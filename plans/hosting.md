@@ -40,3 +40,11 @@ Railway only serves domains registered on the service, and its edge already sits
 - Load test at 10× target (100k / day, Ramadan-morning spike) with synthetic data against signup, prayer pings and the reminder sweep.
 - Runtime: Doxa hit memory leaks under Bun (email transport, analytics fetch). Either run production on Node or load-test Bun on the real email path.
   - Note: the Bun memory leak has since been fixed.
+
+## Monitoring
+
+- **Errors:** Sentry for the admin app, public server, worker and mobile app; tagged with campaign id and app version; emails and names stripped before sending.
+- **Logs:** structured, with a request id and campaign id on every line; read in the host's log viewer.
+- **Jobs:** an operator page lists failed jobs with a retry button.
+- **Uptime Kuma:** push monitors for heartbeats from the worker loop, each daily job and the backups; HTTP monitors on a campaign page and `api.prayer.tools`.
+- **Alerts:** reminders running late (the oldest due, unsent reminder is more than ~10 minutes old); bounce or complaint rate above the provider's safe level; an error spike in Sentry; uptime failures; missed backup heartbeats.

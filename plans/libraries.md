@@ -17,11 +17,17 @@ Reusable prayer content that champions can use directly or modify. prayer.tools 
   - An edit in one language leaves the entry's other languages on the library's text; the champion is offered AI translation of the edit or can mark those languages as following their edit.
 - **Relaunch:** a new run reuses the same libraries, picking up the latest published version of each library the campaign hasn't edited; edited copies carry over.
 
+## Metadata
+
+- **Credit line**, shown on the campaign under the content (e.g. "Content from Ramadan 2026 by …").
+- **License**, from a short list in code: our own · used with permission · CC BY · CC BY-SA · other (described).
+- **Source language** and **topic tags** (the catalog filters by topic).
+
 ## Ownership and sharing
 
 - **Platform libraries:** created and maintained by the prayer.tools team through an operator-only screen, available to every campaign.
 - **Champion libraries:** created in the admin app; private to their owner.
-- **Share request:** the owner requests sharing → prayer.tools reviews → the library is published to the catalog for everyone.
+- **Share request:** the owner requests sharing and confirms they have the rights to it → prayer.tools reviews, seeing the license → the library is published to the catalog for everyone.
 - **Versions:** the owner edits a draft and publishes; campaigns that haven't edited the library follow the latest published version, so work in progress never reaches other campaigns.
 - Libraries sit outside campaign tenant isolation: readable when you own them or when they are published. A campaign's edited copy belongs to the campaign and stays tenant-scoped.
 

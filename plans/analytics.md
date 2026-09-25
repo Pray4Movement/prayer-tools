@@ -26,10 +26,11 @@ Why a relay:
 - Stored per campaign: pageviews and visitors, signups and verifications, sources / UTM, countries, prayer sessions and minutes, praying now.
 - Raw events kept for a limited window; daily rollups per campaign kept indefinitely. Champion dashboards read the rollups.
 - Prayer sessions are the same data as the praying-now ping (`prayer_session`), not a second pipeline.
+- Per-person totals per campaign (prayers, minutes) are kept up to date as sessions arrive, for what intercessors see about themselves, so raw prayer sessions can be dropped after 2 years without changing any stats.
 
 ## Statinator
 
-- Project `prayer_tools_campaigns`, endpoint `https://statinator.prayer.tools`. Same project during the WordPress → v2 transition so dashboards stay continuous; events always carry `hostname`.
+- Project `prayer_tools_campaigns`, endpoint `https://statinator.prayer.tools`. Same project during the WordPress → v3 transition so dashboards stay continuous; events always carry `hostname`.
 - Config via env (project id, API key, endpoint); forwarding no-ops when unset (local dev).
 - Payload conventions: `geo` (visitor, from Cloudflare headers), `target_latitude` / `target_longitude` (the campaign's prayed-for place), `user_hash` (SHA-256 of the lowercased, trimmed email; raw email never leaves the server), `metadata` (campaign id and slug, subscription id, timezone, event-specific keys).
 
@@ -38,9 +39,10 @@ Why a relay:
 | Event | Fires when | Notes |
 |---|---|---|
 | `pageview` + heartbeats | page views on campaign sites | via the relay |
-| `campaign_signup` | a new subscription is created | `frequency` in metadata |
+| `campaign_signup` | a new subscription is created | `frequency` in metadata; referral source when the signup came through a share link |
 | `campaign_signup_verified` | email verification link clicked | once per verification |
-| `prayer_fuel_viewed` | the praying-now ping from a fuel page or the app | driven by the ping, not page render, so it survives edge caching; `source`: porch / manage / app |
+| `prayer_fuel_viewed` | the praying-now ping from a prayer content page or the app | driven by the ping, not page render, so it survives edge caching; `source`: porch / manage / app. Keeps its WordPress-era name so dashboards stay continuous |
+| `campaign_shared` | an intercessor shares the campaign | web or app |
 | `prayer_story_submitted` | a story is submitted | never send the story text; campaign id + `user_hash` only |
 | `campaign_created` | a campaign is created in the admin app | |
 | `prayer_recorded` | "praying as a group" count submitted | `value` = number of people |
@@ -49,4 +51,4 @@ Why a relay:
 ## To verify
 
 - Cloudflare's "Add visitor location headers" managed transform applies to Cloudflare for SaaS custom-hostname traffic.
-- WordPress events carry per-subsite integer campaign ids (not unique across the network); v2 events carry the v2 campaign id plus slug.
+- WordPress events carry per-subsite integer campaign ids (not unique across the network); v3 events carry the v3 campaign id plus slug.

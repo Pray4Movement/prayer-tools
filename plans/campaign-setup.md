@@ -16,6 +16,13 @@ There are no campaign types. A campaign is described by four setup answers; temp
 - A shared-calendar campaign ending 50 days or less after its start displays as a **fixed** campaign.
 - One ending more than 50 days after its start, or with no end, displays as **ongoing** (with or without an end date).
 
+## Lifecycle
+
+- **Campaign:** draft → published → archived. New campaigns start as drafts and are seen through a preview link until published. Archived campaigns show a short "this campaign has ended" page with no signup and no reminders, and can be un-archived. There is no paused state.
+- **Run:** upcoming → active → ended, from its dates, never set by hand. Personal-start campaigns have no run end; each person finishes on their own.
+- **Before a run starts** signup is open and reminders begin on the start date.
+- **Between runs** the site shows the final results and the end-of-campaign call to action, and offers "Notify me when this campaign runs again" (the campaign-updates consent) in place of signup; those people are the audience for the relaunch invitation.
+
 ## Goals and commitments
 
 Signup is built around the reminder (Doxa model): the intercessor says when they want to be reminded, not when they sign up to pray.
@@ -90,4 +97,3 @@ All templates preselect the people-mobilized goal.
 - Whether an app commitment needs more than a reminder to count toward the people number.
 - Whether a crisis campaign also needs dated updates everyone sees.
 - Monthly cadence (WordPress supports it).
-- Phases (changing cadence partway through a campaign, e.g. weekly then a daily final push) — an idea for later, not planned.

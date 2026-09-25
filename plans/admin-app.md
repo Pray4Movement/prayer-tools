@@ -5,7 +5,7 @@ Where champions and their teams build and run campaigns. Everything a campaign s
 ## Users
 
 - Champions and their team members
-- Platform operators (cross-campaign support and oversight; curate platform libraries; approve directory listings; assign owners)
+- Platform operators (cross-campaign support and oversight; curate platform libraries; approve directory listings; assign owners; read all stories; retry failed jobs)
 
 ## Stack
 
@@ -35,13 +35,15 @@ Replaces today's flow (signup theme creating a subsite on another domain). Every
 4. **Template and setup:** choose a template, then answer start, end, goal and cadence, each explained (see [campaign-setup.md](campaign-setup.md)).
 5. **Address and languages:** slug (`{slug}.prayer.tools`, suggested from the name). The champion chooses which languages the campaign runs in and a default language. Custom domain can be added later.
 6. **Content:** choose libraries from the catalog — the template's suggested libraries first, "See more" for the rest — filtered by cadence and language, preview, and use as-is or modify; or create content from scratch (see [libraries.md](libraries.md)).
-7. **Look and launch:** branding, email identity, a launch checklist.
+7. **Landing page:** walks through the landing-page sections (see [public-server.md](public-server.md)), asking for content where needed; stories are optional.
+8. **Look and publish:** branding, email identity, a launch checklist, and a preview link that opens on desktop or phone (choosing an RTL language shows the page right to left). Campaigns stay drafts until the champion publishes.
 
 Keeps what today's flow does behind the scenes: Turnstile and a bad-words check on names and slugs, adding the champion to the central CRM with mailing tags, and the `campaign_created` analytics event.
 
 ## What champions manage
 
-- **Campaign:** name, slug, branding, email identity (from-name, reply-to, logo, signature).
+- **Campaign:** name, slug, branding, email identity (from-name, reply-to, logo, signature). When a brand color is chosen, text on it is set to white or dark for contrast, with a warning if the color is too pale to be readable.
+- **Status:** draft → published → archived (see [campaign-setup.md](campaign-setup.md)).
 - **Setup:** start, end, goal, cadence, and "track time committed" for people-mobilized campaigns (see [campaign-setup.md](campaign-setup.md)).
 - **Languages:** the campaign's languages and default language, changeable any time. They drive:
   - the public site's language switcher and signup language options;
@@ -51,14 +53,22 @@ Keeps what today's flow does behind the scenes: Turnstile and a bad-words check 
 - **Runs:** create, schedule, relaunch (new run on the same URL), close. Past runs keep their stats.
 - **End-of-run thank-you:** sent to everyone in the run when it ends, and in personal-start campaigns to each person when they reach the last day. The champion can add an optional message and call to action (button text + link) per run, with a preview.
 - **Domains:** add a custom domain, see CNAME instructions and verification status (provisioned through Cloudflare for SaaS). `{slug}.prayer.tools` always works.
-- **Prayer fuel:** libraries used directly or modified per entry, the campaign's own content, Tiptap editor, per language, AI-assisted translation (see [libraries.md](libraries.md)).
+- **Prayer content:** libraries used directly or modified per entry, the campaign's own content, Tiptap editor, per language, AI-assisted translation (see [libraries.md](libraries.md)).
 - **Libraries:** create their own, request sharing with everyone.
+- **Landing page:** fill in the sections, add custom sections (heading, rich text, optional image and button), and optionally a stories section.
+- **Images:** uploaded to object storage and resized for slow connections; alt text required (AI-translatable); optional credit shown under the image; a focal point so the top image crops well on phones.
+- **Test emails:** "Send me a test email" on every email the campaign sends (reminder, end-of-run, check-in, verification, campaign emails), in any campaign language.
 - **Translations:** per-campaign editable strings over code-owned defaults. Champion-written text (custom sections, custom consent options) is written in one language and translated into the campaign's other languages with an AI translate button; translations stay editable, and editing the original flags the other languages as out of date instead of overwriting them. No public "AI translated" label.
 - **Intercessors:** email subscribers and their commitments; anonymous app intercessors appear as counts and activity only.
-- **Stats:** people signed up (every campaign), progress toward the goal (people, prayer time or coverage), commitments, prayer activity, praying now, per run.
+- **Custom signup fields:** up to about 5 (short text, dropdown or checkbox; required or optional; labels and options AI-translatable). Asked on web signup, and in the app once the person links an email. Answers show on the intercessor record and in exports and are never sent to analytics.
+- **Export:** owners and editors download a CSV straight away: name, email, language, timezone, signup date, status, reminder times, custom answers, consent. Unsubscribed people appear without email or name; anonymous app intercessors aren't included. Every export is logged (who, when), visible to owners and operators.
+- **Stats:** people signed up (every campaign), progress toward the goal (people, prayer time or coverage), commitments, prayer activity, praying now, people who joined through shares, per run.
 - **Directory listing:** opt in; the campaign is listed after a Prayer.Tools operator approves it, and operators can unlist it. The campaign stays reachable by its link either way.
 - **Communication:** campaign emails and push announcements (see Campaign email below).
-- **Stories / contact messages** submitted from the public site.
+- **Stories / contact messages** submitted from the public site. A story whose writer allowed the campaign to publish it can be added to the landing page's stories section in one click; the name shows only if the writer allowed it.
+- **Share** (after publishing): the campaign link (the custom domain once active), a QR code (PNG and SVG), editable share messages per language with WhatsApp sharing, and a share image also used for link previews.
+- **Giving:** a card on the dashboard and a line on the Share screen link to the Prayer.Tools donation page.
+- **Feedback:** the feedback widget (to the Prayer.Tools board) is on every admin page.
 
 ## Campaign email
 
