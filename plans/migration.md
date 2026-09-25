@@ -17,10 +17,12 @@ Source: the WordPress multisite at `/Users/jd/code/sites/campaigns/app/public/` 
 
 | WordPress | v2 |
 |---|---|
-| Subsite + `campaigns` posts | campaign (tenant) + runs |
+| Subsite + `campaigns` posts | campaign (tenant) + runs; campaign type mapped to start, end, goal and cadence |
 | Champion users | accounts + campaign membership |
 | `subscriptions` posts, contact email, timezone, language | person, contact method (verified status kept), subscription |
 | `dt_reports` `recurring_signup` rows (rule in payload) | commitment rules; pre-expanded slot rows are dropped |
+| `selected_time` rows without a rule ("pick" mode) | 24/7 date-list commitments |
+| Marketing opt-ins | consent ledger rows with source `WordPress import`; existing consent is kept |
 | `landing` prayer fuel posts per day / language | prayer fuel per run / day / language |
 | `dt_translations`, campaign settings | per-campaign strings and settings (only non-default values) |
 | Stories, contact-us comments | stories / messages |
@@ -39,6 +41,5 @@ The public server serves these URL shapes for migrated campaigns and redirects t
 
 ## Open
 
-- Specific-date commitments ("pick" mode / `selected_time` rows without a rule) — import as date-list commitments if Ramadan 24/7 is ported.
 - Network-level data (the `wp_praying` counter, P4M tracking dashboards, the global campaign directory on prayer.tools) — what carries over.
 - Subsites holding several campaigns: runs of one campaign (e.g. Ramadan 2025 and 2026) or separate campaigns — likely decided per subsite during import.

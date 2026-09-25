@@ -4,7 +4,7 @@ One app where an intercessor follows several campaigns, each with one or more pr
 
 ## Starting point
 
-Copy the Doxa prayer app (`/Users/jd/code/doxa/doxa-prayer-mobile-app`, Flutter) to get started; it becomes its own codebase from then on.
+Copy the Doxa prayer app (`/Users/jd/code/doxa/doxa-prayer-mobile-app`, Flutter, open source, copying permitted) to get started; it becomes its own codebase from then on.
 
 ## Kept from Doxa
 
@@ -18,12 +18,12 @@ Copy the Doxa prayer app (`/Users/jd/code/doxa/doxa-prayer-mobile-app`, Flutter)
 
 ## Changes for prayer.tools
 
-- **Real schedules on the server.** Each reminder is sent as its own commitment rule (days, time, duration, timezone) so it counts toward coverage. Doxa merges a group's reminders into one schedule and has no duration.
+- **Real schedules on the server.** Each reminder is sent as its own commitment rule (days, time, timezone, and duration when the campaign's goal uses it) so it counts toward the campaign's goal. A person counts toward the people number once they join a campaign and create a reminder. Doxa merges a group's reminders into one schedule and has no duration.
 - **Per-device credential** issued at registration, stored in Keychain / secure storage (survives reinstall on iOS). No bundled app secret; no id that doubles as a bearer token or returns plaintext email.
 - **Campaign lifecycle awareness.** The app refreshes campaign and subscription status on open; a silent push triggers rescheduling when a run ends or a subscription goes inactive, so reminders stop.
 - **Timezone** re-sent when it changes.
 - **Per-campaign** branding, stats, praying-now and run start dates (Doxa has one global start date).
-- **Discovery** via deep links and QR (`*.prayer.tools`, `go.prayer.tools`) plus a paginated campaign directory.
+- **Discovery** via deep links and QR (`*.prayer.tools`, `go.prayer.tools`) plus a paginated directory of operator-approved campaigns, with "Report this campaign" on each.
 - **Server-sent push** (announcements, relaunch invitations) — built on the platform side.
 
 ## Change at copy time

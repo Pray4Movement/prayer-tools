@@ -35,9 +35,14 @@ Host middleware resolves the campaign from the hostname (`campaign_domain`) and 
 
 ## Signup (web)
 
-- Web always means email. New signups are verified by magic link.
+- The signup page offers two ways in: sign up on the web, or use the app (store link / QR that deep-links into this campaign).
+- Web signup uses email, verified by the email link, or Google / Apple sign-in, which gives an already-verified email. Apple's "Hide My Email" gives a relay address, so the same person typing their real email later becomes a second person.
+- After signing up, the person lands on today's prayer content with a note to confirm their email. No reminders are sent until the email is verified; unverified signups are deleted after 7 days.
+- Every commitment has days and a reminder time; duration depends on the campaign's goal (see [campaign-setup.md](campaign-setup.md)).
+- Consent boxes, unchecked: updates from this campaign, news from Prayer.Tools, and any custom options the champion added.
 - Turnstile and rate limiting on public endpoints.
 - Creates or reuses the global `person` / `contact_method` by email; a subscription per campaign; commitments as recurring rules.
+- Contact channels and delivery are typed so SMS or WhatsApp signup can be added later.
 
 ## Subscriber self-service (magic links)
 
@@ -46,16 +51,18 @@ Host middleware resolves the campaign from the hostname (`campaign_domain`) and 
 - Tokens: long random, stored hashed, scoped to one subscriber in one campaign, rotatable, optionally expiring with a "send me a fresh link" fallback. One-click unsubscribe (`List-Unsubscribe`) uses a separate narrow token.
 - Manage: add / change / pause / remove prayer times, profile, language, timezone, unsubscribe, delete data.
 - The manage page shows the current campaign only.
+- Check-in responses: the three buttons in a check-in email (still praying / sometimes / no longer praying) land on a confirmation page on the campaign's domain, authenticated by the link token.
 
 ## API for the mobile app (`api.prayer.tools/v1`)
 
 - Versioned and backward compatible — old app versions live for years. OpenAPI spec.
 - Anonymous device registration issues a per-device credential; email linking later.
-- Subscriptions and commitments per campaign; each commitment is sent as its own rule (days, time, duration, timezone).
+- Subscriptions and commitments per campaign; each commitment is sent as its own rule (days, time, timezone, and duration when the goal uses it).
 - Prayer session pings (upsert per session) feed "praying now" and activity.
 - Prayer fuel as JSON (Tiptap) by campaign / run / day / language, edge-cacheable.
 - Subscription status so the app can stop reminders for ended runs or inactive subscriptions.
-- Campaign directory: paginated search over campaigns that opt in.
+- Campaign directory: paginated search over campaigns that opted in and were approved by a Prayer.Tools operator.
+- Report a campaign: goes to operators, who can unlist it.
 
 ## Domains and deep links
 
@@ -64,8 +71,13 @@ Host middleware resolves the campaign from the hostname (`campaign_domain`) and 
 
 ## i18n
 
-- `@nuxtjs/i18n`; UI strings translated on Weblate (25 locales today), RTL support.
+- `@nuxtjs/i18n`; UI and template strings are AI-translated during development and committed with the code (25 locales today), RTL support. No Weblate and no translation screen.
 - Per-campaign strings and fuel content come from the database.
+- Each campaign serves only its chosen languages; the default language is used when a visitor's language isn't one of them.
+
+## Analytics relay
+
+Same-origin `/api/collect` and `/api/collect/heartbeat` on every campaign host (and `api.prayer.tools` for the app): record per-campaign stats, then forward to Statinator. See [analytics.md](analytics.md).
 
 ## Legacy URLs
 
