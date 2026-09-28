@@ -7,14 +7,14 @@ Runs on either DigitalOcean or Railway, behind Cloudflare.
 - One Docker image; processes chosen by command / env: admin app, public server, worker.
 - All configuration through environment variables.
 - Standard Postgres + PgBouncer in transaction mode (Nuxtinator tenancy requires it; `prepare: false`). DigitalOcean managed Postgres includes a pooler; on Railway, run a PgBouncer service.
-- Two DB roles (Nuxtinator tenancy): an RLS-enforced app role and a BYPASSRLS admin role for migrations and the worker. Create the app role before the first deploy.
+- Two DB roles (Nuxtinator tenancy): an RLS-enforced app role (admin requests and the public server, scoped to one site's org or to one person) and a BYPASSRLS admin role for migrations and the worker's set-based sweeps. Create the app role before the first deploy.
 - Object storage outside both hosts: S3-compatible (Backblaze B2 or Cloudflare R2).
 - Migrations run on boot of the admin app only.
 
 ## Cloudflare
 
 - DNS, TLS and edge caching for everything.
-- Cache rules: cache public pages on campaign hosts; bypass `app.prayer.tools`, `/manage/*` and personal API routes.
+- Cache rules: cache public pages on site hosts; bypass `app.prayer.tools`, `/manage/*`, `prayer.tools/my` and personal API routes.
 - **Cloudflare for SaaS** for champions' custom domains: champions CNAME to a fallback origin; hostnames and certificates are created through the Cloudflare API. First 100 hostnames free, then $0.10 / hostname / month.
 
 ## Risk to prove early: custom domains on Railway
@@ -43,8 +43,8 @@ Railway only serves domains registered on the service, and its edge already sits
 
 ## Monitoring
 
-- **Errors:** Sentry for the admin app, public server, worker and mobile app; tagged with campaign id and app version; emails and names stripped before sending.
-- **Logs:** structured, with a request id and campaign id on every line; read in the host's log viewer.
+- **Errors:** Sentry for the admin app, public server, worker and mobile app; tagged with site id and app version; emails and names stripped before sending.
+- **Logs:** structured, with a request id and site id on every line; read in the host's log viewer.
 - **Jobs:** an operator page lists failed jobs with a retry button.
-- **Uptime Kuma:** push monitors for heartbeats from the worker loop, each daily job and the backups; HTTP monitors on a campaign page and `api.prayer.tools`.
+- **Uptime Kuma:** push monitors for heartbeats from the worker loop, each daily job and the backups; HTTP monitors on a site page and `api.prayer.tools`.
 - **Alerts:** reminders running late (the oldest due, unsent reminder is more than ~10 minutes old); bounce or complaint rate above the provider's safe level; an error spike in Sentry; uptime failures; missed backup heartbeats.
