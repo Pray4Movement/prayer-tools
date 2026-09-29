@@ -1,0 +1,307 @@
+{
+  "a11y": {
+    "skip": "Aller au contenu"
+  },
+  "nav": {
+    "label": "Principal",
+    "pray": "Prier",
+    "stats": "Statistiques",
+    "coverage": "Calendrier de prière",
+    "contact": "Contact",
+    "language": "Langue"
+  },
+  "common": {
+    "optional": "Facultatif",
+    "choose": "Choisir…",
+    "loading": "Chargement…",
+    "or": "ou",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  },
+  "preview": {
+    "banner": "Aperçu — ce site n'est pas encore publié. Seules les personnes disposant du lien d'aperçu peuvent le voir."
+  },
+  "footer": {
+    "my": "Ma prière : toutes vos campagnes",
+    "past": "Campagnes passées",
+    "powered": "Propulsé par",
+    "give": "Faire un don pour soutenir Prayer.Tools"
+  },
+  "feedback": {
+    "intro": "Signalez un bug, une idée ou un contenu inapproprié à l'équipe Prayer.Tools. Pour toute question sur cette campagne ou une coquille dans son contenu, veuillez utiliser la page Contact."
+  },
+  "landing": {
+    "starts_on": "Commence le {date}",
+    "pray_today": "Prier aujourd'hui",
+    "continue_praying": "Continuer la lecture et prier",
+    "why": {
+      "title": "Pourquoi nous prions"
+    },
+    "stories": {
+      "title": "Témoignages"
+    },
+    "how": {
+      "title": "Comment ça marche",
+      "body": "Choisissez quand vous souhaitez prier et nous vous enverrons un rappel par e-mail à ce moment-là, avec un lien vers le guide de prière du jour. Priez aussi longtemps que vous le pouvez : chaque prière compte. Vous pouvez modifier vos moments de prière ou arrêter à tout moment."
+    },
+    "signup": {
+      "title": "S'inscrire pour prier",
+      "intro": "Rejoignez ceux qui prient avec {site}. Choisissez un moment et nous vous le rappellerons.",
+      "button": "Choisir mon moment de prière"
+    },
+    "today": {
+      "title": "La prière du jour"
+    },
+    "share": {
+      "title": "Invitez d'autres personnes à prier",
+      "body": "La prière grandit quand des amis prient ensemble. Partagez cette campagne avec quelqu'un qui aimerait se joindre à vous."
+    },
+    "contact": {
+      "title": "Nous contacter",
+      "body": "Une question sur cette campagne, ou une coquille dans le guide de prière ? Envoyez-nous un message."
+    },
+    "app": {
+      "title": "Prier avec l'application",
+      "body": "Recevez des rappels sur votre téléphone et priez même hors connexion."
+    }
+  },
+  "app": {
+    "app_store": "App Store",
+    "play_store": "Google Play",
+    "qr_alt": "Code QR pour ouvrir cette campagne dans l'application Prayer.Tools",
+    "qr_caption": "Scannez avec votre téléphone pour ouvrir cette campagne dans l'application."
+  },
+  "progress": {
+    "people": "{n} personne en prière | {n} personnes en prière",
+    "people_target": "{n} sur {target} personnes en prière",
+    "prayer_time": "{minutes} sur {target} de prière chaque jour",
+    "coverage": "{percent} % du temps couvert par la prière"
+  },
+  "pray": {
+    "day": "Jour {n}",
+    "praying_now": "{n} personne prie en ce moment | {n} personnes prient en ce moment",
+    "no_content": "Le guide de prière de ce jour n'est pas encore disponible.",
+    "credit": "Contenu : {credit}",
+    "amen": "Amen — j'ai prié",
+    "amen_thanks": "Merci d'avoir prié !",
+    "group_question": "Vous priez en groupe ? Dites-nous combien vous êtes",
+    "group_count": "Combien de personnes ont prié ensemble ?",
+    "group_submit": "Envoyer",
+    "group_thanks": "Merci ! Les prières de votre groupe sont comptées.",
+    "nav": "Autres jours",
+    "previous": "Jour précédent",
+    "next": "Jour suivant",
+    "get_reminders": "Recevoir un rappel quotidien pour prier",
+    "check_email_title": "Veuillez confirmer votre adresse e-mail",
+    "check_email_body": "Nous vous avons envoyé un e-mail contenant un lien. Cliquez dessus pour confirmer votre adresse — vos rappels commenceront dès que ce sera fait. En attendant, voici la prière du jour.",
+    "confirmed_title": "Votre adresse e-mail est confirmée",
+    "confirmed_body": "Vos rappels de prière sont activés. Merci de prier avec nous !"
+  },
+  "license": {
+    "permission": "Utilisé avec autorisation",
+    "other": "Voir la source pour la licence"
+  },
+  "share": {
+    "button": "Partager",
+    "copy": "Copier le lien",
+    "copied": "Lien copié",
+    "invite": "Invitez d'autres personnes à prier avec vous",
+    "default_message": "Je prie avec {site}. Voulez-vous vous joindre à moi ?",
+    "prompt_title": "Invitez d'autres personnes à prier avec vous",
+    "prompt_body": "Vous connaissez quelqu'un qui aimerait prier aussi ? Envoyez-lui le lien."
+  },
+  "signup": {
+    "email": "E-mail",
+    "name": "Prénom",
+    "language": "Langue",
+    "timezone": "Fuseau horaire",
+    "timezone_help": "Les rappels sont envoyés à votre heure locale.",
+    "when_title": "Quand allez-vous prier ?",
+    "when_help": "Choisissez quand nous devons vous le rappeler. Vous pouvez ajouter plusieurs moments de prière.",
+    "add_time": "Ajouter un autre moment de prière",
+    "pick_slots": "Choisir des créneaux dans le calendrier de prière",
+    "picked_times": "Créneaux choisis dans le calendrier",
+    "about_you": "À propos de vous",
+    "consent_title": "Restons en contact (facultatif)",
+    "reminders_note": "Vos rappels de prière sont envoyés, que vous cochiez ces cases ou non.",
+    "starts_on": "Cette campagne commence le {date}. Vos rappels débuteront à cette date.",
+    "signed_in_as": "Inscription en tant que {email}",
+    "apple": "S'inscrire avec Apple",
+    "closed": "Les inscriptions ne sont pas ouvertes pour le moment.",
+    "app_way": "Utiliser l'application",
+    "web_way": "Ou inscrivez-vous ici",
+    "success": "Vous êtes inscrit. Merci de vous joindre à nous dans la prière !"
+  },
+  "commitment": {
+    "how_often": "Fréquence",
+    "daily": "Tous les jours",
+    "weekly": "Certains jours de la semaine",
+    "days": "Quels jours",
+    "time": "Heure du rappel",
+    "time_help": "Nous envoyons le rappel à cette heure-là.",
+    "duration": "Combien de temps allez-vous prier ?",
+    "duration_placeholder": "Choisir une durée",
+    "remove": "Retirer",
+    "daily_at": "Tous les jours à {time}",
+    "weekly_at": "{days} à {time}",
+    "dates_summary": "{n} créneaux choisis"
+  },
+  "consent": {
+    "site_updates": "Recevoir des nouvelles de {site}",
+    "platform_news": "Recevoir des nouvelles de Prayer.Tools"
+  },
+  "stats": {
+    "title": "La prière jusqu'ici",
+    "people": "Personnes inscrites",
+    "commitments": "Moments de prière",
+    "prayers": "Prières",
+    "minutes": "Temps de prière",
+    "share_signups": "Inscrits grâce à un ami",
+    "group_prayers": "Prières en groupe",
+    "praying_now": "En prière maintenant"
+  },
+  "coverage": {
+    "title": "Calendrier de prière",
+    "intro": "Voyez quels créneaux sont couverts par la prière. Choisissez des créneaux libres pour combler les manques, puis inscrivez-vous.",
+    "local_time": "Afficher les heures dans mon fuseau horaire ({tz})",
+    "times_in": "Heures affichées en {tz}",
+    "days": "Jours de la campagne",
+    "pick_help": "Sélectionnez des créneaux pour prier. Personne ne prie encore pendant les créneaux mis en évidence ; le nombre indique combien de personnes prient.",
+    "people_in_slot": "{n} personnes en prière",
+    "picked": "{n} créneau sélectionné | {n} créneaux sélectionnés",
+    "signup_picked": "M'inscrire pour ces créneaux",
+    "clear": "Effacer"
+  },
+  "between": {
+    "ended": "{campaign} a pris fin.",
+    "thanks": "Merci d'avoir prié",
+    "results": "Résultats finaux",
+    "cta_default": "Continuer",
+    "notify_title": "Me prévenir lorsque cette campagne reprendra",
+    "notify_intro": "Laissez votre adresse e-mail et {site} vous préviendra au début de la prochaine campagne.",
+    "notify_button": "Me prévenir",
+    "notify_done": "Merci ! Nous vous préviendrons."
+  },
+  "archived": {
+    "body": "Cette campagne est terminée. Merci à tous ceux qui ont prié.",
+    "more": "Découvrez d'autres façons de prier sur Prayer.Tools"
+  },
+  "contact": {
+    "button": "Envoyer un message",
+    "intro": "Écrivez à l'équipe de {site}. Elle vous répondra par e-mail.",
+    "message": "Message",
+    "send": "Envoyer le message",
+    "done": "Merci ! Votre message a été envoyé. L'équipe vous répondra par e-mail."
+  },
+  "stories": {
+    "title": "Partager un témoignage",
+    "intro": "Dieu a-t-il répondu à une prière, ou se passe-t-il quelque chose que vous aimeriez partager ? Racontez-le à l'équipe de {site}.",
+    "story": "Votre témoignage",
+    "permissions": "Comment votre témoignage peut-il être utilisé ?",
+    "may_publish": "Cette campagne peut publier ce témoignage",
+    "may_platform": "Prayer.Tools peut utiliser ce témoignage dans ses communications",
+    "name_choice": "S'il est partagé",
+    "keep_anonymous": "Rester anonyme",
+    "use_name": "Utiliser mon nom",
+    "send": "Envoyer le témoignage",
+    "done": "Merci d'avoir partagé votre témoignage !",
+    "anonymous": "Anonyme",
+    "share_link": "Partager un témoignage"
+  },
+  "manage": {
+    "title": "Vos moments de prière",
+    "intro": "Connecté en tant que {email} pour {site}.",
+    "signed_out": "Ouvrez le lien de l'un de nos e-mails pour gérer ici vos moments de prière, ou utilisez Ma prière pour voir toutes vos campagnes.",
+    "unverified": "Votre adresse e-mail n'est pas encore confirmée. Les rappels commenceront dès que vous aurez cliqué sur le lien de notre e-mail.",
+    "status_unsubscribed": "Vous êtes désabonné. Vous ne recevrez pas de rappels.",
+    "status_inactive": "Vos rappels sont en pause, car nous ne vous avons pas vu prier depuis un moment.",
+    "resubscribe": "Relancer mes rappels",
+    "resubscribed": "Vos rappels sont de nouveau activés",
+    "times": "Moments de prière",
+    "no_times": "Vous n'avez pas encore de moment de prière.",
+    "paused": "En pause",
+    "change": "Modifier",
+    "pause": "Mettre en pause",
+    "resume": "Reprendre",
+    "remove": "Retirer",
+    "removed": "Moment de prière retiré",
+    "add_time": "Ajouter un moment de prière",
+    "add_to_calendar": "Ajouter au calendrier",
+    "subscribe_calendar": "S'abonner à vos moments de prière dans votre calendrier",
+    "profile": "Vos informations",
+    "timezone_help": "Si vous changez de fuseau horaire, vos rappels restent à la même heure locale.",
+    "email_prefs": "Préférences e-mail",
+    "reminders_separate": "Ces choix n'ont aucun effet sur vos rappels de prière.",
+    "your_data": "Vos données",
+    "download": "Télécharger mes données",
+    "unsubscribe": "Arrêter tous les rappels",
+    "unsubscribed": "Vous êtes désabonné",
+    "delete": "Supprimer mes données",
+    "delete_confirm_title": "Supprimer vos données ?",
+    "delete_confirm_body": "Cela supprime vos moments de prière et vos informations de {site}. Cette action est irréversible.",
+    "delete_confirm": "Supprimer mes données",
+    "saved": "Enregistré",
+    "all_campaigns": "Vous priez avec plusieurs campagnes ?"
+  },
+  "expired": {
+    "title": "Ce lien a expiré",
+    "body": "Pour votre sécurité, les liens de gestion de vos moments de prière expirent. Nous pouvons vous en envoyer un nouveau par e-mail.",
+    "send": "M'envoyer un nouveau lien",
+    "sent": "Si ce lien correspond à un abonnement, nous avons envoyé un nouveau lien à l'adresse e-mail associée."
+  },
+  "unsubscribe": {
+    "title": "Se désabonner",
+    "body": "Arrêter tous les rappels de prière de {site} ?",
+    "confirm": "Se désabonner"
+  },
+  "notice": {
+    "checkin_yes": "Merci de nous avoir répondu ! Continuez à prier — vos rappels continuent.",
+    "checkin_sometimes": "Merci ! Vos rappels continuent. Priez quand vous le pouvez.",
+    "checkin_no": "Merci d'avoir prié avec nous. Nous avons arrêté vos rappels.",
+    "link_invalid": "Ce lien n'est pas valide ou a déjà été utilisé.",
+    "unsubscribed": "Vous êtes désabonné. Vous ne recevrez plus de rappels de {site}.",
+    "verify_invalid": "Ce lien de confirmation n'est pas valide ou a expiré. Veuillez vous réinscrire.",
+    "deleted": "Vos données ont été supprimées.",
+    "not_found": "Nous n'avons pas trouvé ce que vous cherchiez."
+  },
+  "notfound": {
+    "title": "Page introuvable",
+    "body": "Nous n'avons pas trouvé cette page.",
+    "home": "Aller à la page d'accueil"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "turnstile": "Veuillez effectuer la vérification de sécurité.",
+    "email": "Veuillez saisir une adresse e-mail valide.",
+    "commitments": "Veuillez choisir au moins un moment de prière.",
+    "commitment": "Veuillez vérifier votre moment de prière : choisissez une heure, les jours et la durée de votre prière.",
+    "timezone": "Veuillez choisir un fuseau horaire.",
+    "language": "Veuillez choisir une langue.",
+    "closed": "Les inscriptions ne sont pas ouvertes pour le moment.",
+    "required_field": "Veuillez répondre aux questions obligatoires.",
+    "id_token": "Nous n'avons pas pu confirmer votre connexion. Veuillez plutôt utiliser votre adresse e-mail.",
+    "rate": "Trop de tentatives. Veuillez patienter une minute et réessayer."
+  },
+  "my": {
+    "title": "Ma prière",
+    "intro": "Consultez et gérez toutes les campagnes avec lesquelles vous priez. Saisissez votre adresse e-mail et nous vous enverrons un lien de connexion.",
+    "sign_in": "Se connecter",
+    "send_link": "M'envoyer mon lien",
+    "sent": "Si nous connaissons cette adresse, nous y avons envoyé un lien. Il ne fonctionne qu'une fois et expire dans 30 minutes.",
+    "sign_out": "Se déconnecter",
+    "empty": "Aucune campagne n'a encore d'adresse e-mail confirmée pour cette adresse.",
+    "open_site": "Ouvrir",
+    "past": "Campagnes passées",
+    "past_line": "{name} : {prayers} prières, {minutes} minutes",
+    "delete_all": "Supprimer mes données partout",
+    "delete_all_body": "Cela supprime vos moments de prière et vos informations de toutes les campagnes listées ici. Cette action est irréversible.",
+    "notice_link_invalid": "Ce lien de connexion n'est pas valide ou a déjà été utilisé. Demandez-en un nouveau ci-dessous.",
+    "notice_signed_out": "Vous êtes déconnecté.",
+    "notice_deleted": "Vos données ont été supprimées.",
+    "notice_link_sent": "Consultez vos e-mails pour trouver votre lien.",
+    "status_active": "Active",
+    "status_inactive": "En pause",
+    "status_completed": "Terminée",
+    "status_unsubscribed": "Désabonné"
+  }
+}

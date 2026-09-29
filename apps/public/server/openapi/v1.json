@@ -1,0 +1,900 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Prayer.Tools mobile app API",
+    "version": "1",
+    "description": "API used by the Prayer.Tools mobile app to browse prayer sites, read daily prayer content, record prayer and manage the device's own prayer commitments.\n\n**Versioning.** Every path is under `/v1`. The version is backward compatible: fields and operations are only ever added, never renamed or removed, and existing fields keep their meaning. Clients must ignore fields they do not know.\n\n**Authentication.** A device registers once with `POST /v1/devices` and receives a `credential`, returned only in that response and stored hashed on the server. Every route that acts for the device requires it as `Authorization: Bearer <credential>`. Public reads (site info, content, directory) and site reports need no credential. A device is an anonymous intercessor: no email address is ever collected by this API.\n\n**Reminders.** Commitments created through the app never get server email reminders; the app schedules its own local notifications from the commitment rules. `GET /v1/me/subscriptions` reports per site whether reminders should currently be scheduled.\n\n**Offline sync.** `POST /v1/sites/{slug}/amen` takes a client-generated UUID as the prayer session id. Repeats of the same id are ignored, so prayers made offline can be sent later (and retried) without being double counted.\n\n**Content.** Prayer content is returned as Tiptap (ProseMirror) JSON documents with site placeholders (site name, campaign name, place, dates, ...) already filled in.\n\n**Caching.** Public GET responses carry `Cache-Control` headers that allow shared/edge caching; see each operation.\n\n**Errors.** Errors are JSON objects with `statusCode` and `statusMessage` (see the `Error` schema). Rate limits are per client IP; a 429 carries a `Retry-After` header in seconds."
+  },
+  "servers": [
+    { "url": "https://api.prayer.tools", "description": "Production" },
+    { "url": "http://api.localhost:3380", "description": "Local development" }
+  ],
+  "tags": [
+    { "name": "Devices", "description": "Device registration and settings" },
+    { "name": "Sites", "description": "Public site information and prayer content" },
+    { "name": "Prayer", "description": "Recording prayer sessions" },
+    { "name": "Subscriptions", "description": "The device's membership of a site and its prayer commitments" },
+    { "name": "Analytics", "description": "App analytics events" },
+    { "name": "Meta", "description": "API description" }
+  ],
+  "paths": {
+    "/v1/openapi.json": {
+      "get": {
+        "tags": ["Meta"],
+        "operationId": "getOpenApi",
+        "summary": "This OpenAPI document",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI 3.1 document describing this API.",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/v1/devices": {
+      "post": {
+        "tags": ["Devices"],
+        "operationId": "registerDevice",
+        "summary": "Register a device",
+        "description": "Creates an anonymous intercessor (no email) and a device credential. The `credential` is returned only in this response; store it securely and send it as the Bearer token on authenticated routes. All body fields are optional. Rate limited to 10 requests per minute per IP.",
+        "security": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeviceInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Device registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["device_id", "intercessor_id", "credential"],
+                  "properties": {
+                    "device_id": { "type": "string", "format": "uuid" },
+                    "intercessor_id": { "type": "string", "format": "uuid" },
+                    "credential": { "type": "string", "description": "Bearer credential for this device. Returned only once." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/devices/me": {
+      "patch": {
+        "tags": ["Devices"],
+        "operationId": "updateDevice",
+        "summary": "Update this device",
+        "description": "Updates only the fields present in the body. A present field that is empty or null clears the stored value. Also marks the device as seen.",
+        "security": [{ "device": [] }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeviceInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Ok" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" }
+        }
+      },
+      "delete": {
+        "tags": ["Devices"],
+        "operationId": "deleteDevice",
+        "summary": "Remove this device's credential",
+        "description": "Deletes the device and its credential (sign out / uninstall clean-up). The credential stops working immediately.",
+        "security": [{ "device": [] }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Ok" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/v1/directory": {
+      "get": {
+        "tags": ["Sites"],
+        "operationId": "listDirectory",
+        "summary": "Browse the site directory",
+        "description": "Sites that opted in to the public directory and were approved by an operator, ordered by `people_count` descending, then name. Public and edge-cacheable (`Cache-Control: public, max-age=60, s-maxage=300`).",
+        "security": [],
+        "parameters": [
+          { "name": "q", "in": "query", "required": false, "description": "Case-insensitive search in name and description (first 100 characters used).", "schema": { "type": "string", "maxLength": 100 } },
+          { "name": "language", "in": "query", "required": false, "description": "Only sites offering this language code.", "schema": { "type": "string", "maxLength": 10 } },
+          { "name": "page", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+          { "name": "per_page", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of directory entries.",
+            "headers": { "Cache-Control": { "$ref": "#/components/headers/CacheControl" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["page", "per_page", "total", "sites"],
+                  "properties": {
+                    "page": { "type": "integer" },
+                    "per_page": { "type": "integer" },
+                    "total": { "type": "integer", "description": "Total matching entries across all pages." },
+                    "sites": { "type": "array", "items": { "$ref": "#/components/schemas/DirectoryEntry" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/subscriptions": {
+      "get": {
+        "tags": ["Subscriptions"],
+        "operationId": "listMySubscriptions",
+        "summary": "The device's subscriptions and commitments",
+        "description": "Every app subscription of this device across sites (sites of suspended organizations are omitted), with the campaigns the device has commitments in and those commitments. Use `reminders` and each campaign's `status` to decide which local reminders to keep: stop reminders when `reminders` is false or the campaign has ended.",
+        "security": [{ "device": [] }],
+        "responses": {
+          "200": {
+            "description": "The device's subscriptions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["subscriptions"],
+                  "properties": {
+                    "subscriptions": { "type": "array", "items": { "$ref": "#/components/schemas/SiteSubscription" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/v1/collect": {
+      "post": {
+        "tags": ["Analytics"],
+        "operationId": "collectEvent",
+        "summary": "Record an app analytics event",
+        "description": "Records an app analytics event, using the device id as the anonymous identifier. When `site` is given the event also counts in that site's statistics (against its current campaign). Accepted asynchronously. Rate limited to 120 requests per minute per IP.",
+        "security": [{ "device": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["event_type"],
+                "properties": {
+                  "event_type": { "type": "string", "enum": ["app_open", "language_switched", "campaign_shared"] },
+                  "site": { "type": "string", "maxLength": 40, "description": "Site slug the event belongs to. Omit for events not tied to a site." },
+                  "language": { "type": "string", "maxLength": 16 },
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Free-form event properties; dropped entirely if its JSON exceeds 4096 characters. For `campaign_shared`, `channel` (string) names the share channel (defaults to `other`)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "$ref": "#/components/responses/Ok" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/sites/{slug}": {
+      "get": {
+        "tags": ["Sites"],
+        "operationId": "getSite",
+        "summary": "Site info",
+        "description": "Branding, languages, campaigns, the current campaign, goal progress and the number of people praying now. Only published and archived sites are served. Public and edge-cacheable (`Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=600`).",
+        "security": [],
+        "parameters": [
+          { "$ref": "#/components/parameters/Slug" },
+          { "name": "language", "in": "query", "required": false, "description": "Language for translatable text. Falls back to the site's default language when not one of the site's languages.", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "The site.",
+            "headers": { "Cache-Control": { "$ref": "#/components/headers/CacheControl" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/sites/{slug}/content/{day}": {
+      "get": {
+        "tags": ["Sites"],
+        "operationId": "getDayContent",
+        "summary": "Prayer content for one day",
+        "description": "The content blocks (one per content library attached to the campaign) for entry number `day`, as Tiptap JSON with placeholders filled. Each block is in the requested language when available, otherwise the site's default language. Blocks with no entry for that day are omitted. Public and edge-cacheable (`Cache-Control: public, max-age=0, s-maxage=600, stale-while-revalidate=86400`).",
+        "security": [],
+        "parameters": [
+          { "$ref": "#/components/parameters/Slug" },
+          { "name": "day", "in": "path", "required": true, "description": "1-based content entry number.", "schema": { "type": "integer", "minimum": 1, "maximum": 10000 } },
+          { "name": "campaign", "in": "query", "required": false, "description": "Campaign id or slug, or `current` for the site's current campaign.", "schema": { "type": "string", "default": "current" } },
+          { "name": "language", "in": "query", "required": false, "description": "Wanted language. Falls back to the site's default language when not one of the site's languages.", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "The day's content.",
+            "headers": { "Cache-Control": { "$ref": "#/components/headers/CacheControl" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DayContent" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/sites/{slug}/pings": {
+      "post": {
+        "tags": ["Prayer"],
+        "operationId": "pingPrayer",
+        "summary": "Prayer session ping",
+        "description": "Sent periodically while the person is praying. The first ping for a session id starts the session and counts one prayer; later pings for the same id (within 6 hours of its start) add elapsed prayer time, capped at 2 hours. Pings for a session already completed with amen are ignored. A session counts as praying now while pinged within the last 90 seconds. Rate limited to 30 requests per minute per IP.",
+        "security": [{ "device": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Slug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id", "campaign"],
+                "properties": {
+                  "id": { "type": "string", "format": "uuid", "description": "Client-generated prayer session id; reuse it for amen." },
+                  "campaign": { "type": "string", "format": "uuid", "description": "Campaign id." },
+                  "day": { "type": "integer", "minimum": 1, "description": "Content day being prayed." },
+                  "language": { "type": "string", "maxLength": 10 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ping recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok", "praying_now"],
+                  "properties": {
+                    "ok": { "type": "boolean", "const": true },
+                    "praying_now": { "type": "integer", "description": "People praying on this site right now." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/sites/{slug}/amen": {
+      "post": {
+        "tags": ["Prayer"],
+        "operationId": "amen",
+        "summary": "Finish a prayer (amen)",
+        "description": "Marks a prayer as finished. `id` is a client-generated UUID used as the prayer session id. If a session with that id exists (for example started by pings) it is completed and nothing is counted again. Otherwise a finished prayer is recorded at `prayed_at` with `seconds` of prayer time and counted once. Repeats of the same id are ignored, so prayers made offline can be sent (and retried) later without double counting. Rate limited to 60 requests per minute per IP.",
+        "security": [{ "device": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Slug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id", "campaign"],
+                "properties": {
+                  "id": { "type": "string", "format": "uuid", "description": "Client-generated prayer session id (idempotency key)." },
+                  "campaign": { "type": "string", "format": "uuid", "description": "Campaign id." },
+                  "day": { "type": "integer", "minimum": 1, "description": "Content day prayed." },
+                  "language": { "type": "string", "maxLength": 10 },
+                  "prayed_at": { "type": "string", "format": "date-time", "description": "When the prayer started (ISO instant). Defaults to now. Must be no more than 5 minutes in the future and no more than 90 days in the past." },
+                  "seconds": { "type": "integer", "minimum": 0, "maximum": 7200, "default": 0, "description": "Prayer duration in seconds; clamped to 0..7200." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Amen accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok", "recorded"],
+                  "properties": {
+                    "ok": { "type": "boolean", "const": true },
+                    "recorded": { "type": "boolean", "description": "True when a new prayer was recorded; false when the id already existed (repeat, or a pinged session that was completed)." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/sites/{slug}/report": {
+      "post": {
+        "tags": ["Sites"],
+        "operationId": "reportSite",
+        "summary": "Report a site",
+        "description": "Reports a site to Prayer.Tools operators, who can unlist it. No credential required. Rate limited to 5 requests per hour per IP.",
+        "security": [],
+        "parameters": [{ "$ref": "#/components/parameters/Slug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reason"],
+                "properties": {
+                  "reason": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Short reason key or text." },
+                  "details": { "type": "string", "maxLength": 4000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/Ok" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/v1/sites/{slug}/subscription": {
+      "put": {
+        "tags": ["Subscriptions"],
+        "operationId": "putSubscription",
+        "summary": "Join a site or update the subscription",
+        "description": "Creates the device's app subscription on the site on first use, or updates its language / timezone. An unsubscribed subscription stays unsubscribed unless `resubscribe` is true. App subscriptions never receive email reminders.",
+        "security": [{ "device": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Slug" }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": { "type": "string", "maxLength": 10, "description": "Ignored unless one of the site's languages. New subscriptions default to the site's default language." },
+                  "timezone": { "type": "string", "maxLength": 64, "description": "IANA timezone, e.g. `Europe/Paris`. New subscriptions default to the site's timezone." },
+                  "referral": { "type": "string", "maxLength": 20, "description": "Referral code of the person who shared the site; only used when the subscription is created." },
+                  "resubscribe": { "type": "boolean", "description": "True reactivates an unsubscribed subscription." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The subscription.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Subscription" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" }
+        }
+      },
+      "delete": {
+        "tags": ["Subscriptions"],
+        "operationId": "deleteSubscription",
+        "summary": "Leave a site",
+        "description": "Unsubscribes the device from the site. Succeeds also when there is no subscription or it is already unsubscribed.",
+        "security": [{ "device": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Slug" }],
+        "responses": {
+          "200": {
+            "description": "Unsubscribed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok", "status"],
+                  "properties": {
+                    "ok": { "type": "boolean", "const": true },
+                    "status": { "type": "string", "const": "unsubscribed" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/v1/sites/{slug}/commitments": {
+      "post": {
+        "tags": ["Subscriptions"],
+        "operationId": "createCommitment",
+        "summary": "Add a prayer commitment",
+        "description": "Adds a prayer time in a campaign, creating the device's app subscription on the site if needed. When `duration_min` is null or omitted and the campaign goal is not `people`, the site's default duration is used. The commitment's date window (`starts_on` / `ends_on`) is derived from the campaign. App commitments never get server reminders; the app schedules them locally.",
+        "security": [{ "device": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/Slug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  { "$ref": "#/components/schemas/CommitmentInput" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "campaign": { "type": "string", "description": "Campaign id or slug. Defaults to the site's current campaign." },
+                      "language": { "type": "string", "description": "Language for the subscription if it is created now." }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Commitment created.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Commitment" } } }
+          },
+          "400": { "$ref": "#/components/responses/CommitmentInvalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": {
+            "description": "`Campaign is not open` (no such campaign, or it has ended) or `Unsubscribed` (the device's subscription on this site is unsubscribed; resubscribe with PUT subscription first).",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" }
+        }
+      }
+    },
+    "/v1/sites/{slug}/commitments/{id}": {
+      "patch": {
+        "tags": ["Subscriptions"],
+        "operationId": "updateCommitment",
+        "summary": "Change or pause a commitment",
+        "description": "Two forms. A body containing only `paused` pauses or resumes any commitment. Any other body replaces the rule of a `recurring` commitment: `frequency` (omitted means `daily`), `days_of_week`, `time` and `duration_min` (omitted or null clears it, which fails when the campaign requires a duration) are all taken from the body, with optional `paused`. `kind` and `timezone` are not changeable here; `dates` commitments can only be paused or resumed.",
+        "security": [{ "device": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/Slug" },
+          { "$ref": "#/components/parameters/CommitmentId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "title": "Pause",
+                    "type": "object",
+                    "required": ["paused"],
+                    "additionalProperties": false,
+                    "properties": { "paused": { "type": "boolean" } }
+                  },
+                  {
+                    "title": "Replace recurring rule",
+                    "type": "object",
+                    "required": ["time"],
+                    "properties": {
+                      "frequency": { "type": "string", "enum": ["daily", "weekly"], "default": "daily" },
+                      "days_of_week": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 6 }, "description": "0 = Sunday .. 6 = Saturday. Required (non-empty) when frequency is weekly." },
+                      "time": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$", "description": "Local time HH:MM (24h)." },
+                      "duration_min": { "type": ["integer", "null"], "minimum": 1, "maximum": 1440 },
+                      "paused": { "type": "boolean" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated commitment.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Commitment" } } }
+          },
+          "400": { "$ref": "#/components/responses/CommitmentInvalid" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "413": { "$ref": "#/components/responses/PayloadTooLarge" }
+        }
+      },
+      "delete": {
+        "tags": ["Subscriptions"],
+        "operationId": "deleteCommitment",
+        "summary": "Remove a commitment",
+        "security": [{ "device": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/Slug" },
+          { "$ref": "#/components/parameters/CommitmentId" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Ok" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "device": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Device credential returned once by `POST /v1/devices`, sent as `Authorization: Bearer <credential>`. A missing credential returns 401 `Missing credential`; an unknown or deleted one returns 401 `Unknown credential`."
+      }
+    },
+    "parameters": {
+      "Slug": {
+        "name": "slug",
+        "in": "path",
+        "required": true,
+        "description": "Site slug (case-insensitive). Draft sites and sites of suspended organizations return 404.",
+        "schema": { "type": "string", "pattern": "^[a-zA-Z0-9-]{1,40}$" }
+      },
+      "CommitmentId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Commitment id. Only the device's own commitments on this site are found.",
+        "schema": { "type": "string", "format": "uuid" }
+      }
+    },
+    "headers": {
+      "CacheControl": {
+        "description": "Shared-cache policy for this response.",
+        "schema": { "type": "string" }
+      }
+    },
+    "responses": {
+      "Ok": {
+        "description": "Success.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ok" } } }
+      },
+      "BadRequest": {
+        "description": "Invalid input. `statusMessage` names the problem, e.g. `Invalid JSON`, `timezone`, `prayed_at`, `reason`, `Unsupported event_type`.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "CommitmentInvalid": {
+        "description": "Invalid commitment (`statusMessage` `commitment`, or `timezone`, or `Invalid JSON`). On create, `data.errors` lists the invalid fields: any of `frequency`, `days_of_week`, `time`, `dates`, `duration_min`, `kind`.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Unauthorized": {
+        "description": "Missing or unknown device credential.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "NotFound": {
+        "description": "Site, campaign, commitment or subscription not found.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "PayloadTooLarge": {
+        "description": "Request body exceeds the route's size limit.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded for this client IP.",
+        "headers": {
+          "Retry-After": { "description": "Seconds until the limit resets.", "schema": { "type": "integer" } }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["statusCode", "statusMessage"],
+        "properties": {
+          "statusCode": { "type": "integer" },
+          "statusMessage": { "type": "string" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "object",
+            "description": "Extra detail when present, e.g. `{ \"errors\": [\"time\"] }` for an invalid commitment.",
+            "properties": {
+              "errors": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      },
+      "Ok": {
+        "type": "object",
+        "required": ["ok"],
+        "properties": { "ok": { "type": "boolean", "const": true } }
+      },
+      "IsoDate": {
+        "type": "string",
+        "format": "date",
+        "description": "Calendar date YYYY-MM-DD."
+      },
+      "DeviceInput": {
+        "type": "object",
+        "properties": {
+          "platform": { "type": "string", "maxLength": 20, "examples": ["ios", "android"] },
+          "app_version": { "type": "string", "maxLength": 40 },
+          "push_id": { "type": "string", "maxLength": 400, "description": "Push notification token." },
+          "timezone": { "type": "string", "maxLength": 64, "description": "IANA timezone. On registration an invalid value is ignored; on update it returns 400 `timezone`." },
+          "language": { "type": "string", "maxLength": 10 }
+        }
+      },
+      "CommitmentInput": {
+        "type": "object",
+        "description": "A prayer time rule. `recurring` repeats daily or on chosen weekdays; `dates` lists specific instants (only allowed in `coverage` campaigns).",
+        "required": ["time"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["recurring", "dates"], "default": "recurring" },
+          "frequency": { "type": "string", "enum": ["daily", "weekly"], "default": "daily", "description": "Recurring only." },
+          "days_of_week": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0, "maximum": 6 },
+            "description": "Recurring weekly only: 0 = Sunday .. 6 = Saturday. Required (non-empty) when frequency is weekly; duplicates are removed."
+          },
+          "time": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$", "description": "Local time HH:MM (24h) in `timezone`." },
+          "timezone": { "type": "string", "maxLength": 64, "description": "IANA timezone. Defaults to the subscription's timezone." },
+          "duration_min": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 1440,
+            "description": "Minutes of prayer. Required when the campaign's `duration` is `required` (a null value is replaced by the campaign's `default_duration_min` on create); ignored when `hidden`."
+          },
+          "dates": {
+            "type": "array",
+            "maxItems": 200,
+            "items": { "type": "string", "format": "date-time" },
+            "description": "Kind `dates` only: 1 to 200 ISO instants. Unparseable entries are dropped."
+          }
+        }
+      },
+      "Commitment": {
+        "type": "object",
+        "required": ["id", "campaign_id", "kind", "frequency", "days_of_week", "time", "timezone", "duration_min", "dates", "starts_on", "ends_on", "paused"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "campaign_id": { "type": "string", "format": "uuid" },
+          "kind": { "type": "string", "enum": ["recurring", "dates"] },
+          "frequency": { "type": ["string", "null"], "enum": ["daily", "weekly", null], "description": "Null for kind `dates`." },
+          "days_of_week": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 6 }, "description": "0 = Sunday .. 6 = Saturday, sorted. Empty unless frequency is weekly." },
+          "time": { "type": "string", "description": "Local time HH:MM." },
+          "timezone": { "type": "string", "description": "IANA timezone the time is in." },
+          "duration_min": { "type": ["integer", "null"] },
+          "dates": { "type": "array", "items": { "type": "string", "format": "date-time" }, "description": "ISO instants. Empty unless kind is `dates`." },
+          "starts_on": { "$ref": "#/components/schemas/IsoDate" },
+          "ends_on": { "type": ["string", "null"], "format": "date", "description": "Last date (YYYY-MM-DD), or null when open-ended." },
+          "paused": { "type": "boolean" }
+        }
+      },
+      "Campaign": {
+        "type": "object",
+        "required": ["id", "slug", "name", "status", "goal", "goal_target", "cadence", "start_mode", "start_date", "end_date", "length_days", "timezone", "duration", "default_duration_min"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "slug": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["upcoming", "active", "ended"] },
+          "goal": { "type": "string", "enum": ["people", "prayer_time", "coverage"] },
+          "goal_target": { "type": ["integer", "null"] },
+          "cadence": { "type": "string", "enum": ["daily", "weekly"], "description": "How often a new content entry is published." },
+          "start_mode": { "type": "string", "enum": ["date", "join"], "description": "`date`: shared calendar; `join`: each person starts on their own first day." },
+          "start_date": { "type": ["string", "null"], "format": "date" },
+          "end_date": { "type": ["string", "null"], "format": "date" },
+          "length_days": { "type": ["integer", "null"], "description": "Length for personal-start campaigns." },
+          "timezone": { "type": "string" },
+          "duration": { "type": "string", "enum": ["required", "optional", "hidden"], "description": "Whether a commitment asks for `duration_min`." },
+          "default_duration_min": { "type": "integer", "description": "The site's default prayer duration in minutes." }
+        }
+      },
+      "GoalProgress": {
+        "type": "object",
+        "required": ["goal", "people", "value", "target", "percent"],
+        "properties": {
+          "goal": { "type": "string", "enum": ["people", "prayer_time", "coverage"] },
+          "people": { "type": "integer" },
+          "value": { "type": "number", "description": "people: people count; prayer_time: committed minutes per day; coverage: percent of time slots covered." },
+          "target": { "type": ["integer", "null"] },
+          "percent": { "type": ["integer", "null"] }
+        }
+      },
+      "Site": {
+        "type": "object",
+        "required": ["slug", "name", "status", "url", "description", "language", "default_language", "languages", "timezone", "branding", "current_campaign", "campaigns", "stats", "praying_now", "show_people_count"],
+        "properties": {
+          "slug": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["published", "archived"] },
+          "url": { "type": "string", "format": "uri", "description": "Public web address of the site." },
+          "description": { "type": "string", "description": "In `language`; empty string when none." },
+          "language": { "type": "string", "description": "Language the translatable text is in." },
+          "default_language": { "type": "string" },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["code", "name", "dir"],
+              "properties": {
+                "code": { "type": "string" },
+                "name": { "type": "string", "description": "Native language name." },
+                "dir": { "type": "string", "enum": ["ltr", "rtl"] }
+              }
+            }
+          },
+          "timezone": { "type": "string" },
+          "branding": {
+            "type": "object",
+            "required": ["color", "text_color", "logo_url", "image_url", "image_alt", "image_credit", "focal_x", "focal_y"],
+            "properties": {
+              "color": { "type": "string", "description": "Brand color (hex)." },
+              "text_color": { "type": "string", "enum": ["#ffffff", "#18181b"], "description": "Readable text color on the brand color." },
+              "logo_url": { "type": ["string", "null"] },
+              "image_url": { "type": ["string", "null"] },
+              "image_alt": { "type": "string" },
+              "image_credit": { "type": ["string", "null"] },
+              "focal_x": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 },
+              "focal_y": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 }
+            }
+          },
+          "current_campaign": {
+            "oneOf": [
+              {
+                "allOf": [
+                  { "$ref": "#/components/schemas/Campaign" },
+                  {
+                    "type": "object",
+                    "required": ["state"],
+                    "properties": {
+                      "state": { "type": "string", "enum": ["upcoming", "active", "between"], "description": "`between`: the most recent campaign has ended and no other is active or upcoming." }
+                    }
+                  }
+                ]
+              },
+              { "type": "null" }
+            ],
+            "description": "The active campaign, else the next upcoming one, else the most recently ended one; null when the site has no campaigns."
+          },
+          "campaigns": { "type": "array", "items": { "$ref": "#/components/schemas/Campaign" }, "description": "All campaigns, by start date." },
+          "stats": {
+            "oneOf": [{ "$ref": "#/components/schemas/GoalProgress" }, { "type": "null" }],
+            "description": "Goal progress of the current campaign."
+          },
+          "praying_now": { "type": ["integer", "null"], "description": "People praying right now; null when the site hides it." },
+          "show_people_count": { "type": "boolean" }
+        }
+      },
+      "DirectoryEntry": {
+        "type": "object",
+        "required": ["slug", "name", "description", "languages", "image_url", "people_count", "campaign_name", "campaign_starts_on"],
+        "properties": {
+          "slug": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "languages": { "type": "array", "items": { "type": "string" } },
+          "image_url": { "type": ["string", "null"] },
+          "people_count": { "type": "integer" },
+          "campaign_name": { "type": ["string", "null"] },
+          "campaign_starts_on": { "type": ["string", "null"], "format": "date" }
+        }
+      },
+      "TiptapDoc": {
+        "type": "object",
+        "description": "Tiptap / ProseMirror JSON document (`{ \"type\": \"doc\", \"content\": [...] }`) with placeholders filled.",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "const": "doc" },
+          "content": { "type": "array", "items": { "type": "object" } }
+        },
+        "additionalProperties": true
+      },
+      "DayContent": {
+        "type": "object",
+        "required": ["campaign", "day", "language", "blocks"],
+        "properties": {
+          "campaign": {
+            "type": "object",
+            "required": ["id", "slug", "name"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "slug": { "type": "string" },
+              "name": { "type": "string" }
+            }
+          },
+          "day": { "type": "integer" },
+          "language": { "type": "string", "description": "The requested (or fallback) language." },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title", "language", "credit", "license", "doc"],
+              "properties": {
+                "title": { "type": "string", "description": "Content library title." },
+                "language": { "type": "string", "description": "Language this block is actually in (may be the site default when the requested one is missing)." },
+                "credit": { "type": ["string", "null"] },
+                "license": { "type": ["string", "null"] },
+                "doc": { "$ref": "#/components/schemas/TiptapDoc" }
+              }
+            }
+          }
+        }
+      },
+      "Subscription": {
+        "type": "object",
+        "required": ["id", "status", "language", "timezone", "referral_code"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["active", "inactive", "completed", "unsubscribed"] },
+          "language": { "type": "string" },
+          "timezone": { "type": "string" },
+          "referral_code": { "type": "string", "description": "Code others can pass as `referral` when joining through this person's share." }
+        }
+      },
+      "SiteSubscription": {
+        "type": "object",
+        "required": ["site", "subscription", "reminders", "campaigns"],
+        "properties": {
+          "site": {
+            "type": "object",
+            "required": ["slug", "name", "status"],
+            "properties": {
+              "slug": { "type": "string" },
+              "name": { "type": "string" },
+              "status": { "type": "string", "enum": ["draft", "published", "archived"] }
+            }
+          },
+          "subscription": { "$ref": "#/components/schemas/Subscription" },
+          "reminders": { "type": "boolean", "description": "True when the subscription is active and the site is published: the app should schedule local reminders for these commitments." },
+          "campaigns": {
+            "type": "array",
+            "description": "Campaigns in which the device has commitments.",
+            "items": {
+              "allOf": [
+                { "$ref": "#/components/schemas/Campaign" },
+                {
+                  "type": "object",
+                  "required": ["commitments"],
+                  "properties": {
+                    "commitments": { "type": "array", "items": { "$ref": "#/components/schemas/Commitment" } }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

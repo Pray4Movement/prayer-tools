@@ -1,0 +1,307 @@
+{
+  "a11y": {
+    "skip": "Skip to content"
+  },
+  "nav": {
+    "label": "Main",
+    "pray": "Pray",
+    "stats": "Stats",
+    "coverage": "Prayer calendar",
+    "contact": "Contact",
+    "language": "Language"
+  },
+  "common": {
+    "optional": "Optional",
+    "choose": "Choose…",
+    "loading": "Loading…",
+    "or": "or",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "preview": {
+    "banner": "Preview — this site is not published yet. Only people with the preview link can see it."
+  },
+  "footer": {
+    "my": "My prayer: all your campaigns",
+    "past": "Past campaigns",
+    "powered": "Powered by",
+    "give": "Give to support Prayer.Tools"
+  },
+  "feedback": {
+    "intro": "Report a bug, an idea or unsafe content to the Prayer.Tools team. For questions about this campaign or typos in its content, please use the Contact page."
+  },
+  "landing": {
+    "starts_on": "Starts on {date}",
+    "pray_today": "Pray today",
+    "continue_praying": "Keep reading and pray",
+    "why": {
+      "title": "Why we pray"
+    },
+    "stories": {
+      "title": "Stories"
+    },
+    "how": {
+      "title": "How it works",
+      "body": "Choose when you want to pray and we will send you a reminder by email at that time, with a link to the day's prayer guide. Pray for as long as you can: every prayer counts. You can change your prayer times or stop at any time."
+    },
+    "signup": {
+      "title": "Sign up to pray",
+      "intro": "Join others praying with {site}. Choose a time and we will remind you.",
+      "button": "Choose my prayer time"
+    },
+    "today": {
+      "title": "Today's prayer"
+    },
+    "share": {
+      "title": "Invite others to pray",
+      "body": "Prayer grows when friends pray together. Share this campaign with someone who would join you."
+    },
+    "contact": {
+      "title": "Contact us",
+      "body": "Questions about this campaign, or found a typo in the prayer guide? Send us a message."
+    },
+    "app": {
+      "title": "Pray with the app",
+      "body": "Get reminders on your phone and pray even when you are offline."
+    }
+  },
+  "app": {
+    "app_store": "App Store",
+    "play_store": "Google Play",
+    "qr_alt": "QR code to open this campaign in the Prayer.Tools app",
+    "qr_caption": "Scan with your phone to open this campaign in the app."
+  },
+  "progress": {
+    "people": "{n} person praying | {n} people praying",
+    "people_target": "{n} of {target} people praying",
+    "prayer_time": "{minutes} of {target} of prayer each day",
+    "coverage": "{percent}% of the time covered in prayer"
+  },
+  "pray": {
+    "day": "Day {n}",
+    "praying_now": "{n} person praying now | {n} people praying now",
+    "no_content": "The prayer guide for this day is not available yet.",
+    "credit": "Content: {credit}",
+    "amen": "Amen — I prayed",
+    "amen_thanks": "Thank you for praying!",
+    "group_question": "Praying as a group? Tell us how many",
+    "group_count": "How many people prayed together?",
+    "group_submit": "Send",
+    "group_thanks": "Thank you! Your group's prayers are counted.",
+    "nav": "Other days",
+    "previous": "Previous day",
+    "next": "Next day",
+    "get_reminders": "Get a daily reminder to pray",
+    "check_email_title": "Please confirm your email",
+    "check_email_body": "We sent you an email with a link. Click it to confirm your address — your reminders start once you do. Meanwhile, here is today's prayer.",
+    "confirmed_title": "Your email is confirmed",
+    "confirmed_body": "Your prayer reminders are on. Thank you for praying with us!"
+  },
+  "license": {
+    "permission": "Used with permission",
+    "other": "See source for license"
+  },
+  "share": {
+    "button": "Share",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "invite": "Invite others to pray with you",
+    "default_message": "I'm praying with {site}. Will you join me?",
+    "prompt_title": "Invite others to pray with you",
+    "prompt_body": "Know someone who would pray too? Send them the link."
+  },
+  "signup": {
+    "email": "Email",
+    "name": "First name",
+    "language": "Language",
+    "timezone": "Time zone",
+    "timezone_help": "Reminders are sent at your local time.",
+    "when_title": "When will you pray?",
+    "when_help": "Choose when we should remind you. You can add more than one prayer time.",
+    "add_time": "Add another prayer time",
+    "pick_slots": "Pick times on the prayer calendar",
+    "picked_times": "Times you picked on the calendar",
+    "about_you": "About you",
+    "consent_title": "Stay in touch (optional)",
+    "reminders_note": "Your prayer reminders are sent whether or not you tick these boxes.",
+    "starts_on": "This campaign starts on {date}. Your reminders begin then.",
+    "signed_in_as": "Signing up as {email}",
+    "apple": "Sign up with Apple",
+    "closed": "Sign-up is not open right now.",
+    "app_way": "Use the app",
+    "web_way": "Or sign up here",
+    "success": "You're signed up. Thank you for joining us in prayer!"
+  },
+  "commitment": {
+    "how_often": "How often",
+    "daily": "Every day",
+    "weekly": "Some days of the week",
+    "days": "Which days",
+    "time": "Reminder time",
+    "time_help": "We send the reminder at this time.",
+    "duration": "How long will you pray?",
+    "duration_placeholder": "Choose a duration",
+    "remove": "Remove",
+    "daily_at": "Every day at {time}",
+    "weekly_at": "{days} at {time}",
+    "dates_summary": "{n} chosen times"
+  },
+  "consent": {
+    "site_updates": "Send me updates from {site}",
+    "platform_news": "Send me news from Prayer.Tools"
+  },
+  "stats": {
+    "title": "Prayer so far",
+    "people": "People signed up",
+    "commitments": "Prayer times",
+    "prayers": "Prayers",
+    "minutes": "Time in prayer",
+    "share_signups": "Joined through a friend",
+    "group_prayers": "Prayed in groups",
+    "praying_now": "Praying now"
+  },
+  "coverage": {
+    "title": "Prayer calendar",
+    "intro": "See which times are covered in prayer. Pick empty times to fill the gaps, then sign up for them.",
+    "local_time": "Show times in my time zone ({tz})",
+    "times_in": "Times shown in {tz}",
+    "days": "Days of the campaign",
+    "pick_help": "Select times to pray. Highlighted times have nobody praying yet; the number shows how many people are praying.",
+    "people_in_slot": "{n} people praying",
+    "picked": "{n} time selected | {n} times selected",
+    "signup_picked": "Sign up for these times",
+    "clear": "Clear"
+  },
+  "between": {
+    "ended": "{campaign} has ended.",
+    "thanks": "Thank you for praying",
+    "results": "Final results",
+    "cta_default": "Continue",
+    "notify_title": "Notify me when this campaign runs again",
+    "notify_intro": "Leave your email and {site} will let you know when the next campaign starts.",
+    "notify_button": "Notify me",
+    "notify_done": "Thank you! We will let you know."
+  },
+  "archived": {
+    "body": "This campaign has ended. Thank you to everyone who prayed.",
+    "more": "Find other ways to pray at Prayer.Tools"
+  },
+  "contact": {
+    "button": "Send a message",
+    "intro": "Write to the team behind {site}. They will reply by email.",
+    "message": "Message",
+    "send": "Send message",
+    "done": "Thank you! Your message was sent. The team will reply by email."
+  },
+  "stories": {
+    "title": "Share a story",
+    "intro": "Has God answered prayer, or is something happening you want to share? Tell the team behind {site}.",
+    "story": "Your story",
+    "permissions": "How may your story be used?",
+    "may_publish": "This story may be published by this campaign",
+    "may_platform": "Prayer.Tools may use this story in its communications",
+    "name_choice": "If it is shared",
+    "keep_anonymous": "Keep me anonymous",
+    "use_name": "Use my name",
+    "send": "Send story",
+    "done": "Thank you for sharing your story!",
+    "anonymous": "Anonymous",
+    "share_link": "Share a story"
+  },
+  "manage": {
+    "title": "Your prayer times",
+    "intro": "Signed in as {email} for {site}.",
+    "signed_out": "Open the link from one of our emails to manage your prayer times here, or use My prayer to see all your campaigns.",
+    "unverified": "Your email is not confirmed yet. Reminders start once you click the link in our email.",
+    "status_unsubscribed": "You are unsubscribed. You will not receive reminders.",
+    "status_inactive": "Your reminders are paused because we have not seen you pray for a while.",
+    "resubscribe": "Start my reminders again",
+    "resubscribed": "Your reminders are on again",
+    "times": "Prayer times",
+    "no_times": "You have no prayer times yet.",
+    "paused": "Paused",
+    "change": "Change",
+    "pause": "Pause",
+    "resume": "Resume",
+    "remove": "Remove",
+    "removed": "Prayer time removed",
+    "add_time": "Add a prayer time",
+    "add_to_calendar": "Add to calendar",
+    "subscribe_calendar": "Subscribe to your prayer times in your calendar",
+    "profile": "Your details",
+    "timezone_help": "Changing your time zone keeps your reminders at the same local time.",
+    "email_prefs": "Email preferences",
+    "reminders_separate": "These choices do not affect your prayer reminders.",
+    "your_data": "Your data",
+    "download": "Download my data",
+    "unsubscribe": "Stop all reminders",
+    "unsubscribed": "You are unsubscribed",
+    "delete": "Delete my data",
+    "delete_confirm_title": "Delete your data?",
+    "delete_confirm_body": "This removes your prayer times and details from {site}. It cannot be undone.",
+    "delete_confirm": "Delete my data",
+    "saved": "Saved",
+    "all_campaigns": "Praying with more than one campaign?"
+  },
+  "expired": {
+    "title": "This link has expired",
+    "body": "For your security, links to manage your prayer times expire. We can email you a fresh one.",
+    "send": "Send me a fresh link",
+    "sent": "If this link belongs to a subscription, we have sent a fresh link to its email address."
+  },
+  "unsubscribe": {
+    "title": "Unsubscribe",
+    "body": "Stop all prayer reminders from {site}?",
+    "confirm": "Unsubscribe"
+  },
+  "notice": {
+    "checkin_yes": "Thank you for letting us know! Keep praying — your reminders continue.",
+    "checkin_sometimes": "Thank you! Your reminders continue. Pray whenever you can.",
+    "checkin_no": "Thank you for praying with us. We have stopped your reminders.",
+    "link_invalid": "This link is not valid or has already been used.",
+    "unsubscribed": "You are unsubscribed. You will not receive any more reminders from {site}.",
+    "verify_invalid": "This confirmation link is not valid or has expired. Please sign up again.",
+    "deleted": "Your data has been deleted.",
+    "not_found": "We could not find what you were looking for."
+  },
+  "notfound": {
+    "title": "Page not found",
+    "body": "We could not find this page.",
+    "home": "Go to the home page"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "turnstile": "Please complete the security check.",
+    "email": "Please enter a valid email address.",
+    "commitments": "Please choose at least one prayer time.",
+    "commitment": "Please check your prayer time: choose a time, the days, and how long you will pray.",
+    "timezone": "Please choose a time zone.",
+    "language": "Please choose a language.",
+    "closed": "Sign-up is not open right now.",
+    "required_field": "Please answer the required questions.",
+    "id_token": "We could not confirm your sign-in. Please use your email instead.",
+    "rate": "Too many attempts. Please wait a minute and try again."
+  },
+  "my": {
+    "title": "My prayer",
+    "intro": "See and manage every campaign you pray with. Enter your email and we will send you a link to sign in.",
+    "sign_in": "Sign in",
+    "send_link": "Email me my link",
+    "sent": "If we know this address, we have sent a link to it. It works once and expires in 30 minutes.",
+    "sign_out": "Sign out",
+    "empty": "There are no campaigns with a confirmed email for this address yet.",
+    "open_site": "Open",
+    "past": "Past campaigns",
+    "past_line": "{name}: {prayers} prayers, {minutes} minutes",
+    "delete_all": "Delete my data everywhere",
+    "delete_all_body": "This removes your prayer times and details from every campaign listed here. It cannot be undone.",
+    "notice_link_invalid": "This sign-in link is not valid or has already been used. Request a new one below.",
+    "notice_signed_out": "You are signed out.",
+    "notice_deleted": "Your data has been deleted.",
+    "notice_link_sent": "Check your email for your link.",
+    "status_active": "Active",
+    "status_inactive": "Paused",
+    "status_completed": "Completed",
+    "status_unsubscribed": "Unsubscribed"
+  }
+}

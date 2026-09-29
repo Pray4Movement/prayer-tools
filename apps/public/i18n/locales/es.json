@@ -1,0 +1,307 @@
+{
+  "a11y": {
+    "skip": "Saltar al contenido"
+  },
+  "nav": {
+    "label": "Principal",
+    "pray": "Orar",
+    "stats": "Estadísticas",
+    "coverage": "Calendario de oración",
+    "contact": "Contacto",
+    "language": "Idioma"
+  },
+  "common": {
+    "optional": "Opcional",
+    "choose": "Elige…",
+    "loading": "Cargando…",
+    "or": "o",
+    "save": "Guardar",
+    "cancel": "Cancelar"
+  },
+  "preview": {
+    "banner": "Vista previa: este sitio aún no está publicado. Solo las personas con el enlace de vista previa pueden verlo."
+  },
+  "footer": {
+    "my": "Mi oración: todas tus campañas",
+    "past": "Campañas anteriores",
+    "powered": "Con la tecnología de",
+    "give": "Ofrenda para apoyar a Prayer.Tools"
+  },
+  "feedback": {
+    "intro": "Informa al equipo de Prayer.Tools de un error, una idea o contenido inapropiado. Para preguntas sobre esta campaña o errores en su contenido, usa la página de Contacto."
+  },
+  "landing": {
+    "starts_on": "Comienza el {date}",
+    "pray_today": "Ora hoy",
+    "continue_praying": "Sigue leyendo y ora",
+    "why": {
+      "title": "Por qué oramos"
+    },
+    "stories": {
+      "title": "Testimonios"
+    },
+    "how": {
+      "title": "Cómo funciona",
+      "body": "Elige cuándo quieres orar y te enviaremos un recordatorio por correo a esa hora, con un enlace a la guía de oración del día. Ora todo el tiempo que puedas: cada oración cuenta. Puedes cambiar tus horarios de oración o dejar de recibir recordatorios cuando quieras."
+    },
+    "signup": {
+      "title": "Inscríbete para orar",
+      "intro": "Únete a quienes oran con {site}. Elige un horario y te lo recordaremos.",
+      "button": "Elegir mi horario de oración"
+    },
+    "today": {
+      "title": "La oración de hoy"
+    },
+    "share": {
+      "title": "Invita a otros a orar",
+      "body": "La oración crece cuando los amigos oran juntos. Comparte esta campaña con alguien que quiera unirse a ti."
+    },
+    "contact": {
+      "title": "Contáctanos",
+      "body": "¿Tienes preguntas sobre esta campaña o encontraste un error en la guía de oración? Envíanos un mensaje."
+    },
+    "app": {
+      "title": "Ora con la aplicación",
+      "body": "Recibe recordatorios en tu teléfono y ora incluso sin conexión."
+    }
+  },
+  "app": {
+    "app_store": "App Store",
+    "play_store": "Google Play",
+    "qr_alt": "Código QR para abrir esta campaña en la aplicación Prayer.Tools",
+    "qr_caption": "Escanéalo con tu teléfono para abrir esta campaña en la aplicación."
+  },
+  "progress": {
+    "people": "{n} persona orando | {n} personas orando",
+    "people_target": "{n} de {target} personas orando",
+    "prayer_time": "{minutes} de {target} de oración cada día",
+    "coverage": "{percent}% del tiempo cubierto en oración"
+  },
+  "pray": {
+    "day": "Día {n}",
+    "praying_now": "{n} persona orando ahora | {n} personas orando ahora",
+    "no_content": "La guía de oración de este día aún no está disponible.",
+    "credit": "Contenido: {credit}",
+    "amen": "Amén — oré",
+    "amen_thanks": "¡Gracias por orar!",
+    "group_question": "¿Oran en grupo? Dinos cuántos son",
+    "group_count": "¿Cuántas personas oraron juntas?",
+    "group_submit": "Enviar",
+    "group_thanks": "¡Gracias! Las oraciones de tu grupo quedaron registradas.",
+    "nav": "Otros días",
+    "previous": "Día anterior",
+    "next": "Día siguiente",
+    "get_reminders": "Recibe un recordatorio diario para orar",
+    "check_email_title": "Confirma tu correo electrónico",
+    "check_email_body": "Te enviamos un correo con un enlace. Haz clic en él para confirmar tu dirección; tus recordatorios comenzarán en cuanto lo hagas. Mientras tanto, aquí tienes la oración de hoy.",
+    "confirmed_title": "Tu correo está confirmado",
+    "confirmed_body": "Tus recordatorios de oración están activados. ¡Gracias por orar con nosotros!"
+  },
+  "license": {
+    "permission": "Usado con permiso",
+    "other": "Consulta la fuente para ver la licencia"
+  },
+  "share": {
+    "button": "Compartir",
+    "copy": "Copiar enlace",
+    "copied": "Enlace copiado",
+    "invite": "Invita a otros a orar contigo",
+    "default_message": "Estoy orando con {site}. ¿Te unes a mí?",
+    "prompt_title": "Invita a otros a orar contigo",
+    "prompt_body": "¿Conoces a alguien que también quiera orar? Envíale el enlace."
+  },
+  "signup": {
+    "email": "Correo electrónico",
+    "name": "Nombre",
+    "language": "Idioma",
+    "timezone": "Zona horaria",
+    "timezone_help": "Los recordatorios se envían según tu hora local.",
+    "when_title": "¿Cuándo vas a orar?",
+    "when_help": "Elige cuándo quieres que te lo recordemos. Puedes agregar más de un horario de oración.",
+    "add_time": "Agregar otro horario de oración",
+    "pick_slots": "Elegir horarios en el calendario de oración",
+    "picked_times": "Horarios que elegiste en el calendario",
+    "about_you": "Sobre ti",
+    "consent_title": "Mantengámonos en contacto (opcional)",
+    "reminders_note": "Tus recordatorios de oración se envían aunque no marques estas casillas.",
+    "starts_on": "Esta campaña comienza el {date}. Tus recordatorios empezarán ese día.",
+    "signed_in_as": "Te estás inscribiendo como {email}",
+    "apple": "Inscribirse con Apple",
+    "closed": "Las inscripciones no están abiertas en este momento.",
+    "app_way": "Usa la aplicación",
+    "web_way": "O inscríbete aquí",
+    "success": "¡Ya estás inscrito! Gracias por unirte a nosotros en oración."
+  },
+  "commitment": {
+    "how_often": "Con qué frecuencia",
+    "daily": "Todos los días",
+    "weekly": "Algunos días de la semana",
+    "days": "Qué días",
+    "time": "Hora del recordatorio",
+    "time_help": "Enviamos el recordatorio a esta hora.",
+    "duration": "¿Cuánto tiempo vas a orar?",
+    "duration_placeholder": "Elige una duración",
+    "remove": "Quitar",
+    "daily_at": "Todos los días a las {time}",
+    "weekly_at": "{days} a las {time}",
+    "dates_summary": "{n} horarios elegidos"
+  },
+  "consent": {
+    "site_updates": "Envíenme novedades de {site}",
+    "platform_news": "Envíenme noticias de Prayer.Tools"
+  },
+  "stats": {
+    "title": "La oración hasta ahora",
+    "people": "Personas inscritas",
+    "commitments": "Horarios de oración",
+    "prayers": "Oraciones",
+    "minutes": "Tiempo en oración",
+    "share_signups": "Se unieron por invitación de un amigo",
+    "group_prayers": "Oraron en grupo",
+    "praying_now": "Orando ahora"
+  },
+  "coverage": {
+    "title": "Calendario de oración",
+    "intro": "Mira qué horarios están cubiertos en oración. Elige horarios vacíos para llenar los huecos y luego inscríbete en ellos.",
+    "local_time": "Mostrar horarios en mi zona horaria ({tz})",
+    "times_in": "Horarios en {tz}",
+    "days": "Días de la campaña",
+    "pick_help": "Selecciona horarios para orar. Los horarios resaltados aún no tienen a nadie orando; el número indica cuántas personas están orando.",
+    "people_in_slot": "{n} personas orando",
+    "picked": "{n} horario seleccionado | {n} horarios seleccionados",
+    "signup_picked": "Inscribirme en estos horarios",
+    "clear": "Borrar"
+  },
+  "between": {
+    "ended": "{campaign} ha terminado.",
+    "thanks": "Gracias por orar",
+    "results": "Resultados finales",
+    "cta_default": "Continuar",
+    "notify_title": "Avísame cuando esta campaña se realice de nuevo",
+    "notify_intro": "Deja tu correo y {site} te avisará cuando comience la próxima campaña.",
+    "notify_button": "Avísame",
+    "notify_done": "¡Gracias! Te avisaremos."
+  },
+  "archived": {
+    "body": "Esta campaña ha terminado. Gracias a todos los que oraron.",
+    "more": "Descubre otras formas de orar en Prayer.Tools"
+  },
+  "contact": {
+    "button": "Enviar un mensaje",
+    "intro": "Escribe al equipo de {site}. Te responderán por correo.",
+    "message": "Mensaje",
+    "send": "Enviar mensaje",
+    "done": "¡Gracias! Tu mensaje fue enviado. El equipo te responderá por correo."
+  },
+  "stories": {
+    "title": "Comparte un testimonio",
+    "intro": "¿Dios ha respondido a la oración o está pasando algo que quieras compartir? Cuéntaselo al equipo de {site}.",
+    "story": "Tu testimonio",
+    "permissions": "¿Cómo podemos usar tu testimonio?",
+    "may_publish": "Esta campaña puede publicar este testimonio",
+    "may_platform": "Prayer.Tools puede usar este testimonio en sus comunicaciones",
+    "name_choice": "Si se comparte",
+    "keep_anonymous": "Mantenerme en el anonimato",
+    "use_name": "Usar mi nombre",
+    "send": "Enviar testimonio",
+    "done": "¡Gracias por compartir tu testimonio!",
+    "anonymous": "Anónimo",
+    "share_link": "Comparte un testimonio"
+  },
+  "manage": {
+    "title": "Tus horarios de oración",
+    "intro": "Sesión iniciada como {email} en {site}.",
+    "signed_out": "Abre el enlace de uno de nuestros correos para administrar aquí tus horarios de oración, o usa Mi oración para ver todas tus campañas.",
+    "unverified": "Tu correo aún no está confirmado. Los recordatorios comenzarán cuando hagas clic en el enlace de nuestro correo.",
+    "status_unsubscribed": "Cancelaste tu suscripción. No recibirás recordatorios.",
+    "status_inactive": "Tus recordatorios están en pausa porque hace un tiempo que no te vemos orar.",
+    "resubscribe": "Reactivar mis recordatorios",
+    "resubscribed": "Tus recordatorios están activados de nuevo",
+    "times": "Horarios de oración",
+    "no_times": "Aún no tienes horarios de oración.",
+    "paused": "En pausa",
+    "change": "Cambiar",
+    "pause": "Pausar",
+    "resume": "Reanudar",
+    "remove": "Quitar",
+    "removed": "Horario de oración eliminado",
+    "add_time": "Agregar un horario de oración",
+    "add_to_calendar": "Agregar al calendario",
+    "subscribe_calendar": "Suscríbete a tus horarios de oración en tu calendario",
+    "profile": "Tus datos",
+    "timezone_help": "Si cambias tu zona horaria, tus recordatorios se mantienen a la misma hora local.",
+    "email_prefs": "Preferencias de correo",
+    "reminders_separate": "Estas opciones no afectan tus recordatorios de oración.",
+    "your_data": "Tus datos",
+    "download": "Descargar mis datos",
+    "unsubscribe": "Detener todos los recordatorios",
+    "unsubscribed": "Cancelaste tu suscripción",
+    "delete": "Eliminar mis datos",
+    "delete_confirm_title": "¿Eliminar tus datos?",
+    "delete_confirm_body": "Esto elimina tus horarios de oración y tus datos de {site}. No se puede deshacer.",
+    "delete_confirm": "Eliminar mis datos",
+    "saved": "Guardado",
+    "all_campaigns": "¿Oras con más de una campaña?"
+  },
+  "expired": {
+    "title": "Este enlace ha caducado",
+    "body": "Por tu seguridad, los enlaces para administrar tus horarios de oración caducan. Podemos enviarte uno nuevo por correo.",
+    "send": "Enviarme un enlace nuevo",
+    "sent": "Si este enlace corresponde a una suscripción, enviamos un enlace nuevo a su dirección de correo."
+  },
+  "unsubscribe": {
+    "title": "Cancelar suscripción",
+    "body": "¿Detener todos los recordatorios de oración de {site}?",
+    "confirm": "Cancelar suscripción"
+  },
+  "notice": {
+    "checkin_yes": "¡Gracias por avisarnos! Sigue orando: tus recordatorios continúan.",
+    "checkin_sometimes": "¡Gracias! Tus recordatorios continúan. Ora cuando puedas.",
+    "checkin_no": "Gracias por orar con nosotros. Hemos detenido tus recordatorios.",
+    "link_invalid": "Este enlace no es válido o ya se usó.",
+    "unsubscribed": "Cancelaste tu suscripción. No recibirás más recordatorios de {site}.",
+    "verify_invalid": "Este enlace de confirmación no es válido o ha caducado. Vuelve a inscribirte.",
+    "deleted": "Tus datos han sido eliminados.",
+    "not_found": "No pudimos encontrar lo que buscabas."
+  },
+  "notfound": {
+    "title": "Página no encontrada",
+    "body": "No pudimos encontrar esta página.",
+    "home": "Ir a la página de inicio"
+  },
+  "errors": {
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "turnstile": "Completa la verificación de seguridad.",
+    "email": "Ingresa una dirección de correo válida.",
+    "commitments": "Elige al menos un horario de oración.",
+    "commitment": "Revisa tu horario de oración: elige una hora, los días y cuánto tiempo vas a orar.",
+    "timezone": "Elige una zona horaria.",
+    "language": "Elige un idioma.",
+    "closed": "Las inscripciones no están abiertas en este momento.",
+    "required_field": "Responde las preguntas obligatorias.",
+    "id_token": "No pudimos confirmar tu inicio de sesión. Usa tu correo electrónico en su lugar.",
+    "rate": "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+  },
+  "my": {
+    "title": "Mi oración",
+    "intro": "Consulta y administra todas las campañas con las que oras. Ingresa tu correo y te enviaremos un enlace para iniciar sesión.",
+    "sign_in": "Iniciar sesión",
+    "send_link": "Enviarme mi enlace",
+    "sent": "Si conocemos esta dirección, le enviamos un enlace. Funciona una sola vez y caduca en 30 minutos.",
+    "sign_out": "Cerrar sesión",
+    "empty": "Todavía no hay campañas con un correo confirmado para esta dirección.",
+    "open_site": "Abrir",
+    "past": "Campañas anteriores",
+    "past_line": "{name}: {prayers} oraciones, {minutes} minutos",
+    "delete_all": "Eliminar mis datos en todas partes",
+    "delete_all_body": "Esto elimina tus horarios de oración y tus datos de todas las campañas de esta lista. No se puede deshacer.",
+    "notice_link_invalid": "Este enlace de inicio de sesión no es válido o ya se usó. Solicita uno nuevo abajo.",
+    "notice_signed_out": "Cerraste sesión.",
+    "notice_deleted": "Tus datos han sido eliminados.",
+    "notice_link_sent": "Revisa tu correo para encontrar tu enlace.",
+    "status_active": "Activa",
+    "status_inactive": "En pausa",
+    "status_completed": "Completada",
+    "status_unsubscribed": "Suscripción cancelada"
+  }
+}
