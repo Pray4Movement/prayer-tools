@@ -1,5 +1,6 @@
 // Campaign stats from the daily rollups: people, goal progress, commitments,
-// prayer activity, praying now, visitors, sources, countries and shares.
+// prayer activity, praying now, anonymous app users, visitors, sources,
+// countries and shares.
 // Counts only; no personal data.
 import { sql } from 'kysely'
 import { goalProgress, prayingNow, statTotals, activeRules } from '@prayertools/shared/stats'
@@ -38,6 +39,10 @@ export default definePtHandler('pt.stats.read', async (event, tx) => {
       coverage = coverageByDay(grid, campaign.start_date, campaign.end_date, campaign.timezone).map(d => ({ date: d.date, percent: d.percent }))
     }
   }
+  const anon = await tx.selectFrom('pt_subscription as s').select(eb => eb.fn.countAll<string>().as('n'))
+    .where('s.contact_id', 'is', null).where('s.delivery', '=', 'app').where('s.status', '=', 'active')
+    .$if(!!campaign, qb => qb.where(eb => eb.exists(eb.selectFrom('pt_commitment as c').select('c.id').whereRef('c.subscription_id', '=', 's.id').where('c.campaign_id', '=', campaign!.id))))
+    .executeTakeFirst()
   return {
     campaign: campaign ? { ...campaign, status: campaignStatus(campaign), length: displayLength(campaign) } : null,
     totals,
@@ -46,6 +51,7 @@ export default definePtHandler('pt.stats.read', async (event, tx) => {
     progress,
     coverage,
     commitments,
-    prayingNow: await prayingNow(t)
+    prayingNow: await prayingNow(t),
+    anonymousApp: Number(anon?.n ?? 0)
   }
 })

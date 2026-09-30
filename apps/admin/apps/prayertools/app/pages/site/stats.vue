@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const { data: site } = usePtSite()
+const { data: site, can } = usePtSite()
 const { data: campaigns } = useFetch<{ campaigns: { id: string, name: string }[] }>('/api/pt/campaigns', { key: 'pt-campaigns' })
 const campaignId = ref<string | undefined>()
 watch([campaigns, site], () => { if (!campaignId.value) campaignId.value = site.value?.currentCampaign?.id ?? campaigns.value?.campaigns[0]?.id }, { immediate: true })
@@ -14,6 +14,7 @@ const { data } = useFetch<{
   coverage: { date: string, percent: number }[] | null
   commitments: number
   prayingNow: number
+  anonymousApp: number
 }>('/api/pt/stats', { query: computed(() => ({ campaign: campaignId.value })), key: computed(() => `pt-stats-${campaignId.value}`), watch: [campaignId] })
 
 const cards = computed(() => {
@@ -24,6 +25,7 @@ const cards = computed(() => {
     { label: 'Prayers', value: t.prayers ?? 0 },
     { label: 'Minutes prayed', value: Math.round((t.prayer_seconds ?? 0) / 60) },
     { label: 'Praying now', value: data.value?.prayingNow ?? 0 },
+    { label: 'Anonymous app users', value: data.value?.anonymousApp ?? 0 },
     { label: 'Visitors', value: t.visitors ?? 0 },
     { label: 'Signups', value: t.signups ?? 0 },
     { label: 'Confirmed emails', value: t.verifications ?? 0 },
@@ -46,6 +48,16 @@ const days = computed(() => {
   return rows.slice(-60).map(r => ({ ...r, height: Math.max(2, Math.round(r.value / max * 100)) }))
 })
 
+async function downloadIntercessors() {
+  const res = await $fetch.raw<Blob>('/api/pt/export.csv', { responseType: 'blob' })
+  const url = URL.createObjectURL(res._data!)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${site.value?.org.slug}-intercessors.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 const DIM_LABELS: Record<string, string> = { country: 'Countries', source: 'Sources', utm_source: 'Campaign sources (UTM)', referrer: 'Referring sites' }
 </script>
 
@@ -55,12 +67,21 @@ const DIM_LABELS: Record<string, string> = { country: 'Countries', source: 'Sour
       <h1 class="text-2xl font-semibold">
         Stats
       </h1>
-      <USelect
-        v-if="campaigns?.campaigns.length"
-        v-model="campaignId"
-        :items="campaigns.campaigns.map(c => ({ label: c.name, value: c.id }))"
-        class="w-64"
-      />
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          v-if="can('pt.intercessors.export')"
+          icon="i-lucide-download"
+          variant="outline"
+          label="Export intercessors"
+          @click="downloadIntercessors"
+        />
+        <USelect
+          v-if="campaigns?.campaigns.length"
+          v-model="campaignId"
+          :items="campaigns.campaigns.map(c => ({ label: c.name, value: c.id }))"
+          class="w-64"
+        />
+      </div>
     </div>
 
     <UCard v-if="data?.progress">

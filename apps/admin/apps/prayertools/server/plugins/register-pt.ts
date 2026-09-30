@@ -25,7 +25,7 @@ export default defineNitroPlugin(() => {
     ['Campaigns', '/@:orgSlug/site/campaigns', 'i-lucide-calendar-range', 'pt.site.read', 20],
     ['Prayer content', '/@:orgSlug/site/content', 'i-lucide-book-open', 'pt.site.read', 30],
     ['Landing page', '/@:orgSlug/site/landing', 'i-lucide-panels-top-left', 'pt.site.read', 40],
-    ['Intercessors', '/@:orgSlug/site/intercessors', 'i-lucide-users', 'pt.intercessors.read', 50],
+    ['Intercessors', '/@:orgSlug/crm/contacts', 'i-lucide-users', 'crm.contacts.read', 50],
     ['Stats', '/@:orgSlug/site/stats', 'i-lucide-chart-line', 'pt.stats.read', 60],
     ['Stories', '/@:orgSlug/site/stories', 'i-lucide-heart-handshake', 'pt.intercessors.read', 65],
     ['Share', '/@:orgSlug/site/share', 'i-lucide-share-2', 'pt.site.read', 70],
