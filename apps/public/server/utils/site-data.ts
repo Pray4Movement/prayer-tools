@@ -1,0 +1,143 @@
+// Site and campaign data every page needs, read inside the site's org.
+import type { Selectable } from 'kysely'
+import type { Tx } from '@prayertools/shared/db/scope'
+import type { PtSiteTable, SiteBranding, SiteLanding, SiteShare, TranslatableText } from '@prayertools/shared/db/schema'
+import { campaignLength, campaignStatus, durationRule, pickCurrentCampaign } from '@prayertools/shared/setup'
+import { entryNumber } from '@prayertools/shared/schedule'
+import { todayIn } from '@prayertools/shared/dates'
+import { normalizeCampaign, type CampaignRow } from '@prayertools/shared/subscriptions'
+import { siteSettings, type SiteSettings } from '@prayertools/shared/site'
+import { getLanguage, languageDir } from '@prayertools/shared/languages'
+import { textIn } from '@prayertools/shared/translatable'
+import { brandColor } from '@prayertools/shared/colors'
+import { goOrigin, platformConfig, platformOrigin } from '@prayertools/shared/config'
+import { EDITABLE_SITE_STRINGS } from '@prayertools/shared/site-strings'
+import type { CampaignState, CampaignView, SiteView } from '../../shared/view'
+import type { SiteContext } from './site-context'
+
+export type SiteRow = Selectable<PtSiteTable>
+
+export interface SiteData {
+  site: SiteRow
+  campaigns: CampaignRow[]
+  current: { campaign: CampaignRow, state: 'upcoming' | 'active' | 'between' } | null
+  settings: SiteSettings
+}
+
+export const UI_LANGUAGES = ['en', 'es', 'fr', 'pt', 'ar']
+
+export async function loadSiteData(tx: Tx): Promise<SiteData> {
+  const site = await tx.selectFrom('pt_site').selectAll().executeTakeFirst()
+  if (!site) throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  const rows = await tx.selectFrom('pt_campaign').selectAll().orderBy('start_date', 'asc').orderBy('created_at', 'asc').execute()
+  const campaigns = rows.map(normalizeCampaign) as CampaignRow[]
+  return { site, campaigns, current: pickCurrentCampaign(campaigns), settings: siteSettings(site.settings) }
+}
+
+export function stateOf(data: SiteData, c: CampaignRow): CampaignState {
+  if (data.current?.campaign.id === c.id) return data.current.state
+  const s = campaignStatus(c)
+  return s === 'ended' ? 'ended' : s
+}
+
+export function campaignView(data: SiteData, c: CampaignRow): CampaignView {
+  const state = stateOf(data, c)
+  const length = campaignLength(c)
+  let todayEntry = 1
+  if (c.start_mode === 'date' && c.start_date && state === 'active') {
+    todayEntry = Math.max(1, entryNumber(c.start_date, c.cadence, todayIn(c.timezone)))
+    if (length) todayEntry = Math.min(todayEntry, length)
+  } else if (c.start_mode === 'date' && c.start_date && (state === 'between' || state === 'ended') && length) {
+    todayEntry = length
+  }
+  return {
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    state,
+    isCurrent: data.current?.campaign.id === c.id,
+    goal: c.goal,
+    goalTarget: c.goal_target,
+    cadence: c.cadence,
+    startMode: c.start_mode,
+    startDate: c.start_date,
+    endDate: c.end_date,
+    timezone: c.timezone,
+    length,
+    durationRule: durationRule(c.goal, c.track_time),
+    defaultDuration: data.settings.default_duration_min,
+    todayEntry
+  }
+}
+
+export function uiLanguage(lang: string): string {
+  return UI_LANGUAGES.includes(lang) ? lang : 'en'
+}
+
+export async function siteStrings(tx: Tx, lang: string): Promise<Record<string, string>> {
+  const rows = await tx
+    .selectFrom('pt_site_string')
+    .select(['key', 'value'])
+    .where('language', '=', lang)
+    .where('key', 'in', [...EDITABLE_SITE_STRINGS])
+    .execute()
+  return Object.fromEntries(rows.filter(r => r.value.trim()).map(r => [r.key, r.value]))
+}
+
+export function feedbackConfig(): SiteView['feedback'] {
+  const f = platformConfig().feedback
+  if (!f.projectId || !f.apiBase) return null
+  const apiBase = f.apiBase.replace(/\/$/, '')
+  return { scriptUrl: `${apiBase}/js/feedback-web-component.iife.js`, projectId: f.projectId, apiBase }
+}
+
+export async function buildSiteView(tx: Tx, ctx: SiteContext, data: SiteData, lang: string, campaign: CampaignRow | null, path: string): Promise<SiteView> {
+  const { site } = data
+  const def = site.default_language
+  const branding = (site.branding ?? {}) as SiteBranding
+  const share = (site.share ?? {}) as SiteShare
+  const bc = brandColor(branding.color)
+  const cv = campaign ? campaignView(data, campaign) : null
+  const cfg = platformConfig()
+  return {
+    orgId: ctx.orgId,
+    slug: ctx.slug,
+    name: ctx.name,
+    url: ctx.canonicalOrigin,
+    path,
+    lang,
+    uiLang: uiLanguage(lang),
+    dir: languageDir(lang),
+    defaultLanguage: def,
+    languages: site.languages.map(code => ({ code, native: getLanguage(code)?.native ?? code })),
+    brand: { color: bc.color, text: bc.textColor },
+    logoUrl: branding.logo_url ?? null,
+    image: branding.image_url
+      ? { url: branding.image_url, alt: textIn(branding.image_alt, lang, def), credit: branding.image_credit ?? null, fx: branding.focal_x ?? 0.5, fy: branding.focal_y ?? 0.5 }
+      : null,
+    shareImageUrl: branding.share_image_url ?? branding.image_url ?? null,
+    description: textIn(site.description as TranslatableText | null, lang, def),
+    status: site.status,
+    preview: ctx.preview,
+    campaign: cv,
+    campaignSegment: cv && !cv.isCurrent ? cv.slug : null,
+    pastCampaigns: data.campaigns
+      .filter(c => c.id !== data.current?.campaign.id && campaignStatus(c) === 'ended')
+      .reverse()
+      .map(c => ({ slug: c.slug, name: c.name })),
+    strings: await siteStrings(tx, lang),
+    shareMessage: share.messages?.values?.[lang] || null,
+    settings: { showPeopleCount: data.settings.show_people_count, showPrayingNow: data.settings.show_praying_now, sharePrompts: data.settings.share_prompts },
+    donateUrl: cfg.donateUrl,
+    myUrl: `${platformOrigin()}/my`,
+    goUrl: `${goOrigin()}/${ctx.slug}`,
+    appStoreUrl: cfg.appStoreUrl || null,
+    playStoreUrl: cfg.playStoreUrl || null,
+    feedback: feedbackConfig(),
+    turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || null
+  }
+}
+
+export function landingOf(site: SiteRow): SiteLanding {
+  return (site.landing ?? {}) as SiteLanding
+}

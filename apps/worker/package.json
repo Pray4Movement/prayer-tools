@@ -1,0 +1,20 @@
+{
+  "name": "@prayertools/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prayertools/shared": "workspace:*",
+    "croner": "^9.0.0",
+    "kysely": "^0.28.0",
+    "kysely-postgres-js": "^2.0.0",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.0"
+  }
+}

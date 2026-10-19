@@ -1,0 +1,44 @@
+{
+  "core": {
+    "pkg": "@nuxtinator/core",
+    "version": "^2.6.0",
+    "ref": "@nuxtinator/core@2.6.0",
+    "source": "github:corsacca/nuxtinator/layers/core",
+    "tagPrefix": "@nuxtinator/core@"
+  },
+  "tenancy": {
+    "pkg": "@nuxtinator/tenancy",
+    "version": "^3.3.0",
+    "ref": "@nuxtinator/tenancy@3.3.0",
+    "source": "github:corsacca/nuxtinator/layers/tenancy",
+    "tagPrefix": "@nuxtinator/tenancy@"
+  },
+  "email-mailgun": {
+    "pkg": "@nuxtinator/email-mailgun",
+    "version": "^1.0.2",
+    "ref": "@nuxtinator/email-mailgun@1.0.2",
+    "source": "github:corsacca/nuxtinator/layers/email-mailgun",
+    "tagPrefix": "@nuxtinator/email-mailgun@"
+  },
+  "ai": {
+    "pkg": "@nuxtinator/ai",
+    "version": "~0.6.0",
+    "ref": "@nuxtinator/ai@0.6.0",
+    "source": "github:corsacca/nuxtinator/layers/ai",
+    "tagPrefix": "@nuxtinator/ai@"
+  },
+  "crm": {
+    "pkg": "@nuxtinator/crm",
+    "version": "~0.2.2",
+    "ref": "@nuxtinator/crm@0.2.2",
+    "source": "github:corsacca/nuxtinator/layers/apps/crm",
+    "tagPrefix": "@nuxtinator/crm@"
+  },
+  "inbox": {
+    "pkg": "@nuxtinator/inbox",
+    "version": "~0.5.4",
+    "ref": "@nuxtinator/inbox@0.5.4",
+    "source": "github:corsacca/nuxtinator/layers/apps/inbox",
+    "tagPrefix": "@nuxtinator/inbox@"
+  }
+}

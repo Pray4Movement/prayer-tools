@@ -1,0 +1,29 @@
+{
+  "name": "@prayertools/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "jose": "^6.1.0",
+    "nodemailer": "^9.0.1"
+  },
+  "peerDependencies": {
+    "kysely": "^0.28.0",
+    "kysely-postgres-js": "^2.0.0",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/nodemailer": "^8.0.1",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

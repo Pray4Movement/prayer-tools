@@ -1,0 +1,104 @@
+<script setup lang="ts">
+import type { PageView } from '~~/shared/view'
+
+const props = defineProps<{ page: Extract<PageView, { kind: 'landing' }> }>()
+const { site, link, st, num, date } = useSite()
+const { t } = useI18n()
+const has = (s: string) => props.page.sections.includes(s)
+const campaign = computed(() => site.value.campaign)
+
+useHead({ title: () => site.value.name })
+
+const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.value.image.fx * 100}% ${site.value.image.fy * 100}%` } : {})
+</script>
+
+<template>
+  <div>
+    <section class="brand-bg" aria-labelledby="top-title">
+      <div class="max-w-5xl mx-auto px-4 py-10 sm:py-16 grid gap-8 md:grid-cols-2 md:items-center">
+        <div class="space-y-5">
+          <p v-if="campaign" class="text-sm uppercase tracking-wide opacity-90">{{ campaign.name }}</p>
+          <h1 id="top-title" class="text-3xl sm:text-5xl font-bold leading-tight">{{ site.name }}</h1>
+          <p v-if="site.description" class="text-lg opacity-95">{{ site.description }}</p>
+          <p v-if="campaign?.state === 'upcoming' && campaign.startDate" class="font-medium">{{ t('landing.starts_on', { date: date(campaign.startDate) }) }}</p>
+          <GoalProgress v-if="page.progress" :progress="page.progress" on-brand />
+          <p v-if="page.prayingNow > 0" class="text-sm">{{ t('pray.praying_now', { n: num(page.prayingNow) }, page.prayingNow) }}</p>
+          <div class="flex flex-wrap gap-3">
+            <UButton :to="link('signup')" size="xl" color="neutral" variant="solid" class="bg-white text-stone-900 hover:bg-stone-100" :label="st('landing.signup.title')" />
+            <UButton v-if="page.today" :to="link('pray')" size="xl" variant="outline" class="text-(--brand-text) ring-(--brand-text)/60 hover:bg-white/10" :label="t('landing.pray_today')" />
+          </div>
+        </div>
+        <figure v-if="site.image" class="m-0">
+          <img :src="site.image.url" :alt="site.image.alt" class="w-full h-64 sm:h-80 object-cover rounded-xl shadow-lg" :style="imageStyle" fetchpriority="high">
+          <figcaption v-if="site.image.credit" class="mt-1 text-xs opacity-80">{{ site.image.credit }}</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <div class="max-w-3xl mx-auto px-4 py-10 space-y-14">
+      <section v-if="has('why')" aria-labelledby="why-title">
+        <h2 id="why-title" class="text-2xl font-bold mb-4">{{ st('landing.why.title') }}</h2>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div class="pt-content" v-html="page.why" />
+      </section>
+
+      <section v-for="c in has('custom') ? page.custom : []" :key="c.id" :aria-labelledby="`custom-${c.id}`" class="space-y-4">
+        <h2 :id="`custom-${c.id}`" class="text-2xl font-bold">{{ c.heading }}</h2>
+        <img v-if="c.imageUrl" :src="c.imageUrl" :alt="c.imageAlt" class="w-full rounded-xl" loading="lazy">
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div class="pt-content" v-html="c.html" />
+        <UButton v-if="c.buttonUrl && c.buttonLabel" :to="c.buttonUrl" target="_blank" :label="c.buttonLabel" trailing-icon="i-lucide-external-link" />
+      </section>
+
+      <section v-if="has('stories')" aria-labelledby="stories-title">
+        <h2 id="stories-title" class="text-2xl font-bold mb-4">{{ st('landing.stories.title') }}</h2>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <figure v-for="s in page.stories" :key="s.id" class="m-0 rounded-xl bg-white border border-stone-200 p-5">
+            <blockquote class="whitespace-pre-line text-stone-800">{{ s.body }}</blockquote>
+            <figcaption class="mt-3 text-sm text-stone-600">— {{ s.name || t('stories.anonymous') }}</figcaption>
+          </figure>
+        </div>
+        <p class="mt-4"><NuxtLink :to="link('stories')" class="underline">{{ t('stories.share_link') }}</NuxtLink></p>
+      </section>
+
+      <section v-if="has('how')" aria-labelledby="how-title">
+        <h2 id="how-title" class="text-2xl font-bold mb-4">{{ st('landing.how.title') }}</h2>
+        <p class="whitespace-pre-line text-stone-800">{{ st('landing.how.body', { site: site.name }) }}</p>
+      </section>
+
+      <section id="signup" aria-labelledby="signup-title" class="rounded-2xl bg-white border border-stone-200 p-6 space-y-3">
+        <h2 id="signup-title" class="text-2xl font-bold">{{ st('landing.signup.title') }}</h2>
+        <p class="text-stone-700">{{ st('landing.signup.intro', { site: site.name }) }}</p>
+        <UButton :to="link('signup')" size="xl" :label="t('landing.signup.button')" trailing-icon="i-lucide-arrow-right" />
+      </section>
+
+      <section v-if="has('today') && page.today" aria-labelledby="today-title">
+        <h2 id="today-title" class="text-2xl font-bold mb-1">{{ st('landing.today.title') }}</h2>
+        <p class="text-sm text-stone-600 mb-4">{{ t('pray.day', { n: num(page.today.day) }) }}</p>
+        <div class="relative max-h-80 overflow-hidden">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div class="pt-content" v-html="page.today.html" />
+          <div class="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-[#fafaf9]" />
+        </div>
+        <UButton :to="link('pray')" class="mt-4" :label="t('landing.continue_praying')" trailing-icon="i-lucide-arrow-right" />
+      </section>
+
+      <section v-if="has('share')" aria-labelledby="share-title" class="space-y-3">
+        <h2 id="share-title" class="text-2xl font-bold">{{ st('landing.share.title') }}</h2>
+        <p class="text-stone-700">{{ t('landing.share.body') }}</p>
+        <ShareButton />
+      </section>
+
+      <section v-if="has('contact')" aria-labelledby="contact-title" class="space-y-3">
+        <h2 id="contact-title" class="text-2xl font-bold">{{ st('landing.contact.title') }}</h2>
+        <p class="text-stone-700">{{ t('landing.contact.body') }}</p>
+        <UButton :to="link('contact')" variant="outline" :label="t('contact.button')" />
+      </section>
+
+      <section v-if="has('app')" aria-labelledby="app-title" class="space-y-3">
+        <h2 id="app-title" class="text-2xl font-bold">{{ t('landing.app.title') }}</h2>
+        <AppLinks />
+      </section>
+    </div>
+  </div>
+</template>

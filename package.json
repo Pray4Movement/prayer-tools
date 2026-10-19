@@ -1,0 +1,26 @@
+{
+  "name": "prayer-tools",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "packages/*",
+    "apps/admin",
+    "apps/admin/_layers/*",
+    "apps/public",
+    "apps/worker"
+  ],
+  "scripts": {
+    "setup": "bun install && bun run --cwd apps/admin sync-layers && bun install",
+    "dev:admin": "bun run --cwd apps/admin dev",
+    "dev:public": "bun run --cwd apps/public dev",
+    "dev:worker": "bun run --cwd apps/worker dev",
+    "db:setup": "bun run scripts/db-setup.ts",
+    "test": "bun run --cwd packages/shared test && bun run --cwd apps/worker test && bun run --cwd apps/public test && cd apps/admin/apps/marketing && npx vitest run",
+    "typecheck": "bun run --cwd packages/shared typecheck",
+    "smoke": "node apps/admin/scripts/smoke.ts && bun run --cwd apps/public smoke"
+  },
+  "devDependencies": {
+    "playwright": "1.57"
+  }
+}

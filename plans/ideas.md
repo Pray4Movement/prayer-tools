@@ -6,14 +6,6 @@ Not planned. Kept here so they aren't lost.
 
 Phases inside one campaign, e.g. weekly for most of the year then daily for a final 40-day push (the ICOM case). Each phase would have its own dates, cadence and content schedule. Intercessors would be invited to change their reminders and would have to accept; nobody is moved silently.
 
-## Shared inbox
-
-Today contact messages and stories reach the admin app, and replies to campaign emails go to the champion's own reply-to address.
-
-- **Contact inbox:** contact messages and stories as threads per campaign, with status (new / replied / closed), assignment and internal notes; the champion replies from the app by email and the reply is logged on the thread; operators get a cross-campaign view and can take escalations (privacy, safety, abuse).
-- **Full inbox:** replies to campaign emails come back into the thread too — needs inbound email (a reply address per campaign, parsing incoming mail).
-- AI-drafted replies would follow the AI integration doc.
-
 ## Print and PDF
 
 For churches printing a booklet, prayer groups meeting without phones, and people on poor connections.

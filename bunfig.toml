@@ -1,0 +1,4 @@
+# Hoisted linker: Nuxt resolves `extends: ['@nuxtinator/<id>']` by package name
+# from the root node_modules, which only the hoisted linker populates.
+[install]
+linker = "hoisted"
