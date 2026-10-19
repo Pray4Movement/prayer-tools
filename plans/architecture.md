@@ -72,7 +72,7 @@ A request sees one org. These features visit sites one at a time; none reads two
 - **Global suppression:** a table outside org scoping, owned by the email layer; the CRM and inbox check it.
 - **Marketing layer (from Doxa):** audiences from a registry the host fills (the CRM supplies "consented to updates"; prayer.tools adds "people in this campaign", "people from past campaigns"); per-tenant senders and branding; signed unsubscribe tokens and a layer-owned unsubscribe page; the parent record for multi-site sends; the personal template library.
 - **Kernel:** `listUserOrgs` (the user's orgs with their permissions in each) and `withOrgScope` / `listOrgScopes` for work that visits orgs one at a time.
-- **Shell:** rail items for the site's sections and `configureApp` relabels and order (released on master); `configureApp` also setting an app's default status; switcher wording ("Sites", "New site") from app config; a CRM app-config switch that hides the schema builder and permissions matrix.
+- **Shell:** rail items for the site's sections and `configureApp` relabels and order (released on master); `configureApp` also setting an app's default status; switcher wording ("Sites", "New site") from app config. To design: a way to keep the CRM's schema builder and permissions matrix from site owners.
 - **Inbox:** mail to `<site slug>@<shared inbound domain>` routes to that site (`INBOX_SLUG_ADDRESSES`), which is also the reply-to of site email unless the site sets its own.
 - **Personal library:** core's personal apps (user-scoped app layers) — already released.
 - **One Tiptap renderer** shared by the marketing layer and prayer.tools (`tiptapToHtml`), covering every node the editor offers, including Scripture verses.
