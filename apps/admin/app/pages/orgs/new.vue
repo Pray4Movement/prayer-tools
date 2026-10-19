@@ -25,6 +25,7 @@ const slugState = ref<{ available: boolean, reason?: string, suggestion?: string
 const errors = ref<Record<string, string>>({})
 const saving = ref(false)
 const geocoding = ref(false)
+const turnstile = ref<{ reset: () => void } | null>(null)
 
 const purposeItems = Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label }))
 
@@ -79,6 +80,7 @@ async function create() {
   } catch (err) {
     const data = (err as { data?: { data?: { errors?: Record<string, string> } } }).data?.data
     if (data?.errors) errors.value = data.errors
+    turnstile.value?.reset()
     toast.fail(err, 'Could not create the site')
   } finally {
     saving.value = false
@@ -257,6 +259,12 @@ async function create() {
         </UFormField>
       </div>
       <template #footer>
+        <PtTurnstile
+          ref="turnstile"
+          v-model="form.turnstile"
+          :site-key="meta?.turnstileSiteKey || null"
+          class="mb-3"
+        />
         <div class="flex justify-between">
           <UButton
             label="Back"
@@ -269,7 +277,7 @@ async function create() {
             icon="i-lucide-arrow-right"
             trailing
             :loading="saving"
-            :disabled="form.name.trim().length < 2 || !form.slug"
+            :disabled="form.name.trim().length < 2 || !form.slug || (!!meta?.turnstileSiteKey && !form.turnstile)"
             @click="create"
           />
         </div>

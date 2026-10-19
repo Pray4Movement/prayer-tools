@@ -38,6 +38,8 @@ export interface ProcessOptions {
 export interface ProcessResult {
   resolvedParents: number
   started: number
+  // Emails refused by the recipient check.
+  refused: number
   sent: number
   failed: number
   skipped: number
@@ -53,7 +55,7 @@ export async function processMarketing(opts: ProcessOptions): Promise<ProcessRes
   const app = opts.appDb as MarketingDb
   const now = opts.now ?? new Date()
   const log: Log = opts.log ?? ((m, f) => console.error(`[marketing] ${m}`, f ?? ''))
-  const result: ProcessResult = { resolvedParents: 0, started: 0, sent: 0, failed: 0, skipped: 0, retried: 0, paused: 0, finished: 0 }
+  const result: ProcessResult = { resolvedParents: 0, started: 0, refused: 0, sent: 0, failed: 0, skipped: 0, retried: 0, paused: 0, finished: 0 }
 
   await reapStaleClaims(admin, now)
   result.resolvedParents = await resolveParents(admin, app, opts.host, now, log)
@@ -251,8 +253,19 @@ async function sendDue(admin: MarketingDb, app: MarketingDb, host: MarketingHost
   for (const e of sending) byOrg.set(e.org_id, [...(byOrg.get(e.org_id) ?? []), e.id])
   let remaining = limit
 
-  for (const [orgId, emailIds] of byOrg) {
+  for (const [orgId, all] of byOrg) {
     try {
+      const emailIds: string[] = []
+      for (const emailId of all) {
+        const problem = await recipientCheck(admin, emailId, orgId)
+        if (!problem) {
+          emailIds.push(emailId)
+          continue
+        }
+        await inOrg(app, orgId, tx => failEmail(tx, emailId, 'recipient_check', now))
+        result.refused++
+        log('refused an email whose recipients are not all the site\'s own', { emailId, orgId, ...problem })
+      }
       const gate = await inOrg(app, orgId, tx => checkOrgGate(host, tx, orgId, now))
       if (gate.paused) {
         result.paused += gate.paused
@@ -293,6 +306,40 @@ async function sendDue(admin: MarketingDb, app: MarketingDb, host: MarketingHost
     }
     if (remaining <= 0) break
   }
+}
+
+// A site's send may only reach the site's own people: no more deliveries than
+// the site has email addresses, and none to an address of another site.
+// Counted on the admin connection with explicit org filters, so the check
+// doesn't depend on the RLS it guards.
+export async function recipientCheck(admin: MarketingDb, emailId: string, orgId: string): Promise<{ deliveries: number, addresses: number, foreign: number } | null> {
+  const r = await sql<{ deliveries: number, addresses: number, foreign: number }>`
+    SELECT
+      (SELECT count(*)::int FROM marketing_delivery WHERE email_id = ${emailId}) AS deliveries,
+      (SELECT count(*)::int FROM crm_channels WHERE org_id = ${orgId} AND channel_type = 'email') AS addresses,
+      (SELECT count(*)::int FROM marketing_delivery d LEFT JOIN crm_channels c ON c.id = d.channel_id
+        WHERE d.email_id = ${emailId} AND (d.org_id <> ${orgId} OR c.org_id <> ${orgId})) AS foreign
+  `.execute(admin)
+  const row = r.rows[0]!
+  return row.deliveries > row.addresses || row.foreign > 0 ? row : null
+}
+
+async function failEmail(tx: MarketingTx, emailId: string, reason: string, now: Date): Promise<void> {
+  const res = await tx
+    .updateTable('marketing_email')
+    .set({ status: 'failed', failed_reason: reason, finished_at: now, updated_at: now })
+    .where('id', '=', emailId)
+    .where('status', 'in', ['scheduled', 'sending', 'paused'])
+    .executeTakeFirst()
+  if (!Number(res.numUpdatedRows)) return
+  await tx
+    .updateTable('marketing_delivery')
+    .set({ status: 'skipped', skip_reason: reason, address: null, first_name: null })
+    .where('email_id', '=', emailId)
+    .where('status', '=', 'pending')
+    .where('claimed_at', 'is', null)
+    .execute()
+  await recount(tx, emailId)
 }
 
 async function checkOrgGate(host: MarketingHost, tx: MarketingTx, orgId: string, now: Date): Promise<{ budget: number, paused: number, rate?: number }> {
@@ -364,7 +411,7 @@ async function claimBatch(host: MarketingHost, tx: MarketingTx, orgId: string, e
   const items: Claimed[] = []
   for (const r of rows) {
     if (skip.has(r.id)) continue
-    const token = signToken({ o: orgId, e: emailId, d: r.id, p: email.parent_id, a: r.address! }, secret)
+    const token = signToken({ o: orgId, d: r.id }, secret)
     const urls = unsubscribeUrls(base, token)
     const recipient = { contactId: r.contact_id, channelId: r.channel_id, address: r.address!, language: r.language, firstName: r.first_name }
     const rendered = await renderEmail(host, tx, orgId, email, r.language, recipient, { unsubscribeUrl: urls.page, test: false })
@@ -421,8 +468,8 @@ async function recordOutcomes(tx: MarketingTx, emailId: string, outcomes: Outcom
 
 // ── Parents ─────────────────────────────────────────────────────────────────
 
-// Combined results on each running parent; a parent is sent once every site's
-// email is sent or cancelled.
+// Combined results on each parent; a parent is sent once every site's email is
+// sent, cancelled or failed.
 async function syncParents(admin: MarketingDb, now: Date): Promise<void> {
   await sql`
     UPDATE marketing_parent p SET
@@ -434,10 +481,17 @@ async function syncParents(admin: MarketingDb, now: Date): Promise<void> {
     FROM (
       SELECT parent_id,
         sum(recipients)::int AS recipients, sum(sent)::int AS sent, sum(skipped)::int AS skipped, sum(failed)::int AS failed,
-        count(*) FILTER (WHERE status NOT IN ('sent', 'cancelled'))::int AS open
+        count(*) FILTER (WHERE status NOT IN ('sent', 'cancelled', 'failed'))::int AS open
       FROM marketing_email WHERE parent_id IS NOT NULL GROUP BY parent_id
     ) s
     WHERE s.parent_id = p.id AND p.status IN ('sending', 'paused')
+  `.execute(admin)
+  // Unsubscribes keep arriving after a send finishes; each counts on the site
+  // email it came from.
+  await sql`
+    UPDATE marketing_parent p SET unsubscribes = s.unsubscribes, updated_at = ${now}
+    FROM (SELECT parent_id, sum(unsubscribes)::int AS unsubscribes FROM marketing_email WHERE parent_id IS NOT NULL GROUP BY parent_id) s
+    WHERE s.parent_id = p.id AND p.unsubscribes <> s.unsubscribes
   `.execute(admin)
 }
 

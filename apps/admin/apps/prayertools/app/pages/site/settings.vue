@@ -444,10 +444,14 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
               class="w-full"
             />
           </UFormField>
-          <UFormField label="Reply-to address">
+          <UFormField
+            label="Reply-to address"
+            :help="site.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}).` : undefined"
+          >
             <UInput
               v-model="identity.reply_to"
               type="email"
+              :placeholder="site.inboxAddress ?? undefined"
               class="w-full"
             />
           </UFormField>

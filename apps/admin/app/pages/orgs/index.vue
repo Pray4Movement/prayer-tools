@@ -10,18 +10,51 @@ interface SiteRow {
   status: 'draft' | 'published' | 'archived'
   suspended: boolean
   url: string
-  recently_added: boolean
   onboarding: { step?: string, completed?: boolean }
   campaign: { id: string, name: string, state: string, start_date: string | null } | null
   people: number
 }
 
-const { data, status } = await useFetch<{ sites: SiteRow[] }>('/api/pt/sites', { key: 'pt-my-sites' })
+interface InviteRow {
+  id: string
+  invited_by: string | null
+  sites: { name: string, slug: string, roles: string[] }[]
+}
+
+const { data, status, refresh } = await useFetch<{ sites: SiteRow[], invites: InviteRow[] }>('/api/pt/sites', { key: 'pt-my-sites' })
 const { user } = useAuth()
 const isOperator = computed(() => !!(user.value as { is_admin?: boolean } | null)?.is_admin)
 const q = ref('')
 const sites = computed(() => (data.value?.sites ?? []).filter(s => !q.value || `${s.name} ${s.slug}`.toLowerCase().includes(q.value.toLowerCase())))
-const newlyAdded = computed(() => (data.value?.sites ?? []).filter(s => s.recently_added))
+const toast = usePtToast()
+const accepting = ref<string | null>(null)
+const declining = ref<string | null>(null)
+
+async function decline(invite: InviteRow) {
+  declining.value = invite.id
+  try {
+    await $fetch(`/api/pt/invites/${invite.id}/decline`, { method: 'POST' })
+    await refresh()
+  } catch (err) {
+    toast.fail(err, 'Could not decline the invitation')
+  } finally {
+    declining.value = null
+  }
+}
+
+async function accept(invite: InviteRow) {
+  accepting.value = invite.id
+  try {
+    const res = await $fetch<{ slug: string | null }>(`/api/pt/invites/${invite.id}/accept`, { method: 'POST' })
+    await refreshNuxtData('user-orgs').catch(() => {})
+    if (res.slug) await navigateTo(`/@${res.slug}/site`)
+    else await refresh()
+  } catch (err) {
+    toast.fail(err, 'Could not accept the invitation')
+  } finally {
+    accepting.value = null
+  }
+}
 
 function roleLabel(roles: string[]): string {
   return roles.map(r => PT_LABELS.role[r] ?? r).join(', ')
@@ -63,14 +96,17 @@ function roleLabel(roles: string[]): string {
     </div>
 
     <UAlert
-      v-for="s in newlyAdded"
-      :key="`new-${s.id}`"
-      icon="i-lucide-user-plus"
+      v-for="inv in data?.invites ?? []"
+      :key="`invite-${inv.id}`"
+      icon="i-lucide-mail-plus"
       color="info"
       variant="soft"
-      :title="`You've been added to ${s.name}`"
-      :description="`Your role: ${roleLabel(s.roles)}.`"
-      :actions="[{ label: 'Open', to: `/@${s.slug}/site` }]"
+      :title="`You're invited to ${inv.sites.map(x => x.name).join(', ')}`"
+      :description="`${inv.invited_by ? `From ${inv.invited_by}. ` : ''}Your role: ${roleLabel(inv.sites[0]?.roles ?? [])}.`"
+      :actions="[
+        { label: 'Accept', loading: accepting === inv.id, onClick: () => accept(inv) },
+        { label: 'Decline', color: 'neutral', variant: 'outline', loading: declining === inv.id, onClick: () => decline(inv) }
+      ]"
     />
 
     <div

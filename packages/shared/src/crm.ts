@@ -28,8 +28,9 @@ export const CONSENT_WORDING_VERSION = '2026-09'
 export async function ensureSystemUser(db: Db | Tx): Promise<void> {
   await db
     .insertInto('users')
-    .values({ id: SYSTEM_USER_ID, email: SYSTEM_USER_EMAIL, display_name: 'Prayer.Tools system', created: new Date(), updated: new Date() })
-    .onConflict(oc => oc.column('id').doNothing())
+    // Verified, so it never reads as an unaccepted invite (no password, not verified).
+    .values({ id: SYSTEM_USER_ID, email: SYSTEM_USER_EMAIL, display_name: 'Prayer.Tools system', verified: true, created: new Date(), updated: new Date() })
+    .onConflict(oc => oc.column('id').doUpdateSet({ verified: true }))
     .execute()
 }
 

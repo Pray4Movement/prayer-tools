@@ -7,6 +7,6 @@ import type { Logger } from './log'
 
 export async function runMarketing(ctx: WorkerContext, log: Logger) {
   const res = await processMarketing({ adminDb: ctx.admin, appDb: ctx.app, host: ptMarketingHost, now: ctx.now(), limit: 1000, log: (m, f) => log.warn(`marketing.${m}`, f) })
-  if (res.sent || res.failed || res.paused || res.started) log.info('marketing.run', { ...res })
+  if (res.sent || res.failed || res.paused || res.started || res.refused) log.info('marketing.run', { ...res })
   return res
 }

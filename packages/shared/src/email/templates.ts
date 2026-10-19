@@ -8,6 +8,7 @@ import type { SiteBranding, SiteEmailIdentity } from '../db/schema'
 import { emailT } from '../i18n/email'
 import { languageDir } from '../languages'
 import { siteUrlFor } from '../site'
+import { siteInboxAddress } from '../inbox'
 import { escapeHtml } from '../tiptap'
 
 export interface SiteMailContext {
@@ -44,7 +45,8 @@ export async function loadSiteMailContext(tx: Tx, orgId: string): Promise<SiteMa
     logoUrl: identity.logo_url ?? branding.logo_url ?? null,
     fromName: identity.from_name || org.name,
     fromLocal: identity.from_local || org.slug,
-    replyTo: identity.reply_to || null,
+    // A reply-to the site chose, else the site's inbox.
+    replyTo: identity.reply_to || await siteInboxAddress(tx, org.slug),
     signature,
     defaultLanguage: site.default_language
   }

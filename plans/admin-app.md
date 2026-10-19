@@ -12,10 +12,12 @@ Where champions and their teams build and run sites and their campaigns. Everyth
 - Nuxtinator core + tenancy + the shared CRM, inbox, marketing and email provider layers + a prayer.tools layer; the tenant (org) is the site. See [architecture.md](architecture.md).
 - Client-rendered SPA on a single origin. Never edge-cached (`Cache-Control: private, no-store` on the API).
 - Owns the database migrations for the whole platform.
-- Auth: Nuxtinator's current JWT auth with password and forgot password for recovery; Google and Apple sign-in may be added.
+- Auth: Nuxtinator's sessions (a short-lived access token and a rotating refresh token) with password and forgot password for recovery; Google and Apple sign-in may be added.
 - Nuxtinator gaps to close: i18n for the admin UI, rate limiting.
 
 ## Accounts and access
+
+- **One site is the default.** Everything starts from one site: picking a site, its dashboard, emailing that site's subscribers, that site's contacts (Intercessors). The switcher says "Sites" and "New site". Anything spanning several sites (multi-site sends) is an advanced screen, reached from a site's email page, never the default screen.
 
 - One login; after login, **Your sites** lists every site the user belongs to: name, live address, role, status (draft / published / archived), the current or next campaign, and the people count. Pending invites show at the top; with no sites, the page starts onboarding. No subsites, no per-site logins.
 - Per-site roles and invites from Nuxtinator's tenancy layer:
@@ -76,12 +78,13 @@ Keeps what today's flow does behind the scenes: Turnstile and a bad-words check 
 The marketing layer (Doxa's marketing system — composer, Tiptap templates, audiences, senders, consent, one-click unsubscribe — ported to Nuxtinator), scoped to a site and built on the CRM.
 
 - **Audiences:** the current campaign's intercessors, past campaigns' intercessors (re-engagement for a relaunch), everyone who consented, everyone who ticked one of the site's custom consent options. Consent is per site, so it carries across campaigns.
-- **Several sites at once:** a champion can write one email and send it to chosen audiences on several of their sites. Each person gets one email, from the most recently joined chosen site where they consented; unsubscribing stops updates from every chosen site they belong to (see [architecture.md](architecture.md)).
+- **Before sending:** the confirm names the site and how many people the email reaches there ("Send to 1,240 people on Pray for Damascus?"); a multi-site send lists every site and its count.
+- **Several sites at once** (advanced screen): a champion can write one email and send it to chosen audiences on several of their sites. Each person gets one email, from the most recently joined chosen site where they consented; unsubscribing stops updates from every chosen site they belong to (see [architecture.md](architecture.md)).
 - **Templates and variables:** start from the champion's personal templates; variables (`{site name}`, `{campaign name}`, `{past campaign}`, `{site link}`, `{first name}`) are filled in per site.
 - **Consent:** signup offers unchecked boxes for updates from this site and news from Prayer.Tools; reminders and transactional email come with joining. Champions can add their own consent options, with their own label. Every grant and withdrawal goes to the CRM's consent log (see [README.md](README.md)). Marketing only to people who opted in on that site. Prayer reminders are not marketing; unsubscribing from announcements never stops reminders. Bounce suppression is global per address.
 - **Anonymous app intercessors** are reached by push, not email.
 - **Reputation:** reminders and site marketing send on separate subdomains, so one site's bad send can't hurt reminders. Per-site throttling; marketing auto-pauses on high complaint rates.
-- **Sending identity (leaning):** default is the platform domain with a per-site From name and address and the champion's reply-to. Optional verified custom sending domain: the champion adds DKIM / SPF / DMARC records and the domain is registered with the email provider through its API. Per-site custom SMTP is not planned (loses bounce and complaint tracking; Workspace / Microsoft 365 daily limits stall large sends). Cloudflare Email Service can't send from champions' domains (the sender domain must be a Cloudflare zone in our account).
+- **Sending identity (leaning):** default is the platform domain with a per-site From name and address; replies go to the site's inbox (`<slug>@` the shared inbound domain), or to a reply-to the champion sets. Optional verified custom sending domain: the champion adds DKIM / SPF / DMARC records and the domain is registered with the email provider through its API. Per-site custom SMTP is not planned (loses bounce and complaint tracking; Workspace / Microsoft 365 daily limits stall large sends). Cloudflare Email Service can't send from champions' domains (the sender domain must be a Cloudflare zone in our account).
 
 ## Settings
 

@@ -214,7 +214,7 @@ const checklist = computed(() => {
     { label: 'Prayer content for the campaign', done: (content.value?.libraries.length ?? 0) > 0 },
     { label: 'A description for the top of the page', done: !!desc },
     { label: 'A top image', done: !!s.site.branding?.image_url },
-    { label: 'A reply-to address for emails', done: !!s.site.email_identity?.reply_to },
+    { label: 'A reply-to address for emails', done: !!(s.site.email_identity?.reply_to || s.inboxAddress) },
     { label: 'Translations for every language', done: (content.value?.libraries ?? []).every(l => !l.missingLanguages.length) }
   ]
 })
@@ -546,11 +546,12 @@ async function publish() {
           </UFormField>
           <UFormField
             label="Replies go to"
-            help="Your email address, for people who reply to reminders."
+            :help="site?.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}), or give your own address.` : 'Your email address, for people who reply to reminders.'"
           >
             <UInput
               v-model="replyTo"
               type="email"
+              :placeholder="site?.inboxAddress ?? undefined"
               class="w-full"
             />
           </UFormField>

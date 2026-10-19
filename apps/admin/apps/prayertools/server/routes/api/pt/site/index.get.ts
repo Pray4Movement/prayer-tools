@@ -2,6 +2,7 @@ import { defineTenantHandler } from '#tenant/server'
 import { siteUrl, subdomainUrl } from '@prayertools/shared/site'
 import { pickCurrentCampaign } from '@prayertools/shared/setup'
 import { brandColor } from '@prayertools/shared/colors'
+import { siteInboxAddress } from '@prayertools/shared/inbox'
 
 export default defineTenantHandler({ appId: 'site' }, async (tx, ctx) => {
   ptNeed(ctx, 'pt.access')
@@ -20,6 +21,7 @@ export default defineTenantHandler({ appId: 'site' }, async (tx, ctx) => {
     brand: brandColor((site.branding as { color?: string })?.color),
     domains,
     directory: directory ?? null,
+    inboxAddress: await siteInboxAddress(tx as never, ctx.orgSlug),
     currentCampaign: current ? { ...current.campaign, state: current.state } : null,
     campaignCount: campaigns.length,
     roles: ctx.roles,

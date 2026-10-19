@@ -14,6 +14,7 @@ import { sendMail } from './email/transport'
 import { emailT } from './i18n/email'
 import { getLanguage } from './languages'
 import { campaignStatus, pickCurrentCampaign } from './setup'
+import { PT_LIBRARY_APP } from './site'
 import { tiptapToHtml, tiptapToText } from './tiptap'
 import { textIn } from './translatable'
 import type { Selectable } from 'kysely'
@@ -141,6 +142,8 @@ async function consentMembers(tx: Tx, orgId: string, purpose: string, defaultLan
 }
 
 export const ptMarketingHost = {
+  personalAppId: PT_LIBRARY_APP,
+
   secret(): string {
     return platformConfig().secret
   },

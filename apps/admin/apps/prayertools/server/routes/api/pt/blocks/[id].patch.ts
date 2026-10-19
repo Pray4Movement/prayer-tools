@@ -1,4 +1,5 @@
-import { db } from '#core/server/utils/database'
+import { withUserContext } from '#core/server/utils/personal-apps'
+import { PT_LIBRARY_APP } from '@prayertools/shared/site'
 import { jsonb } from '@prayertools/shared/db/json'
 
 export default defineEventHandler(async (event) => {
@@ -11,6 +12,6 @@ export default defineEventHandler(async (event) => {
     if (!doc) ptBadRequest('Invalid content.')
     patch.content = jsonb(doc)
   }
-  await db.updateTable('pt_personal_block').set(patch as never).where('id', '=', getRouterParam(event, 'id')!).where('owner_user_id', '=', user.userId).execute()
+  await withUserContext(event, { appId: PT_LIBRARY_APP }, tx => ptTx(tx).updateTable('pt_personal_block').set(patch as never).where('id', '=', getRouterParam(event, 'id')!).where('owner_user_id', '=', user.userId).execute())
   return { ok: true }
 })

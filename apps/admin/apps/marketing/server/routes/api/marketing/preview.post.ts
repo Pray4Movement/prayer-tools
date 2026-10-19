@@ -8,8 +8,7 @@ export default defineMarketingHandler('marketing.access', async (event, tx, ctx)
   const { languages } = await host.languages(marketingTx(tx), ctx.orgId)
   const input = marketingDraftInput(b, languages.map(l => l.code))
   const lang = typeof b.lang === 'string' && languages.some(l => l.code === b.lang) ? b.lang : input.sourceLanguage
-  const user = await marketingUserEmail(ctx.userId)
-  const token = signToken({ o: ctx.orgId, a: user.email, t: true }, host.secret())
+  const token = signToken({ o: ctx.orgId, t: true }, host.secret())
   const rendered = await renderEmail(host, marketingTx(tx), ctx.orgId, { versions: input.versions, source_language: input.sourceLanguage }, lang, null, {
     unsubscribeUrl: unsubscribeUrls(host.unsubscribeBaseUrl(), token).page,
     test: false

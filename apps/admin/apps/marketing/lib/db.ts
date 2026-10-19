@@ -9,6 +9,14 @@ export async function inOrg<T>(db: MarketingDb, orgId: string, fn: (tx: Marketin
   })
 }
 
+// Runs `fn` as one user (`app.current_user`), for rows a user owns.
+export async function asUser<T>(db: MarketingDb, userId: string, fn: (tx: MarketingTx) => Promise<T>): Promise<T> {
+  return await db.transaction().execute(async (tx) => {
+    await sql`select set_config('app.current_user', ${userId}, true)`.execute(tx)
+    return await fn(tx)
+  })
+}
+
 export function jsonb<T>(value: T) {
   return sql<T>`${JSON.stringify(value)}::text::jsonb`
 }

@@ -3,6 +3,7 @@ import { sql } from 'kysely'
 import { withOrg } from '@prayertools/shared/db/scope'
 import { suppress } from '@prayertools/shared/email/suppression'
 import { materialize, processMarketing } from '../lib/deliver'
+import { asUser } from '../lib/db'
 import { scheduleParent } from '../lib/multi'
 import { addPerson, captureHost, cleanup, closeEnv, createEmail, createSite, createUser, deliveries, emailRow, testEnv, versions, type TestEnv } from './helpers'
 
@@ -172,7 +173,7 @@ describe('multi-site send', () => {
       org_ids: sql`${`{${[s1.orgId, s2.orgId, s3.orgId].join(',')}}`}::uuid[]`,
       audiences: sql`'{consented_updates}'::text[]`
     } as never).returning('id' as never).executeTakeFirstOrThrow() as { id: string }
-    expect(await scheduleParent(env.app as never, parent.id, user, new Date(Date.now() - 1000))).toBe(true)
+    expect(await asUser(env.app as never, user, tx => scheduleParent(tx, parent.id, user, new Date(Date.now() - 1000)))).toBe(true)
 
     const host = captureHost()
     const res = await run(host)
@@ -192,5 +193,52 @@ describe('multi-site send', () => {
 
     await run(host)
     expect(host.mails).toHaveLength(3)
+  })
+})
+
+describe('recipient check', () => {
+  it('refuses an email with a delivery to another site\'s address, before anything is sent', async () => {
+    const a = await createSite(env, 'Site A')
+    const b = await createSite(env, 'Site B')
+    const mine = await addPerson(env, a)
+    const theirs = await addPerson(env, b)
+    const emailId = await createEmail(env, a.orgId)
+    const host = captureHost()
+    // Start it without sending, then plant a delivery to site B's person.
+    await run(host, new Date(), 0)
+    expect(host.mails).toHaveLength(0)
+    await sql`
+      INSERT INTO marketing_delivery (org_id, email_id, channel_id, address, language, purpose, status)
+      VALUES (${a.orgId}, ${emailId}, ${theirs.channelId}, ${theirs.email}, 'en', 'site_updates', 'pending')
+    `.execute(env.admin)
+
+    const res = await run(host)
+    expect(res.refused).toBe(1)
+    expect(host.mails).toHaveLength(0)
+    expect(await emailRow(env, a.orgId, emailId)).toMatchObject({ status: 'failed', failed_reason: 'recipient_check' })
+    const rows = await deliveries(env, a.orgId, emailId)
+    expect(rows.find(r => r.channel_id === mine.channelId)).toMatchObject({ status: 'skipped', skip_reason: 'recipient_check' })
+  })
+
+  it('lets a site\'s own send through', async () => {
+    const a = await createSite(env)
+    await addPerson(env, a)
+    await createEmail(env, a.orgId)
+    const host = captureHost()
+    const res = await run(host)
+    expect(res.refused).toBe(0)
+    expect(host.mails).toHaveLength(1)
+  })
+})
+
+describe('reply-to', () => {
+  it('goes to the site\'s inbox when the site sets none', async () => {
+    const site = await createSite(env)
+    await withOrg(env.app, site.orgId, tx => tx.updateTable('pt_site').set({ email_identity: sql`'{}'::jsonb` }).execute())
+    await addPerson(env, site)
+    await createEmail(env, site.orgId)
+    const host = captureHost()
+    await run(host)
+    expect(host.mails[0]!.replyTo).toBe(`${site.slug}@inbox.test`)
   })
 })

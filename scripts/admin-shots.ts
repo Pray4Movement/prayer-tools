@@ -1,11 +1,12 @@
 // Logs into the admin app, visits pages, saves screenshots and reports
 // console errors and failed API calls. Usage:
 //   bun run scripts/admin-shots.ts /orgs /@ramadan-demo/site …
-// Env: ADMIN_URL (http://localhost:2380), ADMIN_EMAIL, ADMIN_PASSWORD, SHOTS_DIR.
+// Env: ADMIN_URL (the running admin app), ADMIN_EMAIL, ADMIN_PASSWORD, SHOTS_DIR.
 import { chromium } from 'playwright'
 import { mkdirSync } from 'node:fs'
 
-const base = process.env.ADMIN_URL || 'http://localhost:2380'
+if (!process.env.ADMIN_URL) throw new Error('Set ADMIN_URL to the running admin app.')
+const base = process.env.ADMIN_URL
 const dir = process.env.SHOTS_DIR || '/tmp/claude-501/pt2-shots'
 mkdirSync(dir, { recursive: true })
 const paths = process.argv.slice(2)

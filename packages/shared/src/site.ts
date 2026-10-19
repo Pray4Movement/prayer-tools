@@ -1,6 +1,7 @@
 // Site addressing and settings. A site is reachable at `{slug}.<base host>`
 // always, and at its custom domain once Cloudflare reports it active — which
 // then becomes the canonical address.
+import { sql } from 'kysely'
 import { platformConfig } from './config'
 import { withOrg, type Db, type Tx } from './db/scope'
 import type { SiteStatus } from './db/schema'
@@ -138,4 +139,23 @@ export function settingsOverrides(values: Record<string, unknown>): Record<strin
     if (v !== undefined && typeof v === typeof def && v !== def) out[k] = v
   }
   return out
+}
+
+// Apps every site has on. They are host-controlled: a site gets them when it
+// is created, and its owners can't switch them off.
+export const PT_ORG_APPS = ['site', 'crm', 'inbox', 'marketing'] as const
+
+// The champion's personal app: their templates, images and blocks, and their
+// sends to several sites.
+export const PT_LIBRARY_APP = 'library'
+
+// Turns every site app on for an org (a new site, or the staff org).
+export async function enableSiteApps(db: Db | Tx, orgId: string): Promise<void> {
+  const apps = sql.join(PT_ORG_APPS.map(id => sql`(${id})`))
+  await sql`INSERT INTO apps (id) VALUES ${apps} ON CONFLICT (id) DO NOTHING`.execute(db)
+  await sql`
+    INSERT INTO org_apps (org_id, app_id, enabled, source, updated_at)
+    SELECT ${orgId}::uuid, id, true, 'host', now() FROM (VALUES ${apps}) AS a(id)
+    ON CONFLICT (org_id, app_id) DO UPDATE SET enabled = true, source = 'host', updated_at = now()
+  `.execute(db)
 }

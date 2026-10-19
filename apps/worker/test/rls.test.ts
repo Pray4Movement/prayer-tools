@@ -5,6 +5,10 @@ import { addDays, todayIn } from '@prayertools/shared/dates'
 import { SCHEDULED_JOBS } from '../src/daily'
 import { drainJobs } from '../src/jobs/processor'
 import { runReminderSweep } from '../src/reminders'
+import { runMarketing } from '../src/marketing'
+import { asUser } from '../../admin/apps/marketing/lib/db'
+import { scheduleParent } from '../../admin/apps/marketing/lib/multi'
+import { jsonb } from '@prayertools/shared/db/json'
 import { addCommitment, cleanup, closeEnv, createCampaign, createSite, createSubscriber, testCtx, testEnv, type TestEnv } from './helpers'
 import { DAY } from '../src/util'
 
@@ -68,5 +72,55 @@ describe('connections', () => {
     // The only admin write to pt_commitment is the claim stamp.
     const commitmentWrites = queries.filter(q => writesIn(q).includes('pt_commitment'))
     expect(commitmentWrites.every(q => /SET claimed_at = \$\d+::timestamptz\s+FROM due/.test(q))).toBe(true)
+  })
+})
+
+describe('marketing', () => {
+  it('the admin connection only finds work, reaps stale claims and totals sends; it never adds or widens deliveries', async () => {
+    const a = await createSite(env)
+    const b = await createSite(env)
+    for (const site of [a, b]) {
+      const campaign = await createCampaign(env, site.orgId, { endMode: 'none' })
+      await createSubscriber(env, site.orgId, campaign)
+    }
+    const versions = jsonb({ en: { subject: 'Hi', content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'News' }] }] } } })
+    await withOrg(env.app, a.orgId, tx => sql`
+      INSERT INTO marketing_email (versions, source_language, audiences, status, scheduled_at)
+      VALUES (${versions}, 'en', '{current_campaign}', 'scheduled', now() - interval '1 minute')
+    `.execute(tx))
+    const user = await env.admin.insertInto('users').values({ email: `u-${Date.now()}@test.example`, display_name: 'Champion', created: new Date(), updated: new Date() }).returning('id').executeTakeFirstOrThrow()
+    env.users.push(user.id)
+    const parent = await sql<{ id: string }>`
+      INSERT INTO marketing_parent (owner_user_id, versions, source_language, org_ids, audiences)
+      VALUES (${user.id}, ${versions}, 'en', ${`{${a.orgId},${b.orgId}}`}::uuid[], '{current_campaign}') RETURNING id
+    `.execute(env.admin)
+    await asUser(env.app as never, user.id, tx => scheduleParent(tx, parent.rows[0]!.id, user.id, new Date(Date.now() - 60_000)))
+    // A delivery claimed by a crashed pass long ago.
+    await withOrg(env.app, b.orgId, async (tx) => {
+      const email = await sql<{ id: string }>`
+        INSERT INTO marketing_email (versions, source_language, audiences, status, started_at)
+        VALUES (${versions}, 'en', '{current_campaign}', 'sending', now()) RETURNING id
+      `.execute(tx)
+      await sql`
+        INSERT INTO marketing_delivery (email_id, address, language, status, claimed_at)
+        VALUES (${email.rows[0]!.id}, 'stale@test.example', 'en', 'pending', now() - interval '1 hour')
+      `.execute(tx)
+    })
+
+    queries.length = 0
+    const ctx = testCtx(env)
+    await runMarketing(ctx, ctx.log)
+    await runMarketing(ctx, ctx.log)
+
+    const marketing = queries.filter(q => writesIn(q).some(t => t.startsWith('marketing_')))
+    expect(marketing.length).toBeGreaterThan(0)
+    expect(marketing.filter(q => /\binsert\s+into\b/i.test(q))).toEqual([])
+    const tables = new Set(marketing.flatMap(writesIn).filter(t => t.startsWith('marketing_')))
+    expect([...tables].sort()).toEqual(['marketing_delivery', 'marketing_email', 'marketing_parent'])
+    // Admin writes to deliveries are the reap: a stale pending claim becomes failed.
+    const deliveryWrites = marketing.filter(q => writesIn(q).includes('marketing_delivery'))
+    expect(deliveryWrites.every(q => /"status" = \$\d+/.test(q) && /"claimed_at" < \$\d+/.test(q))).toBe(true)
+    const reaped = await withOrg(env.app, b.orgId, tx => sql<{ status: string }>`SELECT status FROM marketing_delivery WHERE address IS NULL AND error IS NOT NULL`.execute(tx))
+    expect(reaped.rows.map(r => r.status)).toEqual(['failed'])
   })
 })

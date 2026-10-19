@@ -1,8 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { sql } from 'kysely'
 import { processMarketing } from '../lib/deliver'
+import { asUser } from '../lib/db'
 import { scheduleParent } from '../lib/multi'
-import { signToken } from '../lib/tokens'
+import { signToken, UNSUBSCRIBE_TOKEN_DAYS, verifyToken } from '../lib/tokens'
 import { applyUnsubscribe, describeUnsubscribe } from '../lib/unsubscribe'
 import { addPerson, captureHost, cleanup, closeEnv, consentOf, createEmail, createSite, createUser, emailRow, testEnv, versions, type TestEnv } from './helpers'
 
@@ -56,15 +57,27 @@ describe('unsubscribe', () => {
     expect(sub.rows[0]!.status).toBe('active')
   })
 
-  it('rejects a tampered token and ignores test tokens', async () => {
+  it('names a delivery, not an address, and rejects tampered or expired tokens', async () => {
     const site = await createSite(env)
     const p = await addPerson(env, site)
+    await createEmail(env, site.orgId)
     const host = captureHost()
-    const good = signToken({ o: site.orgId, a: p.email }, host.secret())
+    await processMarketing({ adminDb: env.admin, appDb: env.app, host, log: () => {} })
+    const good = tokenOf(host.mails.find(m => m.to === p.email)!.unsubscribeUrl)
+    expect(Buffer.from(good.split('.')[0]!, 'base64url').toString('utf8')).not.toContain(p.email.split('@')[0])
     expect(await applyUnsubscribe(host, env.app as never, `${good}x`, capture)).toBeNull()
-    const test = signToken({ o: site.orgId, a: p.email, t: true }, host.secret())
+
+    const payload = JSON.parse(Buffer.from(good.split('.')[0]!, 'base64url').toString('utf8')) as { o: string, d: string }
+    const expired = signToken({ o: payload.o, d: payload.d }, host.secret(), new Date(Date.now() - (UNSUBSCRIBE_TOKEN_DAYS + 1) * 86_400_000))
+    expect(verifyToken(expired, host.secret())).toBeNull()
+    expect(await applyUnsubscribe(host, env.app as never, expired, capture)).toBeNull()
+    expect((await consentOf(env, site.orgId, p.channelId)).status).toBe('opt_in')
+
+    const test = signToken({ o: site.orgId, t: true }, host.secret())
     expect(await applyUnsubscribe(host, env.app as never, test, capture)).toMatchObject({ test: true, withdrawn: 0 })
     expect((await consentOf(env, site.orgId, p.channelId)).status).toBe('opt_in')
+
+    expect(await applyUnsubscribe(host, env.app as never, good, capture)).toMatchObject({ withdrawn: 1 })
   })
 
   it('from a multi-site send, withdraws updates on every chosen site the person belongs to', async () => {
@@ -83,7 +96,7 @@ describe('unsubscribe', () => {
       RETURNING id
     `.execute(env.admin)
     const parentId = parent.rows[0]!.id
-    await scheduleParent(env.app as never, parentId, user, new Date(Date.now() - 1000))
+    await asUser(env.app as never, user, tx => scheduleParent(tx, parentId, user, new Date(Date.now() - 1000)))
     const host = captureHost()
     await processMarketing({ adminDb: env.admin, appDb: env.app, host, log: () => {} })
     const mine = host.mails.filter(m => m.to === email)
@@ -102,6 +115,8 @@ describe('unsubscribe', () => {
       expect(state.events.filter(e => e.event === 'revoke')).toHaveLength(1)
     }
     expect((await consentOf(env, s3.orgId, c.channelId)).status).toBe('opt_in')
+    // The worker totals the send's unsubscribes from its site emails, also after it finished.
+    await processMarketing({ adminDb: env.admin, appDb: env.app, host, log: () => {} })
     const p = await sql<{ unsubscribes: number }>`SELECT unsubscribes FROM marketing_parent WHERE id = ${parentId}`.execute(env.admin)
     expect(p.rows[0]!.unsubscribes).toBe(1)
   })

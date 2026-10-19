@@ -14,6 +14,8 @@ export default defineNitroPlugin(() => {
     path: '/marketing',
     icon: 'i-lucide-mail',
     requiredPermission: 'marketing.access',
+    defaultStatus: 'host_controlled',
+    shellSidebar: true,
     order: 30
   })
   registerNavItem({ appId: 'marketing', title: 'Emails', path: '/marketing', icon: 'i-lucide-mails', requiredPermission: 'marketing.access', order: 10 })

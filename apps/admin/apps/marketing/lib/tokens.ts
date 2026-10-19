@@ -1,23 +1,27 @@
-// Signed unsubscribe tokens: base64url JSON payload + HMAC-SHA256.
+// Signed unsubscribe tokens: base64url JSON payload + HMAC-SHA256. A token
+// names a delivery by id, never an address, and expires.
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
+export const UNSUBSCRIBE_TOKEN_DAYS = 365
+
 export interface UnsubscribePayload {
-  // Org whose email was sent, and that email (absent for test sends).
+  // Org whose email was sent.
   o: string
-  e?: string
+  // The delivery (absent on test sends and previews, `t`).
   d?: string
-  p?: string | null
-  a: string
   t?: true
+  // Expiry, unix seconds.
+  x: number
 }
 
-export function signToken(data: UnsubscribePayload, secret: string): string {
-  const payload = Buffer.from(JSON.stringify(data)).toString('base64url')
+export function signToken(data: Omit<UnsubscribePayload, 'x'>, secret: string, now: Date = new Date()): string {
+  const full: UnsubscribePayload = { ...data, x: Math.floor(now.getTime() / 1000) + UNSUBSCRIBE_TOKEN_DAYS * 86_400 }
+  const payload = Buffer.from(JSON.stringify(full)).toString('base64url')
   const sig = createHmac('sha256', secret).update(`marketing:${payload}`).digest('base64url')
   return `${payload}.${sig}`
 }
 
-export function verifyToken(token: string | null | undefined, secret: string): UnsubscribePayload | null {
+export function verifyToken(token: string | null | undefined, secret: string, now: Date = new Date()): UnsubscribePayload | null {
   if (!token || typeof token !== 'string') return null
   const i = token.lastIndexOf('.')
   if (i <= 0) return null
@@ -27,7 +31,10 @@ export function verifyToken(token: string | null | undefined, secret: string): U
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as UnsubscribePayload
-    return typeof data.o === 'string' && typeof data.a === 'string' ? data : null
+    if (typeof data.o !== 'string' || typeof data.x !== 'number') return null
+    if (!data.t && typeof data.d !== 'string') return null
+    if (data.x * 1000 < now.getTime()) return null
+    return data
   } catch {
     return null
   }

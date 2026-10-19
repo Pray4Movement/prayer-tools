@@ -24,6 +24,9 @@ export interface PlatformConfig {
   appStoreUrl: string
   playStoreUrl: string
   feedback: { apiBase: string, projectId: string }
+  // The inbox layer's shared inbound domain; with `slugAddresses` every site's
+  // inbox is `<slug>@<domain>`.
+  inbox: { domain: string, slugAddresses: boolean }
 }
 
 export function platformConfig(): PlatformConfig {
@@ -51,7 +54,8 @@ export function platformConfig(): PlatformConfig {
     donateUrl: env('PT_DONATE_URL', 'https://prayer.tools/give'),
     appStoreUrl: env('PT_APP_STORE_URL'),
     playStoreUrl: env('PT_PLAY_STORE_URL'),
-    feedback: { apiBase: env('PT_FEEDBACK_API_BASE', 'https://apps.gospelambition.org'), projectId: env('PT_FEEDBACK_PROJECT_ID') }
+    feedback: { apiBase: env('PT_FEEDBACK_API_BASE', 'https://apps.gospelambition.org'), projectId: env('PT_FEEDBACK_PROJECT_ID') },
+    inbox: { domain: env('INBOX_DOMAIN').toLowerCase(), slugAddresses: env('INBOX_SLUG_ADDRESSES') === 'true' }
   }
 }
 

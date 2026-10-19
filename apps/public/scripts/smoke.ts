@@ -1,18 +1,22 @@
-// End-to-end smoke test against the running public dev server (port 3380),
-// Mailpit (8025) and the seeded dev database. Creates its own test people
+// End-to-end smoke test against the running public dev server, Mailpit (8025)
+// and the seeded dev database. Creates its own test people
 // (smoke+<run>@example.com) and removes them at the end.
 // Usage (from apps/public): bun run scripts/smoke.ts
-// Env: PT_SECRET (read from .env), ADMIN_DATABASE_URL (default: dev admin role),
-//      APP_DATABASE_URL (from .env), PUBLIC_URL (default http://localhost:3380).
+// Env: PT_SECRET and APP_DATABASE_URL (read from .env), ADMIN_DATABASE_URL (the
+//      same database on the admin role), PUBLIC_URL (the running public server).
 import { sql } from 'kysely'
 import { createDb } from '@prayertools/shared/db/connect'
 import { withOrg } from '@prayertools/shared/db/scope'
 import { hashToken, randomToken } from '@prayertools/shared/tokens'
 import { manageToken, unsubscribeToken } from '@prayertools/shared/links'
 
-const BASE = process.env.PUBLIC_URL || 'http://localhost:3380'
+if (!process.env.PUBLIC_URL || !process.env.ADMIN_DATABASE_URL) {
+  console.error('Set PUBLIC_URL (the running public server) and ADMIN_DATABASE_URL (its database, admin role).')
+  process.exit(1)
+}
+const BASE = process.env.PUBLIC_URL
 const PORT = new URL(BASE).port || '80'
-const admin = createDb(process.env.ADMIN_DATABASE_URL || 'postgres://pt2_admin:dev@localhost:5432/prayer_tools_v3_with_orgs_2')
+const admin = createDb(process.env.ADMIN_DATABASE_URL)
 const app = createDb(process.env.APP_DATABASE_URL!)
 const run = Date.now().toString(36)
 const emails: string[] = []

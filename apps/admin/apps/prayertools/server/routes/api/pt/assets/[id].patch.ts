@@ -1,6 +1,7 @@
 // Edits an image's alt text, credit and focal point (so the top image crops
 // well on phones).
-import { db } from '#core/server/utils/database'
+import { withUserContext } from '#core/server/utils/personal-apps'
+import { PT_LIBRARY_APP } from '@prayertools/shared/site'
 import { parseText } from '@prayertools/shared/translatable'
 import { jsonb } from '@prayertools/shared/db/json'
 
@@ -22,7 +23,7 @@ export default defineEventHandler(async (event) => {
       patch[k] = v
     }
   }
-  const res = await db.updateTable('pt_personal_asset').set(patch as never).where('id', '=', id).where('owner_user_id', '=', user.userId).executeTakeFirst()
+  const res = await withUserContext(event, { appId: PT_LIBRARY_APP }, tx => ptTx(tx).updateTable('pt_personal_asset').set(patch as never).where('id', '=', id).where('owner_user_id', '=', user.userId).executeTakeFirst())
   if (!Number(res.numUpdatedRows)) ptNotFound('Image not found.')
   return { ok: true }
 })

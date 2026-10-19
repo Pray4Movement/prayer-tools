@@ -2,14 +2,14 @@ import { renderEmail } from '../../../../../lib/render'
 import { signToken, unsubscribeUrls } from '../../../../../lib/tokens'
 
 // "Send me a test" as one of the chosen sites.
-export default defineMarketingUserHandler(async (event, userId) => {
+export default defineMarketingUserHandler(async (event, _tx, userId) => {
   const b = await marketingBody(event)
   const [site] = await marketingRequireSites(userId, [b.org_id])
   const host = marketingHost()
   const input = marketingDraftInput(b, Object.keys((b.versions ?? {}) as object).concat(String(b.source_language ?? '')))
   const lang = typeof b.lang === 'string' ? b.lang : input.sourceLanguage
   const user = await marketingUserEmail(userId)
-  const urls = unsubscribeUrls(host.unsubscribeBaseUrl(), signToken({ o: site!.id, a: user.email, t: true }, host.secret()))
+  const urls = unsubscribeUrls(host.unsubscribeBaseUrl(), signToken({ o: site!.id, t: true }, host.secret()))
   const firstName = user.name.trim().split(/\s+/)[0] || ''
   await marketingInOrg(site!.id, async (tx) => {
     const rendered = await renderEmail(host, tx, site!.id, { versions: input.versions, source_language: input.sourceLanguage }, lang,

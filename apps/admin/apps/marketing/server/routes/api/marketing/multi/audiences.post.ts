@@ -3,7 +3,7 @@ import { addressFingerprint } from '../../../../../lib/tokens'
 
 // Audiences of each chosen site with eligible counts, and how many people the
 // send reaches once each person counts once across the sites.
-export default defineMarketingUserHandler(async (event, userId) => {
+export default defineMarketingUserHandler(async (event, _tx, userId) => {
   const b = await marketingBody<{ org_ids?: unknown, selected?: unknown }>(event)
   const sites = await marketingRequireSites(userId, b.org_ids)
   const selected = Array.isArray(b.selected) ? b.selected.map(s => String(s)) : []

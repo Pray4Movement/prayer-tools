@@ -1,8 +1,7 @@
-import { db } from '#core/server/utils/database'
 import { jsonb } from '../../../../../lib/db'
 import { parseVersions } from '../../../../../lib/render'
 
-export default defineMarketingUserHandler(async (event, userId) => {
+export default defineMarketingUserHandler(async (event, tx, userId) => {
   const id = getRouterParam(event, 'id')
   if (!marketingIsUuid(id)) marketingNotFound()
   const b = await marketingBody(event)
@@ -19,7 +18,7 @@ export default defineMarketingUserHandler(async (event, userId) => {
     patch.versions = jsonb(versions)
     patch.source_language = sourceLanguage
   }
-  const res = await db.updateTable('marketing_template').set(patch).where('id', '=', id).where('owner_user_id', '=', userId).executeTakeFirst()
+  const res = await tx.updateTable('marketing_template').set(patch).where('id', '=', id).where('owner_user_id', '=', userId).executeTakeFirst()
   if (!Number(res.numUpdatedRows)) marketingNotFound('Template not found.')
   return { ok: true }
 })

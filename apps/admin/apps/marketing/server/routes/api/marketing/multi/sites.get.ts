@@ -1,5 +1,5 @@
 // Every site where the user may send, with its languages.
-export default defineMarketingUserHandler(async (_event, userId) => {
+export default defineMarketingUserHandler(async (_event, _tx, userId) => {
   const sites = await marketingSendableSites(userId)
   const { languages, perSite } = await marketingSitesLanguages(sites.map(s => s.id))
   return {

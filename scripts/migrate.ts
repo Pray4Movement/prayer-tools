@@ -10,6 +10,8 @@ import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Migrator, sql, type Kysely, type Migration, type MigrationProvider } from 'kysely'
 import { createDb } from '@prayertools/shared/db/connect'
+import { LAYERS } from '../apps/admin/layers'
+import { subdirOf } from '../apps/admin/scripts/lib/resolve'
 
 const root = path.resolve(import.meta.dirname, '..')
 const admin = path.join(root, 'apps/admin')
@@ -23,10 +25,19 @@ async function subdirs(dir: string): Promise<string[]> {
   }
 }
 
+// Nuxtinator layers load from _layers/, or from a local checkout when
+// NUXTINATOR_SOURCE_DIR / NUXTINATOR_<ID>_PATH is set (as in nuxt.config.ts).
+function layerDir(l: (typeof LAYERS)[number]): string {
+  const envKey = l.pkg.replace(/^@/, '').replace(/[/-]/g, '_').toUpperCase() + '_PATH'
+  if (process.env[envKey]) return process.env[envKey]!
+  if (process.env.NUXTINATOR_SOURCE_DIR) return path.join(process.env.NUXTINATOR_SOURCE_DIR, subdirOf(l))
+  return path.join(admin, '_layers', l.id)
+}
+
 export async function migrationFolders(): Promise<string[]> {
   return [
     path.join(admin, 'migrations'),
-    ...(await subdirs(path.join(admin, '_layers'))).map(d => path.join(d, 'migrations')),
+    ...LAYERS.map(l => path.join(layerDir(l), 'migrations')),
     ...(await subdirs(path.join(admin, 'apps'))).map(d => path.join(d, 'migrations'))
   ]
 }

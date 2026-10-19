@@ -1,6 +1,6 @@
 // Seeds local development data: a platform library and three sites (a
 // published Ramadan campaign, a published 24/7 coverage campaign, a draft).
-// Idempotent: sites that already exist are left alone.
+// Idempotent: sites that already exist only get their apps turned on.
 // Usage: DATABASE_URL=… bun run scripts/seed-dev.ts
 import { sql } from 'kysely'
 import { createDb } from '@prayertools/shared/db/connect'
@@ -10,6 +10,7 @@ import { addDays, todayIn } from '@prayertools/shared/dates'
 import { textDoc } from '@prayertools/shared/tiptap'
 import { makeText } from '@prayertools/shared/translatable'
 import { jsonb } from '@prayertools/shared/db/json'
+import { enableSiteApps } from '@prayertools/shared/site'
 
 const url = process.env.DATABASE_URL
 if (!url) throw new Error('DATABASE_URL is required')
@@ -61,8 +62,12 @@ interface SiteSeed {
 
 async function site(seed: SiteSeed, libraryId: string) {
   const existing = await db.selectFrom('orgs').select('id').where('slug', '=', seed.slug).executeTakeFirst()
-  if (existing) return console.log(`site ${seed.slug} exists`)
+  if (existing) {
+    await enableSiteApps(db, existing.id)
+    return console.log(`site ${seed.slug} exists`)
+  }
   const org = await db.insertInto('orgs').values({ slug: seed.slug, name: seed.name, created_at: new Date(), updated_at: new Date() }).returning('id').executeTakeFirstOrThrow()
+  await enableSiteApps(db, org.id)
   const owner = await db.selectFrom('users').select('id').where('id', '!=', '00000000-0000-4000-8000-000000000001').orderBy('created', 'asc').executeTakeFirst()
   if (owner) {
     await db.insertInto('memberships').values({ user_id: owner.id, org_id: org.id, roles: sql`'{admin}'::text[]`, created_at: new Date(), updated_at: new Date() }).execute()

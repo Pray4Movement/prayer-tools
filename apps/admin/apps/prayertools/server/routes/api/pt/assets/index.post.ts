@@ -1,6 +1,7 @@
 // Uploads an image into the personal library (multipart `file`, optional
 // `alt` JSON TranslatableText and `credit`). Alt text is required.
-import { db } from '#core/server/utils/database'
+import { withUserContext } from '#core/server/utils/personal-apps'
+import { PT_LIBRARY_APP } from '@prayertools/shared/site'
 import { parseText } from '@prayertools/shared/translatable'
 import { jsonb } from '@prayertools/shared/db/json'
 import { rateLimit } from '@prayertools/shared/rate-limit'
@@ -20,7 +21,7 @@ export default defineEventHandler(async (event) => {
   if (!alt || !Object.values(alt.values).some(v => v.trim())) ptBadRequest('Describe the image (alt text) for people who can\'t see it.')
   const credit = parts?.find(p => p.name === 'credit')?.data.toString('utf8').slice(0, 200) || null
   const img = await ptProcessImage(file.data)
-  const row = await db.insertInto('pt_personal_asset').values({
+  const row = await withUserContext(event, { appId: PT_LIBRARY_APP }, tx => ptTx(tx).insertInto('pt_personal_asset').values({
     owner_user_id: user.userId,
     storage_key: img.key,
     url: img.url,
@@ -30,6 +31,6 @@ export default defineEventHandler(async (event) => {
     height: img.height,
     alt: jsonb(alt),
     credit
-  } as never).returningAll().executeTakeFirstOrThrow()
+  } as never).returningAll().executeTakeFirstOrThrow())
   return { asset: row }
 })

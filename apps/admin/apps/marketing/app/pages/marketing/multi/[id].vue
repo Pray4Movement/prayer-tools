@@ -425,6 +425,8 @@ const testFn = async (lang: string) => (await $fetch<{ to: string }>('/api/marke
           <MarketingSchedule
             :loading="sending"
             :problems="problems"
+            :targets="audienceSites.map(s => ({ name: s.site.name, count: s.combined }))"
+            :people="people"
             @send="send"
           />
         </div>

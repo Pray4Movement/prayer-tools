@@ -8,14 +8,17 @@ type Json<T> = ColumnType<T, T | string, T | string>
 
 // ── Vocabularies (code-owned) ───────────────────────────────────────────────
 
-export const EMAIL_STATUSES = ['draft', 'scheduled', 'sending', 'paused', 'sent', 'cancelled'] as const
+export const EMAIL_STATUSES = ['draft', 'scheduled', 'sending', 'paused', 'sent', 'cancelled', 'failed'] as const
 export type EmailStatus = typeof EMAIL_STATUSES[number]
 
 export const DELIVERY_STATUSES = ['pending', 'sent', 'skipped', 'failed'] as const
 export type DeliveryStatus = typeof DELIVERY_STATUSES[number]
 
-export type SkipReason = 'no_consent' | 'suppressed' | 'cancelled' | 'no_address'
+export type SkipReason = 'no_consent' | 'suppressed' | 'cancelled' | 'no_address' | 'recipient_check'
 export type PauseReason = 'manual' | 'complaint_rate'
+// The worker refused the send: more deliveries than the site has email
+// addresses, or a delivery to another site's address.
+export type FailedReason = 'recipient_check'
 
 // ── Content ─────────────────────────────────────────────────────────────────
 
@@ -47,6 +50,8 @@ export interface MarketingEmailTable {
   id: Generated<string>
   org_id: Generated<string>
   parent_id: string | null
+  // A multi-site send's chosen sites (empty for a single-site email).
+  parent_org_ids: Generated<string[]>
   versions: Json<EmailVersions>
   source_language: string
   audiences: Generated<string[]>
@@ -55,6 +60,7 @@ export interface MarketingEmailTable {
   started_at: NullableTimestamp
   finished_at: NullableTimestamp
   paused_reason: string | null
+  failed_reason: string | null
   recipients: Generated<number>
   sent: Generated<number>
   skipped: Generated<number>
@@ -235,6 +241,9 @@ export interface ConsentWithdrawal {
 }
 
 export interface MarketingHost {
+  // The personal app (`registerApp({ scope: 'user' })`) whose handlers own a
+  // user's templates and multi-site sends.
+  personalAppId: string
   // HMAC secret for unsubscribe tokens.
   secret(): string
   // Origin serving the layer's unsubscribe page and endpoint.

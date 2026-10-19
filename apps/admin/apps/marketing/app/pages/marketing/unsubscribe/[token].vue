@@ -51,7 +51,7 @@ const siteNames = computed(() => {
           This link doesn't work
         </h1>
         <p class="text-sm text-(--ui-text-muted)">
-          It may have been cut off by your email program. Try the unsubscribe link in the email again.
+          It may have expired, or been cut off by your email program. Try the unsubscribe link in a recent email again.
         </p>
       </div>
       <div

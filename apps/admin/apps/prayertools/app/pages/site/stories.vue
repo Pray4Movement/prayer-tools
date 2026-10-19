@@ -5,7 +5,7 @@ definePageMeta({ middleware: 'auth' })
 
 interface Story { id: string, name: string | null, body: string, language: string, may_publish: boolean, may_platform: boolean, use_name: boolean, published: boolean, created_at: string, conversation_id: string | null }
 
-const { can } = usePtSite()
+const { data: site, can } = usePtSite()
 const toast = usePtToast()
 const { data, refresh } = useFetch<{ stories: Story[] }>('/api/pt/stories', { key: 'pt-stories' })
 
@@ -73,7 +73,7 @@ async function setPublished(s: Story, published: boolean) {
             size="sm"
             variant="ghost"
             color="neutral"
-            :to="`/inbox?conversation=${s.conversation_id}`"
+            :to="`/@${site?.org.slug}/inbox/${s.conversation_id}`"
             label="Open in inbox"
           />
         </div>

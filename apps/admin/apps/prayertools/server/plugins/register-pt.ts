@@ -1,12 +1,13 @@
 import { registerPermissions } from '#core/server/utils/permissions-registry'
 import { registerDefaultGrants } from '#core/server/utils/default-grants-registry'
 import { registerStaticRole } from '#core/server/utils/roles-registry'
-import { registerApp } from '#core/server/utils/app-registry'
+import { configureApp, registerApp } from '#core/server/utils/app-registry'
 import { registerNavItem } from '#core/server/utils/nav-registry'
 import { registerAdminSection } from '#core/server/utils/admin-section-registry'
 import { registerCrmConsentPurpose } from '#crm/server'
 import { registerAiFeature } from '#ai/server'
 import { PT_PERMISSIONS, PT_PERMISSION_META, PT_STATIC_ROLES } from '../../app/utils/pt-permissions'
+import { PT_LIBRARY_APP } from '@prayertools/shared/site'
 
 export default defineNitroPlugin(() => {
   registerPermissions(PT_PERMISSIONS, PT_PERMISSION_META)
@@ -18,7 +19,15 @@ export default defineNitroPlugin(() => {
     registerStaticRole({ ...role, source: 'pt' })
   }
 
-  registerApp({ id: 'site', title: 'Site', path: '/@:orgSlug/site', icon: 'i-lucide-church', requiredPermission: 'pt.access', order: 1 })
+  // Every site has the same apps, turned on when the site is created
+  // (PT_ORG_APPS); site owners can't switch them off.
+  registerApp({ id: 'site', title: 'Site', path: '/@:orgSlug/site', icon: 'i-lucide-church', requiredPermission: 'pt.access', order: 1, defaultStatus: 'host_controlled', shellSidebar: true })
+  configureApp('inbox', { defaultStatus: 'host_controlled' })
+  // Intercessors are CRM contacts, reached from the Site sidebar.
+  configureApp('crm', { sidebarApp: 'site', launcher: false, defaultStatus: 'host_controlled' })
+  // The champion's own library (templates, images, blocks) and multi-site
+  // sends, the same from every site.
+  registerApp({ id: PT_LIBRARY_APP, title: 'My library', path: '/personal', icon: 'i-lucide-library-big', description: 'Your templates, images and blocks, usable on any of your sites.', scope: 'user', permissions: [], defaultStatus: 'default', order: 90 })
 
   const nav: [string, string, string, string, number][] = [
     ['Dashboard', '/@:orgSlug/site', 'i-lucide-layout-dashboard', 'pt.access', 10],

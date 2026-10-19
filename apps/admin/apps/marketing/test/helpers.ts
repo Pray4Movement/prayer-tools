@@ -156,8 +156,8 @@ export async function deliveries(env: TestEnv, orgId: string, emailId: string) {
 }
 
 export async function emailRow(env: TestEnv, orgId: string, emailId: string) {
-  return await withOrg(env.app, orgId, tx => sql<{ status: string, recipients: number, sent: number, skipped: number, failed: number, unsubscribes: number, paused_reason: string | null }>`
-    SELECT status, recipients, sent, skipped, failed, unsubscribes, paused_reason FROM marketing_email WHERE id = ${emailId}
+  return await withOrg(env.app, orgId, tx => sql<{ status: string, recipients: number, sent: number, skipped: number, failed: number, unsubscribes: number, paused_reason: string | null, failed_reason: string | null }>`
+    SELECT status, recipients, sent, skipped, failed, unsubscribes, paused_reason, failed_reason FROM marketing_email WHERE id = ${emailId}
   `.execute(tx).then(r => r.rows[0]!))
 }
 

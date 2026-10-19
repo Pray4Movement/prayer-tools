@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { LAYERS } from './layers'
+import { subdirOf, type LayerSpec } from './scripts/lib/resolve'
 
 declare const process: { env: Record<string, string | undefined> }
 
@@ -17,10 +18,13 @@ function stripLayerTsconfigs() {
 }
 stripLayerTsconfigs()
 
-// NUXTINATOR_<ID>_PATH points one layer at a local checkout.
-function layer(pkg: string): string {
-  const envKey = pkg.replace(/^@/, '').replace(/[/-]/g, '_').toUpperCase() + '_PATH'
-  return process.env[envKey] || pkg
+// NUXTINATOR_<ID>_PATH points one layer at a local checkout;
+// NUXTINATOR_SOURCE_DIR points every layer at a local Nuxtinator repo.
+function layer(l: LayerSpec): string {
+  const envKey = l.pkg.replace(/^@/, '').replace(/[/-]/g, '_').toUpperCase() + '_PATH'
+  if (process.env[envKey]) return process.env[envKey]!
+  if (process.env.NUXTINATOR_SOURCE_DIR) return join(process.env.NUXTINATOR_SOURCE_DIR, subdirOf(l))
+  return l.pkg
 }
 
 // prayer.tools' own layers live in ./apps/<id>/, stacked on top of the fetched ones.
@@ -34,7 +38,7 @@ function localApps(): string[] {
 
 export default defineNuxtConfig({
 
-  extends: [...LAYERS.map(l => layer(l.pkg)), ...localApps()],
+  extends: [...LAYERS.map(l => layer(l)), ...localApps()],
 
   modules: [
     '@nuxt/eslint',

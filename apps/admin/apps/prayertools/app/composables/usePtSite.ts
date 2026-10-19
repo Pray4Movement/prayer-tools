@@ -42,6 +42,8 @@ export interface PtSiteResponse {
     archived_at: string | null
   }
   org: { id: string, slug: string, name: string }
+  // Where replies land when the site sets no reply-to.
+  inboxAddress: string | null
   url: string
   subdomainUrl: string
   brand: { color: string, textColor: string, tooPale: boolean }

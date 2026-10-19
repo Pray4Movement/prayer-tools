@@ -12,6 +12,11 @@ import { readLock, resolveAll, writeLock } from './lib/lock'
 // setup`), resolve once and write it so setup still works unattended — with no
 // tags in the source yet, every layer resolves to `master`, i.e. today's behaviour.
 
+if (process.env.NUXTINATOR_SOURCE_DIR) {
+  console.log(`NUXTINATOR_SOURCE_DIR is set — layers load from ${process.env.NUXTINATOR_SOURCE_DIR}, nothing to fetch.`)
+  process.exit(0)
+}
+
 let lock = readLock()
 if (!lock) {
   console.log('No layers.lock.json — resolving once from layers.ts…')

@@ -1,7 +1,7 @@
 // Creates the two database roles and the database for local development:
 //   <prefix>_admin — BYPASSRLS, owns the schema; migrations and worker sweeps
 //   <prefix>_app   — RLS-enforced; admin requests and the public server
-// Usage: bun run scripts/db-setup.ts [dbname]
+// Usage: bun run scripts/db-setup.ts <dbname>
 // Env: PG_SUPERUSER_URL (default postgres://localhost:5432/postgres),
 //      PT_DB_ROLE_PREFIX (default pt2), PT_DB_PASSWORD (default "dev")
 import postgres from 'postgres'
@@ -9,7 +9,11 @@ import postgres from 'postgres'
 const superUrl = process.env.PG_SUPERUSER_URL || 'postgres://localhost:5432/postgres'
 const prefix = process.env.PT_DB_ROLE_PREFIX || 'pt2'
 const password = process.env.PT_DB_PASSWORD || 'dev'
-const dbName = process.argv[2] || 'prayer_tools_v3_with_orgs_2'
+const dbName = process.argv[2]
+if (!dbName) {
+  console.error('Usage: bun run scripts/db-setup.ts <dbname>')
+  process.exit(1)
+}
 const admin = `${prefix}_admin`
 const app = `${prefix}_app`
 

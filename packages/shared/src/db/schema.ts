@@ -604,6 +604,7 @@ export interface UsersTable {
   email: string
   display_name: string
   is_admin: Generated<boolean>
+  verified: Generated<boolean>
 }
 
 export interface OrgsTable {

@@ -10,6 +10,7 @@ import { jsonb, pgArray } from '@prayertools/shared/db/json'
 import { makeText } from '@prayertools/shared/translatable'
 import { forwardEvent } from '@prayertools/shared/statinator'
 import { getTemplate } from '@prayertools/shared/setup'
+import { enableSiteApps } from '@prayertools/shared/site'
 
 export const PT_STAFF_SLUG = 'staff'
 
@@ -49,8 +50,8 @@ export async function ptSlugTaken(slug: string): Promise<boolean> {
   return !!row
 }
 
-// Creates the org (the site), the owner's membership, the app rows every org
-// gets, and the pt_site row — one transaction.
+// Creates the org (the site), the owner's membership, the site's apps, and the
+// pt_site row — one transaction.
 export async function ptCreateSite(userId: string, input: CreateSiteInput): Promise<{ id: string, slug: string, name: string }> {
   await ensureSystemUser(db as never)
   const orgId = crypto.randomUUID()
@@ -62,10 +63,7 @@ export async function ptCreateSite(userId: string, input: CreateSiteInput): Prom
     await db.transaction().execute(async (tx) => {
       await tx.insertInto('orgs').values({ id: orgId, slug: input.slug, name: input.name.trim(), created_at: now, updated_at: now }).execute()
       await tx.insertInto('memberships').values({ id: membershipId, user_id: userId, org_id: orgId, roles: ['admin'], created_at: now, updated_at: now }).execute()
-      const apps = await tx.selectFrom('apps').select('id').where('status', '!=', 'disabled').execute()
-      if (apps.length) {
-        await tx.insertInto('org_apps').values(apps.map(a => ({ org_id: orgId, app_id: a.id, enabled: true, source: 'auto' as const, updated_at: now }))).execute()
-      }
+      await enableSiteApps(tx as never, orgId)
       await sql`select set_config('app.current_org', ${orgId}, true)`.execute(tx)
       await tx.insertInto('pt_site').values({
         org_id: orgId,
@@ -113,6 +111,7 @@ export async function ptStaffOrgId(): Promise<string> {
   await db.insertInto('orgs').values({ id: crypto.randomUUID(), slug: PT_STAFF_SLUG, name: 'Prayer.Tools', created_at: now, updated_at: now })
     .onConflict(oc => oc.column('slug').doNothing()).execute()
   const row = await db.selectFrom('orgs').select('id').where('slug', '=', PT_STAFF_SLUG).executeTakeFirstOrThrow()
+  await enableSiteApps(db as never, row.id)
   return row.id
 }
 

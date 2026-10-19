@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { MarketingDraft, MarketingLanguage, MarketingVariable, MarketingVersions } from '../../utils/marketing-ui'
-import { MARKETING_PAUSE_REASONS, MARKETING_SKIP_REASONS, MARKETING_STATUS, marketingDate, marketingErrorMessage, marketingHasText } from '../../utils/marketing-ui'
+import { MARKETING_FAILED_REASONS, MARKETING_PAUSE_REASONS, MARKETING_SKIP_REASONS, MARKETING_STATUS, marketingDate, marketingErrorMessage, marketingHasText } from '../../utils/marketing-ui'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -16,6 +16,7 @@ interface Email {
   started_at: string | null
   finished_at: string | null
   paused_reason: string | null
+  failed_reason: string | null
   recipients: number
   sent: number
   skipped: number
@@ -217,6 +218,13 @@ const testFn = async (lang: string) => (await $fetch<{ to: string }>('/api/marke
         icon="i-lucide-circle-pause"
         :description="MARKETING_PAUSE_REASONS[email.paused_reason] ?? email.paused_reason"
       />
+      <UAlert
+        v-if="email.status === 'failed' && email.failed_reason"
+        color="error"
+        variant="soft"
+        icon="i-lucide-octagon-x"
+        :description="MARKETING_FAILED_REASONS[email.failed_reason] ?? email.failed_reason"
+      />
       <p class="text-sm text-(--ui-text-muted)">
         <span v-if="email.status === 'scheduled'">Goes out {{ marketingDate(email.scheduled_at) }}.</span>
         <span v-else-if="email.started_at">Started {{ marketingDate(email.started_at) }}<span v-if="email.finished_at">, finished {{ marketingDate(email.finished_at) }}</span>.</span>
@@ -345,6 +353,7 @@ const testFn = async (lang: string) => (await $fetch<{ to: string }>('/api/marke
           <MarketingSchedule
             :loading="sending"
             :problems="problems"
+            :targets="meta ? [{ name: meta.site.name, count: combined }] : []"
             @send="send"
           />
         </div>

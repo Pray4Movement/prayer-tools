@@ -11,19 +11,25 @@ export const MARKETING_STATUS: Record<string, { label: string, color: 'neutral' 
   sending: { label: 'Sending', color: 'primary' },
   paused: { label: 'Paused', color: 'warning' },
   sent: { label: 'Sent', color: 'success' },
-  cancelled: { label: 'Cancelled', color: 'error' }
+  cancelled: { label: 'Cancelled', color: 'error' },
+  failed: { label: 'Not sent', color: 'error' }
 }
 
 export const MARKETING_SKIP_REASONS: Record<string, string> = {
   no_consent: 'Didn\'t opt in',
   suppressed: 'Address bounced or complained',
   cancelled: 'Cancelled before sending',
-  no_address: 'No address'
+  no_address: 'No address',
+  recipient_check: 'Stopped by the recipient check'
 }
 
 export const MARKETING_PAUSE_REASONS: Record<string, string> = {
   manual: 'Paused by a team member.',
   complaint_rate: 'Paused automatically: too many recipients marked this site\'s email as spam this week. It stays paused until the complaint rate drops.'
+}
+
+export const MARKETING_FAILED_REASONS: Record<string, string> = {
+  recipient_check: 'Not sent: its recipients didn\'t match this site\'s people, so Prayer.Tools stopped it. Nobody received it. Contact support.'
 }
 
 export function marketingEmptyDoc(): MarketingDoc {

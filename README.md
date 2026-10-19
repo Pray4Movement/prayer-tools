@@ -17,14 +17,17 @@ Implementation of the plans in [plans/](plans/): each site is a Nuxtinator org; 
 
 ```bash
 bun run setup                                  # install, fetch Nuxtinator layers, install again
-bun run scripts/db-setup.ts                    # roles pt2_admin (BYPASSRLS) / pt2_app (RLS) + prayer_tools_v3_with_orgs_2
-bun run scripts/db-setup.ts prayer_tools_v3_with_orgs_2_test
+bun run scripts/db-setup.ts prayer_tools_v3_with_orgs_3        # roles pt2_admin (BYPASSRLS) / pt2_app (RLS) + the dev database
+bun run scripts/db-setup.ts prayer_tools_v3_with_orgs_3_test   # the test database, named by PT_TEST_DB
+cp .env.example .env                           # PT_TEST_DB (and NUXTINATOR_SOURCE_DIR when used)
 cp apps/admin/.env.example apps/admin/.env     # fill secrets; same for apps/public and apps/worker
-bun run dev:admin                              # http://localhost:2380 — runs migrations on boot
-DATABASE_URL=postgres://pt2_admin:dev@localhost:5432/prayer_tools_v3_with_orgs_2 bun run scripts/seed-dev.ts
-bun run dev:public                             # http://<slug>.localhost:3380, http://localhost:3380/my, http://api.localhost:3380
+bun run dev:admin                              # http://localhost:2480 (NUXT_PORT) — runs migrations on boot
+DATABASE_URL=postgres://pt2_admin:dev@localhost:5432/prayer_tools_v3_with_orgs_3 bun run scripts/seed-dev.ts
+bun run dev:public -- --port 3480              # http://<slug>.localhost:3480, http://localhost:3480/my, http://api.localhost:3480
 bun run dev:worker
 ```
+
+To work against a local Nuxtinator checkout instead of the tagged releases, set `NUXTINATOR_SOURCE_DIR=/path/to/nuxtinator` in `apps/admin/.env` and the repo-root `.env`: every layer in `layers.ts` then loads from that repo (`<dir>/<subdir>`), edits there show up live, and `sync-layers` fetches nothing.
 
 Mail goes to Mailpit (localhost:1025, UI :8025) in development. `PT_SECRET` must be the same for the admin app, public server and worker.
 
@@ -32,7 +35,8 @@ Mail goes to Mailpit (localhost:1025, UI :8025) in development. `PT_SECRET` must
 
 ```bash
 bun run test     # shared unit tests, worker (test DB), public unit tests, marketing (test DB)
-bun run smoke    # admin API and public server end-to-end checks against running dev servers
+# admin API and public server end-to-end checks against running dev servers:
+ADMIN_URL=http://localhost:2480 DATABASE_URL=… PUBLIC_URL=http://localhost:3480 ADMIN_DATABASE_URL=… bun run smoke
 ```
 
 ## Deployment
@@ -44,4 +48,5 @@ One image (`Dockerfile`); `PT_PROCESS=admin|public|worker` picks the process. Tw
 - **Nuxtinator upgrades are done here, not upstream.** The marketing layer lives in `apps/admin/apps/marketing`; the CRM "system actor" is a no-login system user; the consent log's wording/surface/source go in the CRM event `meta`; global suppression is `pt_suppression`; the shared transport replaces the three email paths only for prayer.tools mail (core invites/password resets still use `email-mailgun`).
 - **Manage and unsubscribe links are signed tokens** (rotatable per subscription through `manage_version`, manage links expire after 400 days) rather than stored random tokens; verification, check-in and My prayer tokens are random and stored hashed.
 - **Admin UI is English only**; the public site ships five languages.
-- **Not built:** sending from a champion's own domain (DKIM), the one-step 4-day → 12-day join (only `joined_from` is recorded), an operator cross-site inbox view, CI axe/RTL screenshot jobs and size budgets, the WordPress importer (legacy URL handling is in place).
+- **Not built:** sending from a champion's own domain (DKIM), the one-step 4-day → 12-day join (only `joined_from` is recorded), an operator cross-site inbox view, the cross-site "all my people" list (deferred: it would need cross-org reads), CI axe/RTL screenshot jobs and size budgets, the WordPress importer (legacy URL handling is in place).
+- **Unreleased Nuxtinator pieces.** The admin app needs layer changes that are not tagged yet (active app on org routes, `configureApp`, slug inbox addresses, `listUserOrgs`/`withOrgScope`, the orgs rail link and switcher labels). Until they are released, develop with `NUXTINATOR_SOURCE_DIR` pointing at a checkout that has them; a build from the tags in `layers.lock.json` lacks them.

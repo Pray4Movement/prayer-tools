@@ -1,10 +1,9 @@
 import type { H3Event } from 'h3'
-import { sql, type Transaction } from 'kysely'
+import type { Transaction } from 'kysely'
 import type { Database } from '#core/server/database/schema'
 import { db } from '#core/server/utils/database'
-import { requireAuth } from '#core/server/utils/auth'
-import { getUserGrantedPermissions } from '#core/server/utils/permission-grants'
-import { computePermsForOrg, withOrgContext, type TenantContext } from '#tenant/server'
+import { withUserContext } from '#core/server/utils/personal-apps'
+import { listUserOrgs, withOrgContext, withOrgScope, type TenantContext } from '#tenant/server'
 import { getMarketingHost } from '../../lib/registry'
 import { parseVersions } from '../../lib/render'
 import type { EmailVersions, MarketingDb, MarketingHost, MarketingTx } from '../../lib/types'
@@ -58,12 +57,16 @@ export function defineMarketingHandler<T>(
   })
 }
 
-// User-owned endpoints (templates, multi-site sends): signed in, no org.
-export function defineMarketingUserHandler<T>(fn: (event: H3Event, userId: string) => Promise<T>) {
+// A user's own rows (templates, multi-site sends): signed in, no org, inside
+// the host's personal app, whose transaction sets `app.current_user` so only
+// the caller's rows are visible.
+export function defineMarketingUserHandler<T>(fn: (event: H3Event, tx: MarketingTx, userId: string) => Promise<T>) {
   return defineEventHandler(async (event) => {
-    const user = requireAuth(event)
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.method)) {
+      await readBody(event).catch(() => null)
+    }
     try {
-      return await fn(event, user.userId)
+      return await withUserContext(event, { appId: marketingHost().personalAppId }, async (tx, ctx) => await fn(event, marketingTx(tx), ctx.userId))
     } catch (err) {
       asHttpError(err)
     }
@@ -116,12 +119,10 @@ export async function marketingUserEmail(userId: string): Promise<{ email: strin
   return { email: u.email, name: u.display_name }
 }
 
-// Runs `fn` inside one org's RLS scope for a user-owned (org-less) request.
+// Runs `fn` in its own transaction inside one org's RLS scope, for a
+// user-owned (org-less) request that works on each chosen site in turn.
 export async function marketingInOrg<T>(orgId: string, fn: (tx: MarketingTx) => Promise<T>): Promise<T> {
-  return await db.transaction().execute(async (tx) => {
-    await sql`select set_config('app.current_org', ${orgId}, true)`.execute(tx)
-    return await fn(tx as unknown as MarketingTx)
-  })
+  return await withOrgScope(orgId, async tx => await fn(marketingTx(tx)))
 }
 
 export interface MarketingSite {
@@ -132,25 +133,8 @@ export interface MarketingSite {
 
 // Every site where the user may send site email.
 export async function marketingSendableSites(userId: string): Promise<MarketingSite[]> {
-  const orgs = await db
-    .selectFrom('memberships')
-    .innerJoin('orgs', 'orgs.id', 'memberships.org_id')
-    .select(['orgs.id as id', 'orgs.slug as slug', 'orgs.name as name'])
-    .where('memberships.user_id', '=', userId)
-    .where('orgs.suspended_at', 'is', null)
-    .orderBy('orgs.name')
-    .execute()
-  const out: MarketingSite[] = []
-  for (const org of orgs) {
-    const ok = await db.transaction().execute(async (tx) => {
-      await sql`select set_config('app.current_org', ${org.id}, true)`.execute(tx)
-      const perms = await computePermsForOrg(tx, userId, org.id)
-      for (const p of await getUserGrantedPermissions(tx, userId)) perms.add(p)
-      return perms.has('marketing.send' as never)
-    })
-    if (ok) out.push(org)
-  }
-  return out
+  const orgs = await listUserOrgs(userId, { permission: 'marketing.send' as never, appId: 'marketing' })
+  return orgs.map(o => ({ id: o.id, slug: o.slug, name: o.name }))
 }
 
 export function marketingClientIp(event: H3Event): string | null {
