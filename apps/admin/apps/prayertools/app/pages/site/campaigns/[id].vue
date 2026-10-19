@@ -71,6 +71,7 @@ async function remove() {
     v-if="data && site"
     class="max-w-3xl mx-auto space-y-6"
   >
+    <PtCampaignTabs :campaign-id="String(route.params.id)" />
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <UButton
@@ -228,7 +229,7 @@ async function remove() {
         </div>
         <UButton
           v-if="can('pt.email.send')"
-          to="/site/emails"
+          :to="{ path: '/marketing/test-emails', query: { campaign: String(route.params.id) } }"
           variant="link"
           label="Preview the thank-you email"
           class="px-0"

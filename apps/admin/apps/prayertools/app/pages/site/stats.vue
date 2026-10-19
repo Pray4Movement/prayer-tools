@@ -1,9 +1,10 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
+const route = useRoute()
 const { data: site, can } = usePtSite()
 const { data: campaigns } = useFetch<{ campaigns: { id: string, name: string }[] }>('/api/pt/campaigns', { key: 'pt-campaigns' })
-const campaignId = ref<string | undefined>()
+const campaignId = ref<string | undefined>(typeof route.query.campaign === 'string' ? route.query.campaign : undefined)
 watch([campaigns, site], () => { if (!campaignId.value) campaignId.value = site.value?.currentCampaign?.id ?? campaigns.value?.campaigns[0]?.id }, { immediate: true })
 
 const { data } = useFetch<{
@@ -63,6 +64,10 @@ const DIM_LABELS: Record<string, string> = { country: 'Countries', source: 'Sour
 
 <template>
   <div class="max-w-6xl mx-auto space-y-6">
+    <PtCampaignTabs
+      v-if="typeof route.query.campaign === 'string'"
+      :campaign-id="route.query.campaign"
+    />
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-semibold">
         Stats

@@ -170,6 +170,11 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
 
 <template>
   <div class="max-w-6xl mx-auto space-y-6">
+    <PtCampaignTabs
+      v-if="typeof route.query.campaign === 'string'"
+      :campaign-id="route.query.campaign"
+    />
+    <PtContentTabs v-else />
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-semibold">
         Prayer content

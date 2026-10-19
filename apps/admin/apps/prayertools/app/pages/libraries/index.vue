@@ -24,6 +24,7 @@ async function create() {
 
 <template>
   <div class="max-w-5xl mx-auto space-y-8">
+    <PtContentTabs />
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-semibold">

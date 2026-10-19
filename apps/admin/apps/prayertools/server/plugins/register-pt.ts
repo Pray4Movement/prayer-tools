@@ -2,7 +2,7 @@ import { registerPermissions } from '#core/server/utils/permissions-registry'
 import { registerDefaultGrants } from '#core/server/utils/default-grants-registry'
 import { registerStaticRole } from '#core/server/utils/roles-registry'
 import { configureApp, registerApp } from '#core/server/utils/app-registry'
-import { registerNavItem } from '#core/server/utils/nav-registry'
+import { registerRailItem } from '#core/server/utils/rail-registry'
 import { registerAdminSection } from '#core/server/utils/admin-section-registry'
 import { registerCrmConsentPurpose } from '#crm/server'
 import { registerAiFeature } from '#ai/server'
@@ -21,30 +21,28 @@ export default defineNitroPlugin(() => {
 
   // Every site has the same apps, turned on when the site is created
   // (PT_ORG_APPS); site owners can't switch them off.
-  registerApp({ id: 'site', title: 'Site', path: '/@:orgSlug/site', icon: 'i-lucide-church', requiredPermission: 'pt.access', order: 1, defaultStatus: 'host_controlled', shellSidebar: true })
-  configureApp('inbox', { defaultStatus: 'host_controlled' })
-  // Intercessors are CRM contacts, reached from the Site sidebar.
-  configureApp('crm', { sidebarApp: 'site', launcher: false, defaultStatus: 'host_controlled' })
+  registerApp({ id: 'site', title: 'Site', path: '/@:orgSlug/site', icon: 'i-lucide-church', requiredPermission: 'pt.access', order: 10, defaultStatus: 'host_controlled' })
+  configureApp('crm', { defaultStatus: 'host_controlled' })
+  configureApp('inbox', { order: 60, defaultStatus: 'host_controlled' })
+  configureApp('marketing', { title: 'Email', order: 70 })
   // The champion's own library (templates, images, blocks) and multi-site
   // sends, the same from every site.
-  registerApp({ id: PT_LIBRARY_APP, title: 'My library', path: '/personal', icon: 'i-lucide-library-big', description: 'Your templates, images and blocks, usable on any of your sites.', scope: 'user', permissions: [], defaultStatus: 'default', order: 90 })
+  registerApp({ id: PT_LIBRARY_APP, title: 'Library', path: '/personal', icon: 'i-lucide-library-big', description: 'Your templates, images and blocks, usable on any of your sites.', scope: 'user', permissions: [], defaultStatus: 'default', order: 90 })
 
-  const nav: [string, string, string, string, number][] = [
-    ['Dashboard', '/@:orgSlug/site', 'i-lucide-layout-dashboard', 'pt.access', 10],
-    ['Campaigns', '/@:orgSlug/site/campaigns', 'i-lucide-calendar-range', 'pt.site.read', 20],
-    ['Prayer content', '/@:orgSlug/site/content', 'i-lucide-book-open', 'pt.site.read', 30],
-    ['Landing page', '/@:orgSlug/site/landing', 'i-lucide-panels-top-left', 'pt.site.read', 40],
-    ['Intercessors', '/@:orgSlug/crm/contacts', 'i-lucide-users', 'crm.contacts.read', 50],
-    ['Stats', '/@:orgSlug/site/stats', 'i-lucide-chart-line', 'pt.stats.read', 60],
-    ['Stories', '/@:orgSlug/site/stories', 'i-lucide-heart-handshake', 'pt.intercessors.read', 65],
-    ['Share', '/@:orgSlug/site/share', 'i-lucide-share-2', 'pt.site.read', 70],
-    ['Test emails & push', '/@:orgSlug/site/emails', 'i-lucide-mail-check', 'pt.email.send', 75],
-    ['Settings', '/@:orgSlug/site/settings', 'i-lucide-settings', 'pt.site.read', 80],
-    ['Domains', '/@:orgSlug/site/domains', 'i-lucide-globe', 'pt.site.manage', 85],
-    ['Team', '/@:orgSlug/site/team', 'i-lucide-user-cog', 'org.members.read', 90]
+  // The rail is the only main navigation; every entry is "this, for the
+  // current site". Sections with several pages use in-page tabs.
+  const rail: [string, string, string, string, string, number][] = [
+    ['site', 'Dashboard', '/@:orgSlug/site', 'i-lucide-layout-dashboard', 'pt.access', 10],
+    ['site', 'Campaigns', '/@:orgSlug/site/campaigns', 'i-lucide-calendar-range', 'pt.site.read', 20],
+    ['site', 'Content', '/@:orgSlug/site/content', 'i-lucide-book-open', 'pt.site.read', 30],
+    ['site', 'Landing page', '/@:orgSlug/site/landing', 'i-lucide-panels-top-left', 'pt.site.read', 40],
+    ['crm', 'Intercessors', '/@:orgSlug/crm/contacts', 'i-lucide-users', 'crm.contacts.read', 50],
+    ['site', 'Stats', '/@:orgSlug/site/stats', 'i-lucide-chart-line', 'pt.stats.read', 80],
+    ['site', 'Team', '/@:orgSlug/site/team', 'i-lucide-user-cog', 'org.members.read', 90],
+    ['site', 'Settings', '/@:orgSlug/site/settings', 'i-lucide-settings', 'pt.site.read', 100]
   ]
-  for (const [title, path, icon, requiredPermission, order] of nav) {
-    registerNavItem({ appId: 'site', title, path, icon, requiredPermission, order })
+  for (const [appId, title, path, icon, requiredPermission, order] of rail) {
+    registerRailItem({ appId, id: title.toLowerCase().replace(/\s+/g, '-'), title, path, icon, requiredPermission, order })
   }
 
   registerAdminSection({ appId: 'pt', title: 'Sites', path: '/admin/pt/sites', icon: 'i-lucide-church', order: 20 })

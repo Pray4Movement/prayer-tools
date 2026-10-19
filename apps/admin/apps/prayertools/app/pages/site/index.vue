@@ -70,7 +70,7 @@ const progressLabel = computed(() => {
           />
           <UButton
             v-if="site.site.status === 'published'"
-            to="/site/share"
+            to="/site/landing/share"
             icon="i-lucide-share-2"
             label="Share"
           />
@@ -186,13 +186,13 @@ const progressLabel = computed(() => {
               </li>
               <li v-if="can('pt.email.send')">
                 <NuxtLink
-                  to="/site/emails"
+                  to="/marketing/test-emails"
                   class="hover:underline"
                 >Send yourself a test email</NuxtLink>
               </li>
               <li v-if="can('pt.site.manage')">
                 <NuxtLink
-                  to="/site/domains"
+                  to="/site/settings/domains"
                   class="hover:underline"
                 >Add your own domain</NuxtLink>
               </li>

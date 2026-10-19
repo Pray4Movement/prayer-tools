@@ -114,6 +114,7 @@ async function translateWhy() {
     v-if="site"
     class="max-w-4xl mx-auto space-y-6"
   >
+    <PtLandingTabs />
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-semibold">

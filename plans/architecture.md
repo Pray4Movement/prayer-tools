@@ -53,7 +53,7 @@ The public server and worker are not Nuxt layers. Logic they share with the admi
 
 ## Working across sites
 
-A request sees one org. These features visit sites one at a time; none reads two orgs in one query. One site is the default everywhere: picking a site, emailing that site's subscribers and that site's contacts are the main screens; cross-site features are advanced and never the default screen.
+A request sees one org. These features visit sites one at a time; none reads two orgs in one query. One site is the default everywhere: picking a site, emailing that site's subscribers and that site's contacts are the main screens; cross-site features are secondary actions and never the default screen.
 
 - **Your sites.** After login, the sites list comes from the user's memberships, each site read inside its own org: name, live address, role, status, current campaign and people count, with pending invitations to the user's verified email at the top (accept or decline there). Operators can search all sites.
 - **Personal library.** Email templates, images and reusable blocks belong to the champion, not to a site, and can be used on any of their sites. Using one on a site makes a copy there. It is a Nuxtinator personal app (`library`, on for everyone): its tables have no org and an owner policy on `app.current_user`, which the personal-app handlers set; they hold no intercessor data. Prayer-content libraries follow the same ownership (see [libraries.md](libraries.md)). Sharing with specific people is deferred.
@@ -72,7 +72,7 @@ A request sees one org. These features visit sites one at a time; none reads two
 - **Global suppression:** a table outside org scoping, owned by the email layer; the CRM and inbox check it.
 - **Marketing layer (from Doxa):** audiences from a registry the host fills (the CRM supplies "consented to updates"; prayer.tools adds "people in this campaign", "people from past campaigns"); per-tenant senders and branding; signed unsubscribe tokens and a layer-owned unsubscribe page; the parent record for multi-site sends; the personal template library.
 - **Kernel:** `listUserOrgs` (the user's orgs with their permissions in each) and `withOrgScope` / `listOrgScopes` for work that visits orgs one at a time.
-- **Shell:** the active app resolved on org-prefixed routes; `configureApp` so the host folds the CRM into the Site sidebar, hides it from the launcher and sets the apps' default status; an orgs rail link and switcher wording ("Sites", "New site") from app config.
+- **Shell:** rail items for the site's sections and `configureApp` relabels and order (released on master); `configureApp` also setting an app's default status; switcher wording ("Sites", "New site") from app config; a CRM app-config switch that hides the schema builder and permissions matrix.
 - **Inbox:** mail to `<site slug>@<shared inbound domain>` routes to that site (`INBOX_SLUG_ADDRESSES`), which is also the reply-to of site email unless the site sets its own.
 - **Personal library:** core's personal apps (user-scoped app layers) — already released.
 - **One Tiptap renderer** shared by the marketing layer and prayer.tools (`tiptapToHtml`), covering every node the editor offers, including Scripture verses.

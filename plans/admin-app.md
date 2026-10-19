@@ -17,7 +17,18 @@ Where champions and their teams build and run sites and their campaigns. Everyth
 
 ## Accounts and access
 
-- **One site is the default.** Everything starts from one site: picking a site, its dashboard, emailing that site's subscribers, that site's contacts (Intercessors). The switcher says "Sites" and "New site". Anything spanning several sites (multi-site sends) is an advanced screen, reached from a site's email page, never the default screen.
+- **One site is the default.** Everything starts from one site: picking a site, its dashboard, emailing that site's subscribers, that site's contacts (Intercessors). Anything spanning several sites (multi-site sends) is a secondary action, never the default screen.
+
+## Navigation
+
+- **The rail is the only main navigation;** there is no app sidebar. Top to bottom:
+  - for the current site: Dashboard, Campaigns, Content, Landing page, Intercessors (the CRM's contacts), Inbox, Email, Stats, Team, Settings;
+  - after a divider: Library (the champion's personal library);
+  - at the bottom: Admin, for operators only.
+- Every rail entry means "this, for the current site". Switching sites is the header switcher's job; it says "Sites" and "New site", never "Organizations". The rail starts collapsed (Nuxtinator's default).
+- **Sections with several pages use in-page tabs:** Content (prayer content, libraries); Landing page (page, stories, share); Email (emails, test emails and push); Settings (settings, domains); Library (images and blocks, templates); a campaign (overview, content, emails, stats for that campaign).
+- **Multi-site sends are never in the rail or top-level navigation:** "Send to several sites…" is in the overflow menu of a site's Email list and on each Library template, and only when the user can send on at least two sites.
+- **The CRM and the inbox keep their own in-page navigation.** Champions never see the CRM's schema builder or permissions matrix.
 
 - One login; after login, **Your sites** lists every site the user belongs to: name, live address, role, status (draft / published / archived), the current or next campaign, and the people count. Pending invites show at the top; with no sites, the page starts onboarding. No subsites, no per-site logins.
 - Per-site roles and invites from Nuxtinator's tenancy layer:
@@ -79,7 +90,7 @@ The marketing layer (Doxa's marketing system — composer, Tiptap templates, aud
 
 - **Audiences:** the current campaign's intercessors, past campaigns' intercessors (re-engagement for a relaunch), everyone who consented, everyone who ticked one of the site's custom consent options. Consent is per site, so it carries across campaigns.
 - **Before sending:** the confirm names the site and how many people the email reaches there ("Send to 1,240 people on Pray for Damascus?"); a multi-site send lists every site and its count.
-- **Several sites at once** (advanced screen): a champion can write one email and send it to chosen audiences on several of their sites. Each person gets one email, from the most recently joined chosen site where they consented; unsubscribing stops updates from every chosen site they belong to (see [architecture.md](architecture.md)).
+- **Several sites at once** (a secondary action, see Navigation): a champion can write one email and send it to chosen audiences on several of their sites. Each person gets one email, from the most recently joined chosen site where they consented; unsubscribing stops updates from every chosen site they belong to (see [architecture.md](architecture.md)).
 - **Templates and variables:** start from the champion's personal templates; variables (`{site name}`, `{campaign name}`, `{past campaign}`, `{site link}`, `{first name}`) are filled in per site.
 - **Consent:** signup offers unchecked boxes for updates from this site and news from Prayer.Tools; reminders and transactional email come with joining. Champions can add their own consent options, with their own label. Every grant and withdrawal goes to the CRM's consent log (see [README.md](README.md)). Marketing only to people who opted in on that site. Prayer reminders are not marketing; unsubscribing from announcements never stops reminders. Bounce suppression is global per address.
 - **Anonymous app intercessors** are reached by push, not email.

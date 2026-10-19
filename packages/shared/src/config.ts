@@ -79,7 +79,9 @@ export const RESERVED_SLUGS = new Set([
   'app', 'api', 'go', 'www', 'my', 'admin', 'mail', 'email', 'smtp', 'ftp', 'static', 'assets', 'cdn',
   'help', 'support', 'docs', 'blog', 'status', 'staging', 'dev', 'test', 'sites', 'site', 'prayer',
   'prayertools', 'tools', 'give', 'donate', 'login', 'account', 'dashboard', 'statinator', 'feedback',
-  'news', 'webmail', 'ns1', 'ns2', 'mx', 'autodiscover', 'autoconfig', 'img', 'images', 'media'
+  'news', 'webmail', 'ns1', 'ns2', 'mx', 'autodiscover', 'autoconfig', 'img', 'images', 'media',
+  // Mail role addresses: a site's slug is also its inbox address on the shared inbound domain.
+  'abuse', 'bounce', 'contact', 'hostmaster', 'mailer-daemon', 'no-reply', 'noreply', 'notifications', 'postmaster', 'security', 'webmaster'
 ])
 
 export const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/

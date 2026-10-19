@@ -21,6 +21,7 @@ async function setPublished(s: Story, published: boolean) {
 
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
+    <PtLandingTabs />
     <div>
       <h1 class="text-2xl font-semibold">
         Stories

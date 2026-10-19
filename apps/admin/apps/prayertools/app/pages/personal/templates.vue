@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import type { MarketingVersions } from '../../utils/marketing-ui'
-import { marketingDate, marketingErrorMessage } from '../../utils/marketing-ui'
+import type { MarketingVersions } from '../../../../marketing/app/utils/marketing-ui'
+import { marketingDate, marketingErrorMessage } from '../../../../marketing/app/utils/marketing-ui'
 
-definePageMeta({ middleware: 'auth' })
+definePageMeta({ middleware: 'auth', tenantExempt: true })
 
 interface Template { id: string, name: string, versions: MarketingVersions, source_language: string, updated_at: string }
 
 const toast = useToast()
+const severalSites = useMarketingSeveralSites()
 const templates = ref<Template[]>([])
 const loading = ref(true)
 const renaming = ref<Template | null>(null)
@@ -47,6 +48,7 @@ async function remove(t: Template) {
 
 <template>
   <div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+    <PtLibraryTabs />
     <div>
       <h1 class="text-2xl font-semibold">
         Your email templates
@@ -81,6 +83,15 @@ async function remove(t: Template) {
             {{ t.versions[t.source_language]?.subject }} · {{ Object.keys(t.versions).length }} language(s) · updated {{ marketingDate(t.updated_at) }}
           </p>
         </div>
+        <UButton
+          v-if="severalSites"
+          label="Send to several sites"
+          size="sm"
+          icon="i-lucide-send"
+          color="neutral"
+          variant="ghost"
+          :to="{ path: '/marketing/multi/new', query: { template: t.id } }"
+        />
         <UButton
           label="Rename"
           size="sm"

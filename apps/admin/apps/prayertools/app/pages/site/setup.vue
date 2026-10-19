@@ -225,7 +225,7 @@ async function publish() {
     await saveLook()
     await $fetch('/api/pt/site/status', { method: 'POST', body: { action: 'publish' } })
     toast.ok('Your site is live', site.value?.url)
-    await navigateTo(`/@${slug.value}/site/share`)
+    await navigateTo(`/@${slug.value}/site/landing/share`)
   } catch (err) {
     toast.fail(err, 'Could not publish')
   } finally {

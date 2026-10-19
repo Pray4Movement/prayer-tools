@@ -51,6 +51,7 @@ async function deleteBlock(id: string) {
 
 <template>
   <div class="max-w-5xl mx-auto space-y-8">
+    <PtLibraryTabs />
     <div>
       <h1 class="text-2xl font-semibold">
         My images and blocks

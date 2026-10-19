@@ -82,6 +82,19 @@ async function loadParent() {
   }
 }
 
+// "Send to several sites" on a Library template starts the send from it.
+async function startFromTemplate(templateId: string) {
+  const { templates } = await $fetch<{ templates: { id: string, versions: MarketingVersions, source_language: string }[] }>('/api/marketing/templates')
+  const t = templates.find(x => x.id === templateId)
+  if (!t) return
+  const codes = allLanguages.value.map(l => l.code)
+  const versions: MarketingVersions = {}
+  for (const [lang, v] of Object.entries(t.versions)) if (codes.includes(lang)) versions[lang] = v
+  if (!Object.keys(versions).length) return
+  const source = versions[t.source_language] ? t.source_language : Object.keys(versions)[0]!
+  draft.value = { ...draft.value, versions, source_language: source }
+}
+
 async function loadAudiences() {
   if (!orgIds.value.length || !isDraft.value) {
     audienceSites.value = []
@@ -105,6 +118,7 @@ onMounted(async () => {
     variables.value = res.variables
     draft.value.source_language = res.sites[0]?.defaultLanguage ?? res.languages[0]?.code ?? 'en'
     await loadParent()
+    if (id.value === 'new' && typeof route.query.template === 'string') await startFromTemplate(route.query.template)
     await loadAudiences()
   } catch (err) {
     error.value = marketingErrorMessage(err)

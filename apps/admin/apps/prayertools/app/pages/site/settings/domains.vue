@@ -48,6 +48,7 @@ async function remove(id: string) {
     v-if="site"
     class="max-w-3xl mx-auto space-y-6"
   >
+    <PtSettingsTabs />
     <div>
       <h1 class="text-2xl font-semibold">
         Domains

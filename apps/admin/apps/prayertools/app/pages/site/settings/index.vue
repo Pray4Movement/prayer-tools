@@ -190,6 +190,7 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
     v-if="site"
     class="max-w-4xl mx-auto space-y-6"
   >
+    <PtSettingsTabs />
     <h1 class="text-2xl font-semibold">
       Settings
     </h1>

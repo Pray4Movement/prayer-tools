@@ -19,6 +19,12 @@ interface Row {
   unsubscribes: number
 }
 
+const severalSites = useMarketingSeveralSites()
+const moreItems = [
+  { label: 'Send to several sites…', icon: 'i-lucide-send', to: '/marketing/multi/new' },
+  { label: 'Sends to several sites', icon: 'i-lucide-history', to: '/marketing/multi' }
+]
+
 const emails = ref<Row[]>([])
 const meta = ref<{ site: { name: string }, canSend: boolean } | null>(null)
 const loading = ref(true)
@@ -50,6 +56,7 @@ function when(e: Row): string {
 
 <template>
   <div class="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+    <MarketingTabs />
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-semibold">
@@ -59,12 +66,27 @@ function when(e: Row): string {
           Emails to people who opted in to hear from {{ meta?.site.name ?? 'this site' }}. Prayer reminders are separate and never affected.
         </p>
       </div>
-      <UButton
+      <div
         v-if="meta?.canSend"
-        label="New email"
-        icon="i-lucide-plus"
-        to="/marketing/new"
-      />
+        class="flex items-center gap-2"
+      >
+        <UButton
+          label="New email"
+          icon="i-lucide-plus"
+          to="/marketing/new"
+        />
+        <UDropdownMenu
+          v-if="severalSites"
+          :items="moreItems"
+        >
+          <UButton
+            icon="i-lucide-ellipsis"
+            color="neutral"
+            variant="ghost"
+            aria-label="More"
+          />
+        </UDropdownMenu>
+      </div>
     </div>
 
     <UAlert
