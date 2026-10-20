@@ -9,6 +9,10 @@ const campaign = computed(() => site.value.campaign)
 
 useHead({ title: () => site.value.name })
 
+const signupIntro = computed(() => campaign.value?.state === 'upcoming' && campaign.value.startDate
+  ? t('signup.starts_on', { date: date(campaign.value.startDate) })
+  : st('landing.signup.intro', { site: site.value.name }))
+
 const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.value.image.fx * 100}% ${site.value.image.fy * 100}%` } : {})
 </script>
 
@@ -24,7 +28,7 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
           <GoalProgress v-if="page.progress" :progress="page.progress" on-brand />
           <p v-if="page.prayingNow > 0" class="text-sm">{{ t('pray.praying_now', { n: num(page.prayingNow) }, page.prayingNow) }}</p>
           <div class="flex flex-wrap gap-3">
-            <UButton :to="link('signup')" size="xl" color="neutral" variant="solid" class="bg-white text-stone-900 hover:bg-stone-100" :label="st('landing.signup.title')" />
+            <UButton to="#signup" size="xl" color="neutral" variant="solid" class="bg-white text-stone-900 hover:bg-stone-100" :label="st('landing.signup.title')" />
             <UButton v-if="page.today" :to="link('pray')" size="xl" variant="outline" class="text-(--brand-text) ring-(--brand-text)/60 hover:bg-white/10" :label="t('landing.pray_today')" />
           </div>
         </div>
@@ -65,12 +69,24 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
         <h2 id="how-title" class="text-2xl font-bold mb-4">{{ st('landing.how.title') }}</h2>
         <p class="whitespace-pre-line text-stone-800">{{ st('landing.how.body', { site: site.name }) }}</p>
       </section>
+    </div>
 
-      <section id="signup" aria-labelledby="signup-title" class="rounded-2xl bg-white border border-stone-200 p-6 space-y-3">
-        <h2 id="signup-title" class="text-2xl font-bold">{{ st('landing.signup.title') }}</h2>
-        <p class="text-stone-700">{{ st('landing.signup.intro', { site: site.name }) }}</p>
-        <UButton :to="link('signup')" size="xl" :label="t('landing.signup.button')" trailing-icon="i-lucide-arrow-right" />
-      </section>
+    <section id="signup" class="scroll-mt-4 bg-stone-100/70" aria-labelledby="signup-title">
+      <div class="max-w-5xl mx-auto px-4 py-12">
+        <div class="rounded-xl border border-stone-200 bg-white shadow-sm">
+          <div class="border-b border-stone-200 px-5 py-6 text-center sm:px-8">
+            <h2 id="signup-title" class="text-2xl font-bold">{{ st('landing.signup.title') }}</h2>
+            <p class="mt-2 text-stone-600">{{ signupIntro }}</p>
+          </div>
+          <div class="px-5 py-6 sm:px-8">
+            <UAlert v-if="!page.form.open || !campaign" color="neutral" variant="soft" icon="i-lucide-info" :title="t('signup.closed')" />
+            <LazySignupForm v-else :form="page.form" hydrate-on-visible />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="max-w-3xl mx-auto px-4 py-10 space-y-14">
 
       <section v-if="has('today') && page.today" aria-labelledby="today-title">
         <h2 id="today-title" class="text-2xl font-bold mb-1">{{ st('landing.today.title') }}</h2>

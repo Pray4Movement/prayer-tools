@@ -7,46 +7,45 @@ const { data: campaigns } = useFetch<{ campaigns: { id: string, name: string }[]
 const campaignId = ref<string | undefined>(typeof route.query.campaign === 'string' ? route.query.campaign : undefined)
 watch([campaigns, site], () => { if (!campaignId.value) campaignId.value = site.value?.currentCampaign?.id ?? campaigns.value?.campaigns[0]?.id }, { immediate: true })
 
-const { data } = useFetch<{
+const { data, pending, error } = useFetch<{
   totals: Record<string, number>
   series: { day: string, metric: string, value: number }[]
   dims: Record<string, { key: string, total: number }[]>
   progress: { goal: string, people: number, value: number, target: number | null, percent: number | null } | null
   coverage: { date: string, percent: number }[] | null
+  campaign: { name: string, start_date: string | null, end_date: string | null, length: string } | null
   commitments: number
   prayingNow: number
   anonymousApp: number
 }>('/api/pt/stats', { query: computed(() => ({ campaign: campaignId.value })), key: computed(() => `pt-stats-${campaignId.value}`), watch: [campaignId] })
 
-const cards = computed(() => {
-  const t = data.value?.totals ?? {}
-  return [
-    { label: 'People signed up', value: data.value?.progress?.people ?? 0 },
-    { label: 'Prayer times', value: data.value?.commitments ?? 0 },
-    { label: 'Prayers', value: t.prayers ?? 0 },
-    { label: 'Minutes prayed', value: Math.round((t.prayer_seconds ?? 0) / 60) },
-    { label: 'Praying now', value: data.value?.prayingNow ?? 0 },
-    { label: 'Anonymous app users', value: data.value?.anonymousApp ?? 0 },
-    { label: 'Visitors', value: t.visitors ?? 0 },
-    { label: 'Signups', value: t.signups ?? 0 },
-    { label: 'Confirmed emails', value: t.verifications ?? 0 },
-    { label: 'Joined through shares', value: t.share_signups ?? 0 },
-    { label: 'Shares', value: t.shares ?? 0 },
-    { label: 'Praying as a group', value: t.group_prayers ?? 0 },
-    { label: 'Stories', value: t.stories ?? 0 }
-  ]
-})
+const campaign = computed(() => data.value?.campaign ?? null)
+const hours = (min: number) => min >= 60 ? `${(min / 60).toLocaleString(undefined, { maximumFractionDigits: 1 })} h` : `${Math.round(min)} min`
+const total = (metric: string) => data.value?.totals?.[metric] ?? 0
 
+const metric = ref<'prayers' | 'minutes' | 'visitors' | 'signups'>('prayers')
 const METRICS = [
-  { key: 'prayers', label: 'Prayers' },
-  { key: 'visitors', label: 'Visitors' },
-  { key: 'signups', label: 'Signups' }
+  { label: 'Prayers', value: 'prayers', unit: 'prayers', source: 'prayers' },
+  { label: 'Minutes prayed', value: 'minutes', unit: 'minutes', source: 'prayer_seconds' },
+  { label: 'Visitors', value: 'visitors', unit: 'visitors', source: 'visitors' },
+  { label: 'Signups', value: 'signups', unit: 'signups', source: 'signups' }
 ]
-const metric = ref('prayers')
-const days = computed(() => {
-  const rows = (data.value?.series ?? []).filter(s => s.metric === metric.value)
-  const max = Math.max(1, ...rows.map(r => r.value))
-  return rows.slice(-60).map(r => ({ ...r, height: Math.max(2, Math.round(r.value / max * 100)) }))
+const metricInfo = computed(() => METRICS.find(m => m.value === metric.value)!)
+// Daily values for the chosen metric over the last 60 days, days without activity as 0.
+const points = computed(() => {
+  const info = metricInfo.value
+  const byDay = new Map((data.value?.series ?? []).filter(s => s.metric === info.source).map(s => [s.day, s.value]))
+  if (!byDay.size) return []
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
+  const end = new Date(`${iso(new Date())}T00:00:00Z`)
+  const earliest = new Date(`${[...byDay.keys()].sort()[0]}T00:00:00Z`)
+  const start = new Date(Math.max(earliest.getTime(), end.getTime() - 59 * 86400000))
+  const out: { day: string, value: number }[] = []
+  for (let d = start; d <= end; d = new Date(d.getTime() + 86400000)) {
+    const v = byDay.get(iso(d)) ?? 0
+    out.push({ day: iso(d), value: info.source === 'prayer_seconds' ? Math.round(v / 60) : v })
+  }
+  return out
 })
 
 async function downloadIntercessors() {
@@ -60,6 +59,7 @@ async function downloadIntercessors() {
 }
 
 const DIM_LABELS: Record<string, string> = { country: 'Countries', source: 'Sources', utm_source: 'Campaign sources (UTM)', referrer: 'Referring sites' }
+const DIM_ICONS: Record<string, string> = { country: 'i-lucide-globe', source: 'i-lucide-signpost', utm_source: 'i-lucide-megaphone', referrer: 'i-lucide-link' }
 </script>
 
 <template>
@@ -68,15 +68,26 @@ const DIM_LABELS: Record<string, string> = { country: 'Countries', source: 'Sour
       v-if="typeof route.query.campaign === 'string'"
       :campaign-id="route.query.campaign"
     />
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-semibold">
-        Stats
-      </h1>
+    <header class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold">
+          Stats
+        </h1>
+        <p class="text-sm text-(--ui-text-muted)">
+          <template v-if="campaign">
+            {{ campaign.name }}: {{ ptFormatDate(campaign.start_date) }} – {{ campaign.end_date ? ptFormatDate(campaign.end_date) : 'ongoing' }}
+          </template>
+          <template v-else>
+            All time
+          </template>
+        </p>
+      </div>
       <div class="flex flex-wrap gap-2">
         <UButton
           v-if="can('pt.intercessors.export')"
           icon="i-lucide-download"
-          variant="outline"
+          variant="soft"
+          color="neutral"
           label="Export intercessors"
           @click="downloadIntercessors"
         />
@@ -85,124 +96,299 @@ const DIM_LABELS: Record<string, string> = { country: 'Countries', source: 'Sour
           v-model="campaignId"
           :items="campaigns.campaigns.map(c => ({ label: c.name, value: c.id }))"
           class="w-64"
+          aria-label="Campaign"
         />
       </div>
-    </div>
+    </header>
 
-    <UCard v-if="data?.progress">
-      <p class="text-sm text-(--ui-text-muted)">
-        Goal: {{ PT_LABELS.goal[data.progress.goal] }}
-      </p>
-      <p class="text-lg font-semibold">
-        <template v-if="data.progress.goal === 'people'">
-          {{ data.progress.people.toLocaleString() }} people<span v-if="data.progress.target"> of {{ data.progress.target.toLocaleString() }}</span>
-        </template>
-        <template v-else-if="data.progress.goal === 'prayer_time'">
-          {{ (data.progress.value / 60).toFixed(1) }} hours of prayer a day committed, of {{ ((data.progress.target ?? 1440) / 60).toFixed(0) }}
-        </template>
-        <template v-else>
-          {{ data.progress.value }}% of the time covered
-        </template>
-      </p>
-      <UProgress
-        v-if="data.progress.percent !== null"
-        :model-value="data.progress.percent"
-        class="mt-2"
-      />
-    </UCard>
+    <UAlert
+      v-if="site && !can('pt.stats.read')"
+      color="neutral"
+      variant="subtle"
+      icon="i-lucide-lock"
+      title="You don’t have permission to see stats."
+    />
+    <UAlert
+      v-else-if="error"
+      color="error"
+      variant="subtle"
+      icon="i-lucide-circle-alert"
+      title="Stats could not be loaded."
+      :description="ptErrorMessage(error)"
+    />
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-      <UCard
-        v-for="c in cards"
-        :key="c.label"
-      >
-        <p class="text-xs text-(--ui-text-muted)">
-          {{ c.label }}
-        </p>
-        <p class="text-2xl font-semibold tabular-nums">
-          {{ c.value.toLocaleString() }}
-        </p>
-      </UCard>
-    </div>
-
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h2 class="font-semibold">
-            By day
-          </h2>
-          <UTabs
-            v-model="metric"
-            :items="METRICS.map(m => ({ label: m.label, value: m.key }))"
-            :content="false"
-            size="xs"
-          />
-        </div>
-      </template>
+    <template v-else-if="data">
       <div
-        v-if="days.length"
-        class="flex items-end gap-0.5 h-40"
-        role="img"
-        :aria-label="`${metric} per day`"
+        class="grid gap-4 grid-cols-2 lg:grid-cols-4"
+        :class="pending ? 'opacity-60' : ''"
       >
-        <div
-          v-for="d in days"
-          :key="d.day"
-          class="flex-1 bg-(--ui-primary) rounded-t-sm min-w-0.5"
-          :style="{ height: `${d.height}%` }"
-          :title="`${d.day}: ${d.value}`"
-        />
+        <UCard>
+          <div class="text-sm text-(--ui-text-muted)">
+            People praying
+          </div>
+          <div class="text-3xl font-bold tabular-nums">
+            {{ (data.progress?.people ?? 0).toLocaleString() }}
+          </div>
+          <div class="text-xs text-(--ui-text-muted)">
+            {{ campaign?.length === 'fixed' ? 'committed to this campaign' : 'with active prayer times' }}
+          </div>
+        </UCard>
+        <UCard>
+          <div class="text-sm text-(--ui-text-muted)">
+            Praying now
+          </div>
+          <div class="text-3xl font-bold tabular-nums flex items-center gap-2">
+            {{ data.prayingNow.toLocaleString() }}
+            <span
+              v-if="data.prayingNow"
+              class="size-2 rounded-full bg-(--ui-success) animate-pulse"
+              aria-hidden="true"
+            />
+          </div>
+          <div class="text-xs text-(--ui-text-muted)">
+            in an open prayer session
+          </div>
+        </UCard>
+        <UCard>
+          <div class="text-sm text-(--ui-text-muted)">
+            Prayer times
+          </div>
+          <div class="text-3xl font-bold tabular-nums">
+            {{ data.commitments.toLocaleString() }}
+          </div>
+          <div class="text-xs text-(--ui-text-muted)">
+            chosen by intercessors
+          </div>
+        </UCard>
+        <UCard>
+          <div class="text-sm text-(--ui-text-muted)">
+            Joined through shares
+          </div>
+          <div class="text-3xl font-bold tabular-nums">
+            {{ total('share_signups').toLocaleString() }}
+          </div>
+          <div class="text-xs text-(--ui-text-muted)">
+            from {{ total('shares').toLocaleString() }} shares
+          </div>
+        </UCard>
       </div>
-      <p
-        v-else
-        class="text-sm text-(--ui-text-muted)"
-      >
-        No activity yet.
-      </p>
-    </UCard>
 
-    <UCard v-if="data?.coverage?.length">
-      <template #header>
-        <h2 class="font-semibold">
-          24/7 coverage by day
-        </h2>
-      </template>
-      <div class="grid grid-cols-7 gap-1">
-        <div
-          v-for="d in data.coverage"
-          :key="d.date"
-          class="rounded p-1 text-center text-xs"
-          :class="d.percent >= 100 ? 'bg-(--ui-success)/30' : d.percent > 0 ? 'bg-(--ui-warning)/20' : 'bg-(--ui-bg-elevated)'"
-        >
-          <p>{{ ptFormatDate(d.date, { month: 'short', day: 'numeric' }) }}</p>
-          <p class="font-semibold">
-            {{ d.percent }}%
-          </p>
-        </div>
-      </div>
-    </UCard>
-
-    <div class="grid md:grid-cols-2 gap-4">
-      <UCard
-        v-for="(rows, dim) in data?.dims ?? {}"
-        :key="dim"
-      >
+      <UCard v-if="data.progress">
         <template #header>
           <h2 class="font-semibold">
-            {{ DIM_LABELS[dim] ?? dim }}
+            Goal: {{ PT_LABELS.goal[data.progress.goal] }}
           </h2>
         </template>
-        <ul class="text-sm space-y-1">
-          <li
-            v-for="r in rows"
-            :key="r.key"
-            class="flex justify-between"
-          >
-            <span>{{ r.key }}</span>
-            <span class="tabular-nums">{{ r.total.toLocaleString() }}</span>
-          </li>
-        </ul>
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-baseline gap-x-3">
+            <template v-if="data.progress.goal === 'people'">
+              <span class="text-3xl font-bold tabular-nums">{{ data.progress.people.toLocaleString() }}</span>
+              <span class="text-sm text-(--ui-text-muted)">
+                people<template v-if="data.progress.target"> of {{ data.progress.target.toLocaleString() }}</template>
+              </span>
+            </template>
+            <template v-else-if="data.progress.goal === 'prayer_time'">
+              <span class="text-3xl font-bold tabular-nums">{{ Math.round(data.progress.percent ?? 0) }}%</span>
+              <span class="text-sm text-(--ui-text-muted)">
+                {{ hours(data.progress.value) }} of {{ hours(data.progress.target ?? 1440) }} committed per day
+              </span>
+            </template>
+            <template v-else>
+              <span class="text-3xl font-bold tabular-nums">{{ Math.round(data.progress.value) }}%</span>
+              <span class="text-sm text-(--ui-text-muted)">of the time covered by at least one person</span>
+            </template>
+          </div>
+          <UProgress
+            v-if="data.progress.percent !== null"
+            :model-value="Math.min(100, data.progress.percent)"
+            :aria-label="`${Math.round(data.progress.percent)}% of the goal`"
+          />
+          <PtCoverageCalendar
+            v-if="data.coverage?.length"
+            :days="data.coverage"
+            :today="new Date().toISOString().slice(0, 10)"
+          />
+        </div>
       </UCard>
-    </div>
+
+      <UCard>
+        <template #header>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="font-semibold">
+              Prayer activity
+            </h2>
+            <USelect
+              v-model="metric"
+              :items="METRICS.map(m => ({ label: m.label, value: m.value }))"
+              class="w-48"
+              aria-label="Measure"
+            />
+          </div>
+        </template>
+        <div class="space-y-6">
+          <div class="grid gap-4 grid-cols-2 sm:grid-cols-4 text-sm">
+            <div>
+              <div class="text-2xl font-semibold tabular-nums">
+                {{ total('prayers').toLocaleString() }}
+              </div>
+              <div class="text-(--ui-text-muted)">
+                prayers
+              </div>
+            </div>
+            <div>
+              <div class="text-2xl font-semibold tabular-nums">
+                {{ hours(total('prayer_seconds') / 60) }}
+              </div>
+              <div class="text-(--ui-text-muted)">
+                prayed
+              </div>
+            </div>
+            <div>
+              <div class="text-2xl font-semibold tabular-nums">
+                {{ total('group_prayers').toLocaleString() }}
+              </div>
+              <div class="text-(--ui-text-muted)">
+                praying as a group
+              </div>
+            </div>
+            <div>
+              <div class="text-2xl font-semibold tabular-nums">
+                {{ total('stories').toLocaleString() }}
+              </div>
+              <div class="text-(--ui-text-muted)">
+                stories
+              </div>
+            </div>
+          </div>
+          <PtBarChart
+            :points="points"
+            :unit="metricInfo.unit"
+            :title="`${metricInfo.label} per day`"
+          />
+        </div>
+      </UCard>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <UCard>
+          <template #header>
+            <h2 class="font-semibold">
+              Intercessors
+            </h2>
+          </template>
+          <dl class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                People signed up
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ (data.progress?.people ?? 0).toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                Anonymous app users
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ data.anonymousApp.toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                Signups
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ total('signups').toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                Confirmed emails
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ total('verifications').toLocaleString() }}
+              </dd>
+            </div>
+          </dl>
+        </UCard>
+        <UCard>
+          <template #header>
+            <h2 class="font-semibold">
+              Site visits
+            </h2>
+          </template>
+          <dl class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                Visitors
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ total('visitors').toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                Page views
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ total('pageviews').toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                Shares
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ total('shares').toLocaleString() }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-(--ui-text-muted)">
+                Joined through shares
+              </dt>
+              <dd class="text-lg font-semibold tabular-nums">
+                {{ total('share_signups').toLocaleString() }}
+              </dd>
+            </div>
+          </dl>
+        </UCard>
+      </div>
+
+      <div
+        v-if="Object.keys(data.dims).length"
+        class="grid gap-4 sm:grid-cols-2"
+      >
+        <UCard
+          v-for="(rows, dim) in data.dims"
+          :key="dim"
+        >
+          <template #header>
+            <div class="flex items-center gap-2">
+              <UIcon
+                :name="DIM_ICONS[dim] ?? 'i-lucide-chart-bar'"
+                class="size-4 text-(--ui-text-muted)"
+              />
+              <h2 class="font-semibold">
+                {{ DIM_LABELS[dim] ?? dim }}
+              </h2>
+            </div>
+          </template>
+          <ul class="space-y-1.5 text-sm">
+            <li
+              v-for="r in rows"
+              :key="r.key"
+              class="relative flex justify-between gap-3 rounded px-2 py-1"
+            >
+              <span
+                class="absolute inset-y-0 start-0 rounded bg-(--ui-primary)/10"
+                :style="{ width: `${Math.max(2, r.total / (rows[0]?.total || 1) * 100)}%` }"
+                aria-hidden="true"
+              />
+              <span class="relative truncate">{{ r.key }}</span>
+              <span class="relative tabular-nums">{{ r.total.toLocaleString() }}</span>
+            </li>
+          </ul>
+        </UCard>
+      </div>
+    </template>
   </div>
 </template>

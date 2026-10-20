@@ -2,18 +2,19 @@
 import type { SignupFormView } from '~~/shared/view'
 
 defineProps<{ form: SignupFormView }>()
-const { site, st } = useSite()
+const { site, st, date } = useSite()
 const { t } = useI18n()
 useHead({ title: () => `${st('landing.signup.title')} · ${site.value.name}` })
+const startNote = computed(() => site.value.campaign?.state === 'upcoming' && site.value.campaign.startDate ? t('signup.starts_on', { date: date(site.value.campaign.startDate) }) : '')
 const appAvailable = computed(() => !!(site.value.appStoreUrl || site.value.playStoreUrl))
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-10 space-y-8">
+  <div class="max-w-5xl mx-auto px-4 py-10 space-y-8">
     <header class="space-y-2">
       <h1 class="text-3xl font-bold">{{ st('landing.signup.title') }}</h1>
       <p v-if="site.campaign" class="text-stone-600">{{ site.campaign.name }}</p>
-      <p class="text-stone-700">{{ st('landing.signup.intro', { site: site.name }) }}</p>
+      <p class="text-stone-700">{{ startNote || st('landing.signup.intro', { site: site.name }) }}</p>
     </header>
     <UAlert v-if="!form.open || !site.campaign" color="neutral" variant="soft" :title="t('signup.closed')" />
     <template v-else>

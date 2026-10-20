@@ -174,7 +174,7 @@ export interface MyView {
 }
 
 export type PageView =
-  | { kind: 'landing', sections: string[], progress: GoalProgressView | null, why: string, today: { day: number, html: string, title: string } | null, stories: StoryView[], custom: CustomSectionView[], prayingNow: number }
+  | { kind: 'landing', sections: string[], progress: GoalProgressView | null, why: string, today: { day: number, html: string, title: string } | null, stories: StoryView[], custom: CustomSectionView[], prayingNow: number, form: SignupFormView }
   | { kind: 'between', stats: StatsView | null, endMessage: string, cta: { label: string, url: string } | null }
   | { kind: 'archived' }
   | { kind: 'pray', day: number, dateLabel: string | null, blocks: ContentBlockView[], prev: number | null, next: number | null, length: number | null }

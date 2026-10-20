@@ -98,6 +98,18 @@ export function getTemplate(key: string | null | undefined): CampaignTemplate {
   return TEMPLATES.find(t => t.key === key) ?? TEMPLATES[0]!
 }
 
+// Expected first days of Ramadan (the start can shift a day with the moon).
+export const RAMADAN_START_DATES = [
+  '2026-02-18', '2027-02-08', '2028-01-28', '2029-01-16', '2030-01-05',
+  '2030-12-26', '2031-12-15', '2032-12-04', '2033-11-23', '2034-11-12'
+] as const
+
+// Start date a template suggests, on or after `today`; null when it has none.
+export function suggestedStartDate(key: string, today: string): string | null {
+  if (key !== 'ramadan') return null
+  return RAMADAN_START_DATES.find(d => d >= today) ?? null
+}
+
 // Fills a template's answers around what the champion chose.
 export function applyTemplate(key: string, chosen: Partial<SetupAnswers>): SetupAnswers {
   const t = getTemplate(key)

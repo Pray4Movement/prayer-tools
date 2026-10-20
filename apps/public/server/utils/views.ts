@@ -174,7 +174,8 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
     today,
     stories: stories.map(s => ({ id: s.id, body: s.body, name: s.use_name ? s.name : null })),
     custom,
-    prayingNow: data.settings.show_praying_now ? await prayingNow(tx) : 0
+    prayingNow: data.settings.show_praying_now ? await prayingNow(tx) : 0,
+    form: await signupForm(tx, data, lang, !!campaign)
   }
 }
 

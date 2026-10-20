@@ -54,6 +54,10 @@ function openPreview(lib: Library) {
   loadPreview()
 }
 
+function missing(lib: Library): string[] {
+  return props.siteLanguages.filter(l => !lib.languages.includes(l))
+}
+
 function coverage(lib: Library): string {
   if (!props.siteLanguages.length) return lib.languages.map(l => languageName(meta.value, l)).join(', ')
   const have = props.siteLanguages.filter(l => lib.languages.includes(l))
@@ -97,64 +101,112 @@ function coverage(lib: Library): string {
     >
       No libraries match. You can write your own content instead.
     </div>
+    <h3
+      v-if="suggested.length && shown.length"
+      class="text-sm font-semibold text-(--ui-text-muted)"
+    >
+      Suggested for your site
+    </h3>
     <div class="grid md:grid-cols-2 gap-3">
-      <UCard
-        v-for="lib in shown"
+      <template
+        v-for="(lib, i) in shown"
         :key="lib.id"
-        :ui="{ body: 'space-y-2' }"
       >
-        <div class="flex items-start justify-between gap-2">
-          <h3 class="font-semibold">
-            {{ lib.title }}
-          </h3>
-          <div class="flex gap-1">
+        <h3
+          v-if="suggested.length && i === suggested.length"
+          class="md:col-span-2 pt-2 text-sm font-semibold text-(--ui-text-muted)"
+        >
+          More libraries
+        </h3>
+        <UCard :ui="{ body: 'space-y-2' }">
+          <div class="flex items-start justify-between gap-2">
+            <h3 class="font-semibold">
+              {{ lib.title }}
+            </h3>
+            <div class="flex gap-1">
+              <UBadge
+                v-if="lib.suggested"
+                label="Suggested"
+                color="primary"
+                variant="subtle"
+                size="sm"
+              />
+              <UBadge
+                v-if="lib.mine"
+                label="Yours"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+              />
+            </div>
+          </div>
+          <p
+            v-if="lib.description"
+            class="text-sm text-(--ui-text-muted) line-clamp-3"
+          >
+            {{ lib.description }}
+          </p>
+          <p class="text-xs text-(--ui-text-muted)">
+            {{ PT_LABELS.cadence[lib.cadence] ?? lib.cadence }} · {{ lib.entry_count }} {{ lib.cadence === 'weekly' ? 'weeks' : 'days' }} · {{ coverage(lib) }} · {{ PT_LABELS.license[lib.license] ?? lib.license }}
+          </p>
+          <div
+            v-if="lib.topics?.length"
+            class="flex flex-wrap gap-1"
+          >
             <UBadge
-              v-if="lib.suggested"
-              label="Suggested"
-              color="primary"
-              variant="soft"
+              v-for="t in lib.topics"
+              :key="t"
+              :label="t"
               size="sm"
-            />
-            <UBadge
-              v-if="lib.mine"
-              label="Yours"
+              variant="subtle"
               color="neutral"
-              variant="soft"
-              size="sm"
             />
           </div>
-        </div>
-        <p
-          v-if="lib.description"
-          class="text-sm text-(--ui-text-muted) line-clamp-3"
-        >
-          {{ lib.description }}
-        </p>
-        <p class="text-xs text-(--ui-text-muted)">
-          {{ lib.entry_count }} {{ lib.cadence === 'weekly' ? 'weeks' : 'days' }} · {{ coverage(lib) }} · {{ PT_LABELS.license[lib.license] ?? lib.license }}
-          <span v-if="lib.credit"> · {{ lib.credit }}</span>
-        </p>
-        <div class="flex gap-2">
-          <UButton
-            size="sm"
-            :label="usedIds.includes(lib.id) ? 'In use' : 'Use this'"
-            :disabled="usedIds.includes(lib.id)"
-            @click="emit('use', lib.id)"
-          />
-          <UButton
-            size="sm"
-            color="neutral"
-            variant="outline"
-            label="Preview"
-            @click="openPreview(lib)"
-          />
-        </div>
-      </UCard>
+          <p
+            v-if="missing(lib).length"
+            class="text-xs text-(--ui-warning)"
+          >
+            Not yet in {{ missing(lib).map(l => languageName(meta, l)).join(', ') }}
+          </p>
+          <p
+            v-if="lib.credit"
+            class="text-xs text-(--ui-text-dimmed)"
+          >
+            {{ lib.credit }}
+          </p>
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <UButton
+              size="sm"
+              color="neutral"
+              variant="soft"
+              icon="i-lucide-eye"
+              label="Preview"
+              @click="openPreview(lib)"
+            />
+            <UButton
+              v-if="!usedIds.includes(lib.id)"
+              size="sm"
+              icon="i-lucide-plus"
+              label="Use this library"
+              @click="emit('use', lib.id)"
+            />
+            <UBadge
+              v-else
+              color="success"
+              variant="subtle"
+              icon="i-lucide-check"
+              label="In use"
+            />
+          </div>
+        </UCard>
+      </template>
     </div>
     <UButton
       v-if="suggested.length && others.length && !seeMore"
-      label="See more libraries"
-      variant="link"
+      variant="soft"
+      color="neutral"
+      trailing-icon="i-lucide-chevron-down"
+      :label="`See more (${others.length})`"
       @click="seeMore = true"
     />
 

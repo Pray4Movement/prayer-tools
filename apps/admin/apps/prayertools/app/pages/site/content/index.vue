@@ -128,13 +128,22 @@ async function addOwn() {
   try {
     const res = await $fetch<{ siteLibraryId: string }>('/api/pt/content/libraries', { method: 'POST', body: { campaignId: campaignId.value, title: ownTitle.value || 'Our prayer guide', cadence: campaign.value?.cadence } })
     ownTitle.value = ''
+    catalogOpen.value = false
     await refresh()
     selected.value = res.siteLibraryId
   } catch (err) {
     toast.fail(err)
   }
 }
+const removing = ref<Lib | null>(null)
+const removeOpen = computed({
+  get: () => !!removing.value,
+  set: (v: boolean) => {
+    if (!v) removing.value = null
+  }
+})
 async function removeLibrary(l: Lib) {
+  removing.value = null
   await $fetch(`/api/pt/content/libraries/${l.siteLibraryId}`, { method: 'DELETE', query: { campaign: campaignId.value } })
   await refresh()
 }
@@ -165,6 +174,19 @@ async function takeUpdate() {
   await loadEntry()
 }
 
+function modeLabel(l: Lib): string {
+  if (l.follows) return 'Following the library'
+  if (l.libraryId) return `Your copy (v${l.frozenVersion})`
+  return 'Your own content'
+}
+function coverageBadge(l: Lib, code: string): { label: string, color: 'success' | 'warning' | 'error' | 'neutral' } {
+  const n = l.coverage[code] ?? 0
+  if (!l.entryCount) return { label: '—', color: 'neutral' }
+  if (n === 0) return { label: 'missing', color: 'error' }
+  if (n < l.entryCount) return { label: `${n}/${l.entryCount}`, color: 'warning' }
+  return { label: 'complete', color: 'success' }
+}
+
 const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.value && !lib.value.follows ? 1 : 0))
 </script>
 
@@ -175,44 +197,73 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
       :campaign-id="route.query.campaign"
     />
     <PtContentTabs v-else />
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-semibold">
-        Prayer content
-      </h1>
-      <USelect
-        v-if="campaigns?.campaigns.length"
-        v-model="campaignId"
-        :items="campaigns.campaigns.map(c => ({ label: c.name, value: c.id }))"
-        class="w-64"
-      />
-    </div>
+    <header class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-semibold">
+          Prayer content
+        </h1>
+        <p class="mt-1 max-w-2xl text-sm text-(--ui-text-muted)">
+          Each {{ campaign?.cadence === 'weekly' ? 'week' : 'day' }} shows one entry from every library below, in this order.
+          Libraries you follow get fixes and new translations automatically; the first edit gives your site its own copy.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <USelect
+          v-if="campaigns?.campaigns.length"
+          v-model="campaignId"
+          :items="campaigns.campaigns.map(c => ({ label: c.name, value: c.id }))"
+          class="w-64"
+          aria-label="Campaign"
+        />
+        <UButton
+          v-if="campaigns?.campaigns.length && can('pt.content.write')"
+          icon="i-lucide-plus"
+          label="Add content"
+          @click="catalogOpen = true"
+        />
+      </div>
+    </header>
 
-    <UCard v-if="!campaigns?.campaigns.length">
-      <p>Create a campaign first, then choose its content.</p>
-    </UCard>
+    <UEmpty
+      v-if="campaigns && !campaigns.campaigns.length"
+      icon="i-lucide-calendar-plus"
+      title="No campaign yet"
+      description="Create a campaign first, then choose its content."
+      :actions="[{ label: 'New campaign', icon: 'i-lucide-plus', to: '/site/campaigns/new' }]"
+    />
+
+    <UEmpty
+      v-else-if="content && !content.libraries.length"
+      icon="i-lucide-book-open"
+      title="No prayer content yet"
+      description="Choose a library from the catalog or write your own."
+      :actions="can('pt.content.write') ? [{ label: 'Add content', icon: 'i-lucide-plus', onClick: () => { catalogOpen = true } }] : []"
+    />
 
     <div
-      v-else
-      class="grid lg:grid-cols-[18rem_1fr] gap-6"
+      v-else-if="content"
+      class="grid lg:grid-cols-[20rem_1fr] gap-6 items-start"
     >
       <div class="space-y-3">
-        <div
-          v-for="(l, i) in content?.libraries ?? []"
+        <UCard
+          v-for="(l, i) in content.libraries"
           :key="l.siteLibraryId"
-          class="rounded-lg border p-3 cursor-pointer"
-          :class="selected === l.siteLibraryId ? 'border-(--ui-primary) bg-(--ui-bg-elevated)' : 'border-(--ui-border)'"
+          class="cursor-pointer transition-colors"
+          :class="selected === l.siteLibraryId ? 'ring-2 ring-(--ui-primary)' : 'hover:bg-(--ui-bg-elevated)/50'"
+          :ui="{ body: 'p-3 sm:p-4 space-y-2' }"
           role="button"
           tabindex="0"
+          :aria-pressed="selected === l.siteLibraryId"
           @click="selected = l.siteLibraryId"
           @keydown.enter="selected = l.siteLibraryId"
         >
           <div class="flex items-start justify-between gap-2">
-            <p class="font-medium text-sm">
+            <p class="font-medium text-sm min-w-0">
               {{ l.title }}
             </p>
             <div
               v-if="can('pt.content.write')"
-              class="flex"
+              class="flex shrink-0 -me-1 -mt-1"
             >
               <UButton
                 icon="i-lucide-chevron-up"
@@ -229,90 +280,74 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
                 variant="ghost"
                 color="neutral"
                 aria-label="Move down"
-                :disabled="i === (content?.libraries.length ?? 0) - 1"
+                :disabled="i === content.libraries.length - 1"
                 @click.stop="move(l, 1)"
               />
               <UButton
-                icon="i-lucide-x"
+                icon="i-lucide-trash-2"
                 size="xs"
                 variant="ghost"
-                color="neutral"
+                color="error"
                 aria-label="Remove from campaign"
-                @click.stop="removeLibrary(l)"
+                @click.stop="removing = l"
               />
             </div>
           </div>
-          <p class="text-xs text-(--ui-text-muted)">
-            {{ l.entryCount }} entries ·
-            <template v-if="l.follows">
-              following the library
-            </template>
-            <template v-else-if="l.libraryId">
-              your copy (v{{ l.frozenVersion }})
-            </template>
-            <template v-else>
-              written for this site
-            </template>
-          </p>
-          <div class="flex flex-wrap gap-1 mt-1">
+          <div class="flex flex-wrap items-center gap-1">
+            <UBadge
+              size="sm"
+              variant="subtle"
+              :color="l.follows ? 'info' : l.libraryId ? 'warning' : 'neutral'"
+              :label="modeLabel(l)"
+            />
             <UBadge
               v-if="l.updateAvailable"
               size="sm"
               color="info"
-              variant="soft"
+              variant="subtle"
+              icon="i-lucide-sparkle"
               :label="`v${l.latestVersion} available`"
             />
+          </div>
+          <p class="text-xs text-(--ui-text-muted)">
+            {{ l.entryCount }} entries<template v-if="l.credit">
+              · {{ l.credit }}
+            </template>
+          </p>
+          <div class="flex flex-wrap gap-1">
             <UBadge
-              v-if="l.missingLanguages.length"
+              v-for="code in content.languages"
+              :key="code"
               size="sm"
-              color="warning"
-              variant="soft"
-              :label="`Missing ${l.missingLanguages.join(', ')}`"
+              variant="subtle"
+              :color="coverageBadge(l, code).color"
+              :label="`${languageName(meta, code)}: ${coverageBadge(l, code).label}`"
             />
             <UBadge
               v-if="l.staleCount"
               size="sm"
               color="warning"
-              variant="soft"
+              variant="subtle"
+              icon="i-lucide-clock-alert"
               :label="`${l.staleCount} out of date`"
             />
           </div>
-        </div>
-        <template v-if="can('pt.content.write')">
-          <UButton
-            block
-            icon="i-lucide-library"
-            label="Add from library"
-            variant="soft"
-            @click="catalogOpen = true"
-          />
-          <div class="flex gap-2">
-            <UInput
-              v-model="ownTitle"
-              placeholder="Your own content"
-              size="sm"
-              class="flex-1"
-            />
-            <UButton
-              size="sm"
-              icon="i-lucide-plus"
-              aria-label="Create your own content"
-              @click="addOwn"
-            />
-          </div>
-        </template>
+        </UCard>
       </div>
 
       <UCard v-if="lib">
         <template #header>
-          <div class="flex flex-wrap items-center gap-3">
-            <UFormField label="Day">
-              <UInputNumber
-                v-model="day"
-                :min="1"
-                :max="maxDay"
-                class="w-28"
-              />
+          <div class="flex flex-wrap items-end gap-3">
+            <UFormField :label="lib.cadence === 'weekly' ? 'Week' : 'Day'">
+              <div class="flex items-center gap-2">
+                <UInputNumber
+                  v-model="day"
+                  :min="1"
+                  :max="maxDay"
+                  class="w-28"
+                />
+                <span class="text-sm text-(--ui-text-muted)">of {{ lib.entryCount }}</span>
+              </div>
             </UFormField>
             <UFormField label="Language">
               <USelect
@@ -323,16 +358,7 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
             </UFormField>
             <div class="ms-auto flex gap-2">
               <UButton
-                v-if="lib.updateAvailable"
-                size="sm"
-                variant="soft"
-                color="info"
-                label="Compare with library"
-                @click="openCompare"
-              />
-              <UButton
                 v-if="!isSource && canEdit"
-                size="sm"
                 variant="soft"
                 icon="i-lucide-languages"
                 label="AI translate this day"
@@ -350,35 +376,44 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
         </div>
         <div
           v-else
-          class="space-y-3"
+          class="space-y-4"
         >
+          <UAlert
+            v-if="lib.updateAvailable"
+            color="info"
+            variant="subtle"
+            icon="i-lucide-sparkle"
+            :title="`A newer version of this library is available (version ${lib.latestVersion}).`"
+            :actions="[{ label: 'Compare', variant: 'soft', onClick: openCompare }]"
+          />
           <UAlert
             v-if="entry?.stale"
             color="warning"
-            variant="soft"
+            variant="subtle"
             icon="i-lucide-triangle-alert"
             title="Out of date"
             description="The default language was edited after this translation."
-            :actions="canEdit ? [{ label: 'Keep as is', onClick: markCurrent }] : []"
+            :actions="canEdit ? [{ label: 'Keep as is', variant: 'soft', onClick: markCurrent }] : []"
           />
           <template v-if="!editing">
+            <UAlert
+              v-if="lib.follows && canEdit"
+              color="info"
+              variant="subtle"
+              icon="i-lucide-git-branch"
+              title="Editing this day gives your site its own copy of this library."
+              description="From then on, updates to the library don't reach your site unless you choose to take them."
+            />
             <PtContentView
               v-if="entry?.doc"
               :doc="entry.doc"
               :dir="dir"
             />
-            <p
+            <UEmpty
               v-else
-              class="text-sm text-(--ui-text-muted)"
-            >
-              No entry for day {{ day }} in {{ languageName(meta, lang) }}.
-            </p>
-            <UAlert
-              v-if="lib.follows && canEdit"
-              color="neutral"
-              variant="soft"
-              icon="i-lucide-info"
-              description="This day comes from the library. Editing it gives your site its own copy of the library; its future updates will then not reach your site unless you choose to take them."
+              icon="i-lucide-file-x"
+              :title="`No entry for ${lib.cadence === 'weekly' ? 'week' : 'day'} ${day} in ${languageName(meta, lang)}.`"
+              size="sm"
             />
             <UButton
               v-if="canEdit"
@@ -406,6 +441,7 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
               />
               <UButton
                 label="Save"
+                icon="i-lucide-check"
                 :loading="saving"
                 @click="save"
               />
@@ -413,26 +449,72 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
           </template>
         </div>
       </UCard>
-      <UCard v-else>
-        <p class="text-sm text-(--ui-text-muted)">
-          Add a library or write your own content for this campaign.
-        </p>
-      </UCard>
     </div>
 
-    <UModal
+    <USlideover
       v-model:open="catalogOpen"
-      title="Add from library"
-      :ui="{ content: 'max-w-4xl' }"
+      title="Add prayer content"
+      :ui="{ content: 'sm:max-w-3xl' }"
     >
       <template #body>
-        <PtLibraryCatalog
-          :template="site?.site.template_key"
-          :cadence="campaign?.cadence"
-          :site-languages="site?.site.languages ?? []"
-          :used-ids="(content?.libraries ?? []).map(l => l.libraryId).filter(Boolean) as string[]"
-          @use="addLibrary"
-        />
+        <div class="space-y-5">
+          <PtLibraryCatalog
+            :template="site?.site.template_key"
+            :cadence="campaign?.cadence"
+            :site-languages="site?.site.languages ?? []"
+            :used-ids="(content?.libraries ?? []).map(l => l.libraryId).filter(Boolean) as string[]"
+            @use="addLibrary"
+          />
+          <UCard>
+            <div class="flex flex-wrap items-end justify-between gap-3">
+              <div class="min-w-0 flex-1 space-y-2">
+                <div>
+                  <p class="font-medium">
+                    Write your own
+                  </p>
+                  <p class="text-sm text-(--ui-text-muted)">
+                    Start from scratch with an empty set of entries for this campaign.
+                  </p>
+                </div>
+                <UInput
+                  v-model="ownTitle"
+                  placeholder="Our prayer guide"
+                  aria-label="Name of your content"
+                  class="w-full max-w-sm"
+                />
+              </div>
+              <UButton
+                variant="soft"
+                icon="i-lucide-pencil-line"
+                label="Start from scratch"
+                @click="addOwn"
+              />
+            </div>
+          </UCard>
+        </div>
+      </template>
+    </USlideover>
+
+    <UModal
+      v-model:open="removeOpen"
+      :title="`Remove ${removing?.title}?`"
+      :description="removing?.follows ? 'The library stays in the catalog; you can add it again later.' : 'It is removed from this campaign.'"
+    >
+      <template #footer>
+        <div class="flex gap-2">
+          <UButton
+            color="error"
+            icon="i-lucide-trash-2"
+            label="Remove"
+            @click="removing && removeLibrary(removing)"
+          />
+          <UButton
+            variant="ghost"
+            color="neutral"
+            label="Cancel"
+            @click="removing = null"
+          />
+        </div>
       </template>
     </UModal>
 
@@ -443,14 +525,14 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
     >
       <template #body>
         <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <h3 class="text-sm font-medium mb-2">
+          <div class="rounded-lg border border-(--ui-border) p-4">
+            <h3 class="text-sm font-semibold text-(--ui-text-muted) mb-2">
               Your copy
             </h3>
             <PtContentView :doc="compare.site" />
           </div>
-          <div>
-            <h3 class="text-sm font-medium mb-2">
+          <div class="rounded-lg border border-(--ui-primary)/40 p-4">
+            <h3 class="text-sm font-semibold text-(--ui-primary) mb-2">
               Latest library version
             </h3>
             <PtContentView :doc="compare.library" />
@@ -458,13 +540,18 @@ const maxDay = computed(() => Math.max(lib.value?.entryCount ?? 1, 1) + (lib.val
         </div>
       </template>
       <template #footer>
-        <div class="flex justify-between w-full">
-          <p class="text-xs text-(--ui-text-muted)">
+        <div class="flex items-center justify-between gap-3 w-full">
+          <p class="text-xs text-(--ui-text-muted) flex items-center gap-1.5">
+            <UIcon
+              name="i-lucide-triangle-alert"
+              class="size-4 shrink-0 text-(--ui-warning)"
+            />
             Taking the update replaces every edit you made to this library.
           </p>
           <UButton
             v-if="can('pt.content.write')"
             label="Take the update"
+            icon="i-lucide-download"
             color="warning"
             @click="takeUpdate"
           />

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-// Site settings: details, languages, look, sending identity, signup
-// questions, consent options, wording, behaviour, directory, status.
+// Site settings: general (details, languages, behaviour), look and email,
+// wording, and status (publishing, directory, exports, deleting).
 // Only values that differ from the code defaults are stored.
 import type { TranslatableText } from '@prayertools/shared/db/schema'
+import { DEFAULT_BRAND_COLOR } from '@prayertools/shared/colors'
+import type { PtLocation } from '../../../components/PtLocationSearch.vue'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -13,106 +15,119 @@ const route = useRoute()
 const router = useRouter()
 
 const tabs = computed(() => [
-  { label: 'Details', value: 'details', icon: 'i-lucide-info' },
-  { label: 'Languages', value: 'languages', icon: 'i-lucide-languages' },
-  { label: 'Look', value: 'look', icon: 'i-lucide-palette' },
-  ...(can('pt.site.manage') ? [{ label: 'Sending', value: 'sending', icon: 'i-lucide-send' }] : []),
-  { label: 'Signup', value: 'signup', icon: 'i-lucide-clipboard-list' },
+  { label: 'General', value: 'details', icon: 'i-lucide-info' },
+  { label: 'Look and email', value: 'look', icon: 'i-lucide-palette' },
   { label: 'Wording', value: 'wording', icon: 'i-lucide-type' },
-  { label: 'Behaviour', value: 'behaviour', icon: 'i-lucide-sliders-horizontal' },
   ...(can('pt.site.manage') ? [{ label: 'Status', value: 'status', icon: 'i-lucide-power' }] : [])
 ])
+// Section names accepted in ?tab=, opening the tab that holds that section.
+const TAB_ALIASES: Record<string, string> = { languages: 'details', behaviour: 'details', sending: 'look' }
+// The signup form has its own page under Landing.
+if (route.query.tab === 'signup') await navigateTo('/site/landing/signup-form', { replace: true })
 const tab = computed({
-  get: () => String(route.query.tab ?? 'details'),
+  get: () => {
+    const t = String(route.query.tab ?? 'details')
+    return TAB_ALIASES[t] ?? t
+  },
   set: v => router.replace({ query: { ...route.query, tab: v } })
 })
+const TAB_INTRO: Record<string, string> = {
+  details: 'What your site is about, its languages and how it behaves.',
+  look: 'Your site’s colors and images, and how your emails look in people’s inboxes.',
+  wording: 'Change the standard wording on your site. Leave a field empty to use the standard wording.',
+  status: 'Publish or archive the site, list it in the Prayer.Tools directory, or delete it.'
+}
 
 async function patchSite(body: Record<string, unknown>, message = 'Saved') {
   try {
     await $fetch('/api/pt/site', { method: 'PATCH', body })
     await refresh()
-    toast.ok(message)
+    if (message) toast.ok(message)
+    return true
   } catch (err) {
     toast.fail(err)
+    return false
   }
 }
 
 // Details
-const details = reactive({ name: '', purpose: 'place', place_name: '', people_group: '', latitude: null as number | null, longitude: null as number | null, timezone: 'UTC' })
-// Languages
+const details = reactive({ name: '', purpose: 'place', place_name: '', people_group: '', latitude: null as number | null, longitude: null as number | null })
+const location = computed<PtLocation | null>({
+  get: () => details.place_name ? { name: details.place_name, latitude: details.latitude, longitude: details.longitude } : null,
+  set: (v) => { Object.assign(details, { place_name: v?.name ?? '', latitude: v?.latitude ?? null, longitude: v?.longitude ?? null }) }
+})
+// Languages and time zone
 const languages = ref<string[]>([])
 const defaultLanguage = ref('en')
+const timezone = ref('UTC')
 // Look
 const branding = ref<Record<string, any>>({})
-const imagePicker = ref<'image' | 'logo' | 'share' | null>(null)
+const imagePicker = ref<'image' | 'logo' | null>(null)
 // Sending
 const identity = ref<Record<string, any>>({})
 const signature = ref<TranslatableText | null>(null)
 // Behaviour
 const settings = ref<Record<string, any>>({})
 
-watch(site, (s) => {
+function resetLook() {
+  const s = site.value
   if (!s) return
-  Object.assign(details, { name: s.org.name, purpose: s.site.purpose ?? 'place', place_name: s.site.place_name ?? '', people_group: s.site.people_group ?? '', latitude: s.site.latitude, longitude: s.site.longitude, timezone: s.site.timezone })
-  languages.value = [...s.site.languages]
-  defaultLanguage.value = s.site.default_language
   branding.value = { ...s.site.branding }
   identity.value = { ...s.site.email_identity }
   signature.value = s.site.email_identity?.signature ?? null
+}
+
+watch(site, (s) => {
+  if (!s) return
+  Object.assign(details, { name: s.org.name, purpose: s.site.purpose ?? 'place', place_name: s.site.place_name ?? '', people_group: s.site.people_group ?? '', latitude: s.site.latitude, longitude: s.site.longitude })
+  languages.value = [...s.site.languages]
+  defaultLanguage.value = s.site.default_language
+  timezone.value = s.site.timezone
+  resetLook()
   settings.value = { ...s.site.settings }
 }, { immediate: true })
 
 const languageItems = computed(() => (meta.value?.languages ?? []).map(l => ({ label: `${l.name} — ${l.native}`, value: l.code })))
-const contrastWarning = computed(() => site.value?.brand.tooPale)
+const purposeItems = computed(() => Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label, description: PT_LABELS.purposeDescription[value] })))
 
-// Signup questions + consent options
-interface Field { id: string, key: string, kind: string, label: TranslatableText, options: { key: string, label: TranslatableText }[], required: boolean }
-interface Option { id: string, key: string, label: TranslatableText, active: boolean }
-const { data: signup, refresh: refreshSignup } = useFetch<{ fields: Field[], consentOptions: Option[] }>('/api/pt/signup-fields', { key: 'pt-signup-fields' })
-const newField = reactive({ kind: 'text', label: null as TranslatableText | null, options: [] as { key: string, label: TranslatableText }[], required: false })
-function addOption() {
-  const l = site.value!.site.default_language
-  newField.options.push({ key: `o${newField.options.length + 1}`, label: { source: l, values: { [l]: '' }, stale: [] } })
+// Behaviour: booleans save on toggle; numbers save with their own button.
+function settingValue(key: string) {
+  return settings.value[key] ?? meta.value?.settingDefaults[key]
 }
-async function createField() {
-  try {
-    await $fetch('/api/pt/signup-fields', { method: 'POST', body: { ...newField } })
-    Object.assign(newField, { kind: 'text', label: null, options: [], required: false })
-    await refreshSignup()
-    toast.ok('Question added')
-  } catch (err) {
-    toast.fail(err)
-  }
+const savingSetting = ref<string | null>(null)
+async function saveSetting(key: string, value: boolean | number | null) {
+  savingSetting.value = key
+  await patchSite({ settings: { [key]: value ?? meta.value?.settingDefaults[key] } })
+  savingSetting.value = null
 }
-async function saveField(f: Field) {
-  try {
-    await $fetch(`/api/pt/signup-fields/${f.id}`, { method: 'PATCH', body: { label: f.label, options: f.options, required: f.required } })
-    toast.ok('Saved')
-  } catch (err) {
-    toast.fail(err)
-  }
+const numberSettings = computed(() => Object.entries(meta.value?.settingDefaults ?? {}).filter(([, def]) => typeof def === 'number').map(([key]) => key))
+const booleanSettings = computed(() => Object.entries(meta.value?.settingDefaults ?? {}).filter(([, def]) => typeof def === 'boolean').map(([key]) => key))
+const numberDraft = ref<Record<string, number | null>>({})
+watch([settings, meta], () => {
+  numberDraft.value = Object.fromEntries(numberSettings.value.map(k => [k, settingValue(k) as number]))
+}, { immediate: true })
+
+// Look and email
+const brandColor = computed({
+  get: () => branding.value.color ?? DEFAULT_BRAND_COLOR,
+  // The default color is not stored, so choosing it clears the override.
+  set: (v: string) => { branding.value.color = v.toLowerCase() === DEFAULT_BRAND_COLOR ? undefined : v }
+})
+const IMAGE_SLOTS = [
+  { slot: 'logo', key: 'logo_url', label: 'Logo', help: 'Shown at the top of your site and emails. Without one, the site name is shown.' },
+  { slot: 'image', key: 'image_url', label: 'Top image', help: 'The large image at the top of your landing page.' }
+] as const
+function comparable(o: Record<string, unknown> | null | undefined) {
+  return JSON.stringify(Object.keys(o ?? {}).sort().filter(k => o![k] !== undefined && o![k] !== null && o![k] !== '').map(k => [k, o![k]]))
 }
-async function deleteField(f: Field) {
-  await $fetch(`/api/pt/signup-fields/${f.id}`, { method: 'DELETE' })
-  await refreshSignup()
-}
-const newOption = ref<TranslatableText | null>(null)
-async function createOption() {
-  try {
-    await $fetch('/api/pt/consent-options', { method: 'POST', body: { label: newOption.value } })
-    newOption.value = null
-    await refreshSignup()
-  } catch (err) {
-    toast.fail(err)
-  }
-}
-async function saveOption(o: Option, patch: Record<string, unknown>) {
-  try {
-    await $fetch(`/api/pt/consent-options/${o.id}`, { method: 'PATCH', body: patch })
-    await refreshSignup()
-  } catch (err) {
-    toast.fail(err)
-  }
+const brandingDirty = computed(() => comparable(branding.value) !== comparable(site.value?.site.branding))
+const identityDirty = computed(() => can('pt.site.manage') && comparable({ ...identity.value, signature: signature.value }) !== comparable(site.value?.site.email_identity))
+const lookDirty = computed(() => brandingDirty.value || identityDirty.value)
+const savingLook = ref(false)
+async function saveLook() {
+  savingLook.value = true
+  await patchSite({ branding: branding.value, ...(can('pt.site.manage') ? { email_identity: { ...identity.value, signature: signature.value } } : {}) })
+  savingLook.value = false
 }
 
 // Wording
@@ -132,7 +147,9 @@ const EDITABLE: { key: string, label: string, multiline?: boolean }[] = [
 ]
 const { data: strings, refresh: refreshStrings } = useFetch<{ strings: { key: string, language: string, value: string }[] }>('/api/pt/strings', { key: 'pt-strings' })
 const wordingLang = ref('en')
-watch(site, s => { if (s) wordingLang.value = s.site.default_language }, { immediate: true })
+watch(site, (s) => {
+  if (s) wordingLang.value = s.site.default_language
+}, { immediate: true })
 const wording = ref<Record<string, string>>({})
 watch([strings, wordingLang], () => {
   wording.value = Object.fromEntries((strings.value?.strings ?? []).filter(s => s.language === wordingLang.value).map(s => [s.key, s.value]))
@@ -149,27 +166,47 @@ async function saveWording(key: string) {
 
 // Status
 const previewUrl = ref<string | null>(null)
+const statusBusy = ref(false)
+const archiveOpen = ref(false)
 async function setStatus(action: string) {
+  statusBusy.value = true
   try {
     await $fetch('/api/pt/site/status', { method: 'POST', body: { action } })
     await refresh()
-    toast.ok('Updated')
+    archiveOpen.value = false
+    toast.ok(action === 'publish' ? 'Site published' : action === 'archive' ? 'Site archived' : 'Site un-archived')
   } catch (err) {
-    toast.fail(err)
+    toast.fail(err, 'Could not change the status')
+  } finally {
+    statusBusy.value = false
   }
 }
 async function preview() {
   const res = await $fetch<{ url: string }>('/api/pt/site/preview-link', { method: 'POST' })
   previewUrl.value = res.url
 }
+async function copy(text: string) {
+  await navigator.clipboard.writeText(text)
+  toast.ok('Copied')
+}
+const directoryBusy = ref(false)
 async function directory(listed: boolean) {
+  directoryBusy.value = true
   try {
     await $fetch('/api/pt/directory', { method: 'POST', body: { listed } })
     await refresh()
     toast.ok(listed ? 'Listing requested' : 'Removed from the directory')
   } catch (err) {
     toast.fail(err)
+  } finally {
+    directoryBusy.value = false
   }
+}
+const DIRECTORY_TEXT: Record<string, string> = {
+  none: 'Ask to list your site in the Prayer.Tools directory and app so more people find it. A Prayer.Tools operator approves listings.',
+  requested: 'A Prayer.Tools team member will review your site before it appears in the directory.',
+  listed: 'Your site appears in the Prayer.Tools directory and the app.',
+  unlisted: 'Your site is not in the directory. It stays reachable by its link.'
 }
 const deleteConfirm = ref('')
 const deleteOpen = ref(false)
@@ -182,7 +219,9 @@ async function deleteSite() {
   }
 }
 const { data: exportsLog } = useFetch<{ exports: { id: string, row_count: number, created_at: string, display_name: string, email: string }[] }>('/api/pt/exports', { key: 'pt-exports', immediate: false })
-watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('pt-exports') }, { immediate: true })
+watch(tab, (t) => {
+  if (t === 'status' && can('pt.site.manage')) refreshNuxtData('pt-exports')
+}, { immediate: true })
 </script>
 
 <template>
@@ -191,9 +230,14 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
     class="max-w-4xl mx-auto space-y-6"
   >
     <PtSettingsTabs />
-    <h1 class="text-2xl font-semibold">
-      Settings
-    </h1>
+    <header>
+      <h1 class="text-2xl font-bold">
+        Settings
+      </h1>
+      <p class="text-sm text-muted max-w-2xl">
+        {{ TAB_INTRO[tab] }}
+      </p>
+    </header>
     <UTabs
       v-model="tab"
       :items="tabs"
@@ -201,469 +245,395 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
       class="w-full"
     />
 
-    <UCard v-if="tab === 'details'">
-      <fieldset
-        :disabled="!can('pt.site.write')"
-        class="space-y-4"
-      >
-        <UFormField label="Site name">
-          <UInput
-            v-model="details.name"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField label="What you are praying for">
-          <URadioGroup
-            v-model="details.purpose"
-            :items="Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label }))"
-            orientation="horizontal"
-          />
-        </UFormField>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <UFormField
-            label="Place"
-            help="Used in content placeholders like {place}."
-          >
-            <UInput
-              v-model="details.place_name"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField label="People group">
-            <UInput
-              v-model="details.people_group"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-        <UFormField label="Coordinates of the place prayed for">
-          <div class="flex gap-2">
-            <UInputNumber
-              v-model="details.latitude"
-              :step="0.0001"
-              :min="-90"
-              :max="90"
-              placeholder="Latitude"
-              class="w-36"
-            />
-            <UInputNumber
-              v-model="details.longitude"
-              :step="0.0001"
-              :min="-180"
-              :max="180"
-              placeholder="Longitude"
-              class="w-36"
-            />
-          </div>
-        </UFormField>
-        <UFormField label="Timezone">
-          <USelectMenu
-            v-model="details.timezone"
-            :items="ptTimezones()"
-            class="w-full sm:w-80"
-          />
-        </UFormField>
-        <div class="flex justify-end">
-          <UButton
-            label="Save"
-            @click="patchSite({ ...details, place_name: details.place_name || null, people_group: details.people_group || null })"
-          />
-        </div>
-      </fieldset>
-    </UCard>
+    <UAlert
+      v-if="!can('pt.site.write') && tab !== 'wording'"
+      color="neutral"
+      variant="subtle"
+      icon="i-lucide-lock"
+      title="Only owners and editors can change these settings."
+    />
 
-    <UCard v-else-if="tab === 'languages'">
-      <fieldset
-        :disabled="!can('pt.site.write')"
-        class="space-y-4"
-      >
-        <UFormField
-          label="Languages"
-          help="The public site's language switcher, signup languages, and which languages content should exist in."
+    <template v-if="tab === 'details'">
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            About the site
+          </h2>
+        </template>
+        <form
+          @submit.prevent="patchSite({ ...details, place_name: details.place_name || null, people_group: details.people_group || null })"
         >
-          <USelectMenu
-            v-model="languages"
-            :items="languageItems"
-            value-key="value"
-            multiple
-            class="w-full"
+          <fieldset
+            :disabled="!can('pt.site.write')"
+            class="space-y-5"
+          >
+            <UFormField label="Site name">
+              <UInput
+                v-model="details.name"
+                maxlength="80"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField label="What are you praying for?">
+              <URadioGroup
+                v-model="details.purpose"
+                :items="purposeItems"
+                orientation="horizontal"
+                variant="card"
+                class="w-full"
+                :ui="{ fieldset: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }"
+              />
+            </UFormField>
+            <UFormField
+              label="Location"
+              description="Where the people you pray for are. Its name fills content placeholders like {place}."
+            >
+              <PtLocationSearch v-model="location" />
+            </UFormField>
+            <UFormField label="People group">
+              <UInput
+                v-model="details.people_group"
+                class="w-full"
+              />
+            </UFormField>
+            <UButton
+              type="submit"
+              label="Save"
+            />
+          </fieldset>
+        </form>
+      </UCard>
+
+      <UCard>
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h2 class="font-semibold">
+              Dates, goal and content
+            </h2>
+            <p class="text-sm text-muted">
+              Each campaign has its own start, end, goal and rhythm.
+            </p>
+          </div>
+          <UButton
+            to="/site/campaigns"
+            variant="outline"
+            color="neutral"
+            icon="i-lucide-calendar-range"
+            label="Campaigns"
           />
-        </UFormField>
-        <UFormField
-          label="Default language"
-          help="Used when a visitor's language isn't one of the site's."
+        </div>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Languages and time zone
+          </h2>
+        </template>
+        <fieldset
+          :disabled="!can('pt.site.write')"
+          class="space-y-5"
         >
-          <USelect
-            v-model="defaultLanguage"
-            :items="languageItems.filter(l => languages.includes(l.value))"
-            class="w-72"
-          />
-        </UFormField>
-        <div class="flex justify-end">
+          <UFormField
+            label="Languages"
+            description="The public site's language switcher, signup languages, and which languages content should exist in."
+          >
+            <USelectMenu
+              v-model="languages"
+              :items="languageItems"
+              value-key="value"
+              multiple
+              class="w-full"
+            />
+          </UFormField>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <UFormField
+              label="Default language"
+              description="Used when a visitor's language isn't one of the site's."
+            >
+              <USelect
+                v-model="defaultLanguage"
+                :items="languageItems.filter(l => languages.includes(l.value))"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              label="Time zone"
+              description="Used for campaign dates and the daily schedule."
+            >
+              <USelectMenu
+                v-model="timezone"
+                :items="ptTimezones()"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
           <UButton
             label="Save"
             :disabled="!languages.length || !languages.includes(defaultLanguage)"
-            @click="patchSite({ languages, default_language: defaultLanguage })"
+            @click="patchSite({ languages, default_language: defaultLanguage, timezone })"
           />
-        </div>
-      </fieldset>
-    </UCard>
+        </fieldset>
+      </UCard>
 
-    <UCard v-else-if="tab === 'look'">
-      <fieldset
-        :disabled="!can('pt.site.write')"
-        class="space-y-6"
-      >
-        <UFormField label="Brand color">
-          <div class="flex items-center gap-3">
-            <UPopover>
-              <UButton
-                :style="{ background: branding.color ?? site.brand.color, color: site.brand.textColor }"
-                :label="branding.color ?? site.brand.color"
-              />
-              <template #content>
-                <UColorPicker
-                  v-model="branding.color"
-                  class="p-2"
-                />
-              </template>
-            </UPopover>
-            <span class="text-sm text-(--ui-text-muted)">Text on it is set to {{ site.brand.textColor === '#ffffff' ? 'white' : 'dark' }} for contrast.</span>
-          </div>
-          <UAlert
-            v-if="contrastWarning"
-            class="mt-2"
-            color="warning"
-            variant="soft"
-            description="This color is too pale to be readable as links and buttons on white."
-          />
-        </UFormField>
-        <div class="grid sm:grid-cols-3 gap-4">
-          <div
-            v-for="slot in (['image', 'logo', 'share'] as const)"
-            :key="slot"
-            class="space-y-2"
-          >
-            <p class="text-sm font-medium">
-              {{ slot === 'image' ? 'Top image' : slot === 'logo' ? 'Logo (emails and header)' : 'Share image (link previews)' }}
-            </p>
-            <div
-              v-if="branding[`${slot === 'share' ? 'share_image' : slot}_url`]"
-              class="relative aspect-video rounded-md overflow-hidden border border-(--ui-border)"
-            >
-              <img
-                :src="branding[`${slot === 'share' ? 'share_image' : slot}_url`]"
-                alt=""
-                class="size-full object-cover"
-                :style="slot === 'image' ? { objectPosition: `${(branding.focal_x ?? 0.5) * 100}% ${(branding.focal_y ?? 0.5) * 100}%` } : {}"
-              >
-            </div>
-            <div class="flex gap-2">
-              <UButton
-                size="sm"
-                variant="soft"
-                icon="i-lucide-image"
-                label="Choose"
-                @click="imagePicker = slot"
-              />
-              <UButton
-                v-if="branding[`${slot === 'share' ? 'share_image' : slot}_url`]"
-                size="sm"
-                variant="ghost"
-                color="neutral"
-                label="Remove"
-                @click="branding[`${slot === 'share' ? 'share_image' : slot}_url`] = undefined"
-              />
-            </div>
-          </div>
-        </div>
-        <template v-if="branding.image_url">
-          <UFormField
-            label="Focal point of the top image"
-            help="Keeps the important part visible when phones crop the image."
-          >
-            <div class="grid grid-cols-2 gap-4 max-w-md">
-              <USlider
-                v-model="branding.focal_x"
-                :min="0"
-                :max="1"
-                :step="0.05"
-                aria-label="Horizontal focal point"
-              />
-              <USlider
-                v-model="branding.focal_y"
-                :min="0"
-                :max="1"
-                :step="0.05"
-                aria-label="Vertical focal point"
-              />
-            </div>
-          </UFormField>
-          <PtTranslatableInput
-            v-model="branding.image_alt"
-            :languages="site.site.languages"
-            :default-language="site.site.default_language"
-            label="Image description (alt text)"
-            required
-          />
-          <UFormField label="Image credit (shown under the image)">
-            <UInput
-              v-model="branding.image_credit"
-              class="w-full"
-            />
-          </UFormField>
-        </template>
-        <div class="flex justify-end">
-          <UButton
-            label="Save"
-            @click="patchSite({ branding })"
-          />
-        </div>
-      </fieldset>
-    </UCard>
-
-    <UCard v-else-if="tab === 'sending'">
-      <div class="space-y-4">
-        <p class="text-sm text-(--ui-text-muted)">
-          Reminders and site emails are sent from a Prayer.Tools address with your site's name. Replies go to you.
-        </p>
-        <div class="grid sm:grid-cols-2 gap-4">
-          <UFormField label="From name">
-            <UInput
-              v-model="identity.from_name"
-              :placeholder="site.org.name"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField
-            label="Sending address"
-            help="Before the @ of the Prayer.Tools sending domain."
-          >
-            <UInput
-              v-model="identity.from_local"
-              :placeholder="site.org.slug"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField
-            label="Reply-to address"
-            :help="site.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}).` : undefined"
-          >
-            <UInput
-              v-model="identity.reply_to"
-              type="email"
-              :placeholder="site.inboxAddress ?? undefined"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField label="Logo in emails (URL)">
-            <UInput
-              v-model="identity.logo_url"
-              :placeholder="branding.logo_url"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-        <PtTranslatableInput
-          v-model="signature"
-          :languages="site.site.languages"
-          :default-language="site.site.default_language"
-          label="Signature"
-          multiline
-        />
-        <UAlert
-          color="neutral"
-          variant="soft"
-          icon="i-lucide-info"
-          description="Sending from your own domain (with DKIM/SPF records) is planned; for now all mail uses the Prayer.Tools domain so bounces and complaints are tracked."
-        />
-        <div class="flex justify-end">
-          <UButton
-            label="Save"
-            @click="patchSite({ email_identity: { ...identity, signature } })"
-          />
-        </div>
-      </div>
-    </UCard>
-
-    <template v-else-if="tab === 'signup'">
       <UCard>
         <template #header>
           <h2 class="font-semibold">
-            Questions at signup
+            Site settings
           </h2>
-          <p class="text-sm text-(--ui-text-muted)">
-            Up to five. Answers show on each intercessor and in exports, and are never sent to analytics.
-          </p>
         </template>
         <div class="space-y-4">
-          <div
-            v-for="f in signup?.fields ?? []"
-            :key="f.id"
-            class="rounded-md border border-(--ui-border) p-3 space-y-2"
+          <USwitch
+            v-for="key in booleanSettings"
+            :key="key"
+            :model-value="settingValue(key)"
+            :label="PT_LABELS.setting[key] ?? key"
+            :loading="savingSetting === key"
+            :disabled="!can('pt.site.write')"
+            @update:model-value="(v: boolean) => saveSetting(key, v)"
+          />
+          <UFormField
+            v-for="key in numberSettings"
+            :key="key"
+            :label="PT_LABELS.setting[key] ?? key"
           >
-            <div class="flex items-center justify-between">
-              <UBadge
-                :label="f.kind === 'text' ? 'Short text' : f.kind === 'select' ? 'Dropdown' : 'Checkbox'"
-                variant="soft"
-              />
-              <UButton
-                v-if="can('pt.site.write')"
-                size="xs"
-                color="error"
-                variant="ghost"
-                label="Stop asking"
-                @click="deleteField(f)"
-              />
-            </div>
-            <PtTranslatableInput
-              v-model="f.label"
-              :languages="site.site.languages"
-              :default-language="site.site.default_language"
-              label="Question"
-            />
-            <div
-              v-if="f.kind === 'select'"
-              class="space-y-2 ps-4"
-            >
-              <PtTranslatableInput
-                v-for="o in f.options"
-                :key="o.key"
-                v-model="o.label"
-                :languages="site.site.languages"
-                :default-language="site.site.default_language"
-                :label="`Option ${o.key}`"
-              />
-            </div>
-            <div class="flex items-center justify-between">
-              <UCheckbox
-                v-model="f.required"
-                label="Required"
+            <div class="flex items-center gap-2">
+              <UInputNumber
+                v-model="numberDraft[key]"
+                :min="1"
+                :max="240"
                 :disabled="!can('pt.site.write')"
               />
               <UButton
+                v-if="numberDraft[key] !== settingValue(key)"
                 size="sm"
                 label="Save"
-                @click="saveField(f)"
+                :loading="savingSetting === key"
+                @click="saveSetting(key, numberDraft[key] ?? null)"
               />
             </div>
-          </div>
-          <div
-            v-if="can('pt.site.write') && (signup?.fields.length ?? 0) < 5"
-            class="rounded-md border border-dashed border-(--ui-border-accented) p-3 space-y-3"
-          >
-            <URadioGroup
-              v-model="newField.kind"
-              :items="[{ value: 'text', label: 'Short text' }, { value: 'select', label: 'Dropdown' }, { value: 'checkbox', label: 'Checkbox' }]"
-              orientation="horizontal"
-            />
-            <PtTranslatableInput
-              v-model="newField.label"
-              :languages="site.site.languages"
-              :default-language="site.site.default_language"
-              label="New question"
-            />
-            <div
-              v-if="newField.kind === 'select'"
-              class="space-y-2"
-            >
-              <PtTranslatableInput
-                v-for="o in newField.options"
-                :key="o.key"
-                v-model="o.label"
-                :languages="site.site.languages"
-                :default-language="site.site.default_language"
-                :label="`Option ${o.key}`"
-              />
-              <UButton
-                size="xs"
-                variant="soft"
-                icon="i-lucide-plus"
-                label="Add option"
-                @click="addOption"
-              />
-            </div>
-            <div class="flex items-center justify-between">
-              <UCheckbox
-                v-model="newField.required"
-                label="Required"
-              />
-              <UButton
-                label="Add question"
-                @click="createField"
-              />
-            </div>
-          </div>
-        </div>
-      </UCard>
-      <UCard>
-        <template #header>
-          <h2 class="font-semibold">
-            Your own consent options
-          </h2>
-          <p class="text-sm text-(--ui-text-muted)">
-            Offered unchecked at signup, next to “Updates from this site” and “News from Prayer.Tools”. Everyone who ticks one
-            becomes an audience for site emails.
-          </p>
-        </template>
-        <div class="space-y-3">
-          <div
-            v-for="o in signup?.consentOptions ?? []"
-            :key="o.id"
-            class="rounded-md border border-(--ui-border) p-3 space-y-2"
-          >
-            <PtTranslatableInput
-              v-model="o.label"
-              :languages="site.site.languages"
-              :default-language="site.site.default_language"
-              label="Wording"
-            />
-            <div class="flex items-center justify-between">
-              <USwitch
-                :model-value="o.active"
-                label="Offered at signup"
-                :disabled="!can('pt.site.write')"
-                @update:model-value="(v) => saveOption(o, { active: v })"
-              />
-              <UButton
-                size="sm"
-                label="Save"
-                @click="saveOption(o, { label: o.label })"
-              />
-            </div>
-          </div>
-          <div
-            v-if="can('pt.site.write')"
-            class="flex items-end gap-2"
-          >
-            <PtTranslatableInput
-              v-model="newOption"
-              :languages="site.site.languages"
-              :default-language="site.site.default_language"
-              label="New option"
-              placeholder="Send me news about our mission trips"
-              class="flex-1"
-            />
-            <UButton
-              label="Add"
-              @click="createOption"
-            />
-          </div>
+          </UFormField>
         </div>
       </UCard>
     </template>
 
+    <template v-else-if="tab === 'look'">
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Branding
+          </h2>
+          <p class="text-sm text-muted">
+            Your color is used for buttons and highlights on your site and in emails.
+          </p>
+        </template>
+        <fieldset
+          :disabled="!can('pt.site.write')"
+          class="space-y-6"
+        >
+          <PtColorField v-model="brandColor" />
+
+          <div class="grid gap-6 sm:grid-cols-2">
+            <UFormField
+              v-for="s in IMAGE_SLOTS"
+              :key="s.slot"
+              :label="s.label"
+              :description="s.help"
+            >
+              <div class="space-y-2">
+                <div
+                  v-if="branding[s.key]"
+                  class="rounded-md overflow-hidden border border-default"
+                  :class="s.slot === 'logo' ? 'h-32 bg-elevated p-4' : 'aspect-video'"
+                >
+                  <img
+                    :src="branding[s.key]"
+                    alt=""
+                    class="size-full"
+                    :class="s.slot === 'logo' ? 'object-contain' : 'object-cover'"
+                    :style="s.slot === 'image' ? { objectPosition: `${(branding.focal_x ?? 0.5) * 100}% ${(branding.focal_y ?? 0.5) * 100}%` } : {}"
+                  >
+                </div>
+                <div
+                  v-else
+                  class="h-32 rounded-md border border-dashed border-accented flex flex-col items-center justify-center gap-1 text-muted"
+                >
+                  <UIcon
+                    name="i-lucide-image"
+                    class="size-6"
+                  />
+                  <span class="text-xs">No image yet</span>
+                </div>
+                <div class="flex gap-2">
+                  <UButton
+                    size="sm"
+                    variant="soft"
+                    icon="i-lucide-image"
+                    :label="branding[s.key] ? 'Change' : 'Choose'"
+                    @click="imagePicker = s.slot"
+                  />
+                  <UButton
+                    v-if="branding[s.key]"
+                    size="sm"
+                    variant="ghost"
+                    color="neutral"
+                    icon="i-lucide-x"
+                    label="Remove"
+                    @click="branding[s.key] = undefined"
+                  />
+                </div>
+              </div>
+            </UFormField>
+          </div>
+
+          <div
+            v-if="branding.image_url"
+            class="space-y-5 border-t border-default pt-5"
+          >
+            <UFormField
+              label="Focal point of the top image"
+              description="Keeps the important part visible when phones crop the image."
+            >
+              <div class="grid grid-cols-2 gap-4 max-w-md">
+                <USlider
+                  v-model="branding.focal_x"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  aria-label="Horizontal focal point"
+                />
+                <USlider
+                  v-model="branding.focal_y"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  aria-label="Vertical focal point"
+                />
+              </div>
+            </UFormField>
+            <PtTranslatableInput
+              v-model="branding.image_alt"
+              :languages="site.site.languages"
+              :default-language="site.site.default_language"
+              label="Image description (alt text)"
+              required
+            />
+            <UFormField label="Image credit (shown under the image)">
+              <UInput
+                v-model="branding.image_credit"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <p class="text-xs text-muted">
+            The image for link previews is on the
+            <ULink
+              to="/site/landing/share"
+              class="underline"
+            >Share</ULink> page.
+          </p>
+        </fieldset>
+      </UCard>
+
+      <UCard v-if="can('pt.site.manage')">
+        <template #header>
+          <h2 class="font-semibold">
+            Email identity
+          </h2>
+          <p class="text-sm text-muted">
+            How reminders and site emails appear in people's inboxes. They are sent from a Prayer.Tools address with your
+            site's name, and replies go to you.
+          </p>
+        </template>
+        <div class="space-y-5">
+          <div class="grid sm:grid-cols-2 gap-4">
+            <UFormField
+              label="From name"
+              :description="`Leave empty to use “${site.org.name}”.`"
+            >
+              <UInput
+                v-model="identity.from_name"
+                :placeholder="site.org.name"
+                maxlength="80"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              label="Sending address"
+              description="Before the @ of the Prayer.Tools sending domain."
+            >
+              <UInput
+                v-model="identity.from_local"
+                :placeholder="site.org.slug"
+                class="w-full font-mono"
+              />
+            </UFormField>
+            <UFormField
+              label="Reply-to address"
+              :description="site.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}).` : 'Replies to your emails go here.'"
+            >
+              <UInput
+                v-model="identity.reply_to"
+                type="email"
+                :placeholder="site.inboxAddress ?? 'you@example.com'"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              label="Logo in emails (URL)"
+              description="Leave empty to use your site logo."
+            >
+              <UInput
+                v-model="identity.logo_url"
+                :placeholder="branding.logo_url"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <PtTranslatableInput
+            v-model="signature"
+            :languages="site.site.languages"
+            :default-language="site.site.default_language"
+            label="Email signature"
+            help="Added to the end of your emails, in each language."
+            multiline
+          />
+          <UAlert
+            color="neutral"
+            variant="subtle"
+            icon="i-lucide-info"
+            description="Sending from your own domain (with DKIM/SPF records) is planned; for now all mail uses the Prayer.Tools domain so bounces and complaints are tracked."
+          />
+        </div>
+      </UCard>
+
+      <div
+        v-if="can('pt.site.write')"
+        class="flex items-center gap-3"
+      >
+        <UButton
+          icon="i-lucide-save"
+          :label="can('pt.site.manage') ? 'Save look and email' : 'Save look'"
+          :loading="savingLook"
+          :disabled="!lookDirty"
+          @click="saveLook"
+        />
+        <UButton
+          v-if="lookDirty"
+          variant="ghost"
+          color="neutral"
+          label="Discard changes"
+          @click="resetLook"
+        />
+      </div>
+    </template>
+
     <UCard v-else-if="tab === 'wording'">
       <template #header>
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="font-semibold">
-              Wording on your site
-            </h2>
-            <p class="text-sm text-(--ui-text-muted)">
-              Leave a field empty to use the standard wording.
-            </p>
-          </div>
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <h2 class="font-semibold">
+            Wording on your site
+          </h2>
           <USelect
             v-model="wordingLang"
             :items="site.site.languages.map(l => ({ label: languageName(meta, l), value: l }))"
@@ -671,7 +641,7 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
           />
         </div>
       </template>
-      <div class="space-y-3">
+      <div class="space-y-4">
         <div
           v-for="e in EDITABLE"
           :key="e.key"
@@ -706,156 +676,185 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
       </div>
     </UCard>
 
-    <UCard v-else-if="tab === 'behaviour'">
-      <fieldset
-        :disabled="!can('pt.site.write')"
-        class="space-y-4"
-      >
-        <template
-          v-for="(def, key) in meta?.settingDefaults ?? {}"
-          :key="key"
-        >
-          <USwitch
-            v-if="typeof def === 'boolean'"
-            v-model="settings[key]"
-            :label="PT_LABELS.setting[key] ?? key"
-          />
-          <UFormField
-            v-else
-            :label="PT_LABELS.setting[key] ?? key"
-          >
-            <UInputNumber
-              v-model="settings[key]"
-              :min="1"
-              :max="240"
-            />
-          </UFormField>
-        </template>
-        <div class="flex justify-end">
-          <UButton
-            label="Save"
-            @click="patchSite({ settings })"
-          />
-        </div>
-      </fieldset>
-    </UCard>
-
     <template v-else-if="tab === 'status'">
       <UCard>
         <template #header>
-          <h2 class="font-semibold">
-            Status
-          </h2>
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold">
+              Status
+            </h2>
+            <UBadge
+              :label="PT_LABELS.siteStatus[site.site.status]"
+              :color="ptStatusColor(site.site.status)"
+              variant="subtle"
+            />
+          </div>
         </template>
-        <div class="space-y-3 text-sm">
-          <p>
-            This site is <strong>{{ PT_LABELS.siteStatus[site.site.status] }}</strong>.
-            <template v-if="site.site.status === 'draft'">
-              Only people with the preview link can see it.
-            </template>
-            <template v-else-if="site.site.status === 'archived'">
-              Visitors see a short “this campaign has ended” page; no signup and no reminders.
-            </template>
+        <div class="space-y-3">
+          <p
+            v-if="site.site.status === 'draft'"
+            class="text-sm text-muted"
+          >
+            Only people with the preview link can see a draft. Publish when you're ready for people to sign up.
+          </p>
+          <p
+            v-else-if="site.site.status === 'published'"
+            class="text-sm text-muted"
+          >
+            The site is live at <span class="font-mono">{{ site.url }}</span>. Archive it when it's over for good: the
+            site then shows a short “this campaign has ended” page, with no signup and no reminders.
+          </p>
+          <p
+            v-else
+            class="text-sm text-muted"
+          >
+            Archived{{ site.site.archived_at ? ` on ${ptFormatDate(site.site.archived_at)}` : '' }}. Visitors see a short
+            “this campaign has ended” page; no signup and no reminders. Un-archive it to open signup again.
           </p>
           <div class="flex flex-wrap gap-2">
             <UButton
               v-if="site.site.status === 'draft'"
               label="Publish"
               icon="i-lucide-rocket"
+              :loading="statusBusy"
               @click="setStatus('publish')"
             />
             <UButton
               v-if="site.site.status === 'published'"
               label="Archive"
-              color="warning"
-              variant="soft"
-              @click="setStatus('archive')"
+              color="neutral"
+              variant="outline"
+              icon="i-lucide-archive"
+              @click="archiveOpen = true"
             />
             <UButton
               v-if="site.site.status === 'archived'"
               label="Un-archive"
-              variant="soft"
+              icon="i-lucide-archive-restore"
+              :loading="statusBusy"
               @click="setStatus('unarchive')"
             />
             <UButton
               label="Get a preview link"
+              color="neutral"
               variant="outline"
               icon="i-lucide-eye"
               @click="preview"
             />
           </div>
-          <UInput
+          <div
             v-if="previewUrl"
-            :model-value="previewUrl"
-            readonly
-            class="w-full"
-          />
+            class="flex items-center gap-2"
+          >
+            <UInput
+              :model-value="previewUrl"
+              readonly
+              class="flex-1 font-mono"
+            />
+            <UButton
+              icon="i-lucide-copy"
+              aria-label="Copy preview link"
+              @click="copy(previewUrl)"
+            />
+          </div>
         </div>
       </UCard>
+
       <UCard>
         <template #header>
-          <h2 class="font-semibold">
-            Directory
-          </h2>
-        </template>
-        <div class="space-y-3 text-sm">
-          <p>
-            List your site in the Prayer.Tools app's directory so people can find it. A Prayer.Tools operator approves listings.
-            Your site stays reachable by its link either way.
-          </p>
-          <p v-if="site.directory">
-            Status: <UBadge
-              :label="PT_LABELS.directoryStatus[site.directory.status]"
-              :color="ptStatusColor(site.directory.status)"
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold">
+              Prayer.Tools directory
+            </h2>
+            <UBadge
+              :label="site.directory ? (PT_LABELS.directoryStatus[site.directory.status] ?? site.directory.status) : 'Not listed'"
+              :color="site.directory ? ptStatusColor(site.directory.status) : 'neutral'"
               variant="subtle"
             />
+          </div>
+        </template>
+        <div class="space-y-3">
+          <p class="text-sm text-muted">
+            {{ DIRECTORY_TEXT[site.directory?.status ?? 'none'] ?? DIRECTORY_TEXT.none }}
+            Your site stays reachable by its link either way.
           </p>
-          <UButton
-            v-if="!site.directory"
-            label="Ask to be listed"
-            variant="soft"
-            :disabled="site.site.status !== 'published'"
-            @click="directory(true)"
-          />
-          <UButton
-            v-else
-            label="Remove from the directory"
-            color="neutral"
-            variant="soft"
-            @click="directory(false)"
-          />
+          <p
+            v-if="(!site.directory || site.directory.status === 'unlisted') && site.site.status !== 'published'"
+            class="text-xs text-muted"
+          >
+            Publish the site before asking to be listed.
+          </p>
+          <div class="flex gap-2">
+            <UButton
+              v-if="!site.directory || site.directory.status === 'unlisted'"
+              icon="i-lucide-list-plus"
+              :label="site.directory ? 'Ask to be listed again' : 'Ask to be listed'"
+              :loading="directoryBusy"
+              :disabled="site.site.status !== 'published'"
+              @click="directory(true)"
+            />
+            <UButton
+              v-if="site.directory"
+              color="neutral"
+              variant="outline"
+              :label="site.directory.status === 'requested' ? 'Withdraw request' : 'Remove from the directory'"
+              :loading="directoryBusy"
+              @click="directory(false)"
+            />
+          </div>
         </div>
       </UCard>
+
       <UCard v-if="exportsLog?.exports.length">
         <template #header>
           <h2 class="font-semibold">
             Intercessor exports
           </h2>
+          <p class="text-sm text-muted">
+            Every download of intercessors' details.
+          </p>
         </template>
-        <ul class="text-sm space-y-1">
+        <ul class="text-sm divide-y divide-default">
           <li
             v-for="e in exportsLog.exports"
             :key="e.id"
+            class="flex items-center gap-2 py-2 first:pt-0 last:pb-0"
           >
-            {{ ptFormatDate(e.created_at, { dateStyle: 'medium', timeStyle: 'short' }) }} — {{ e.display_name }} ({{ e.email }}), {{ e.row_count }} rows
+            <UIcon
+              name="i-lucide-download"
+              class="text-muted shrink-0"
+            />
+            <span class="flex-1 min-w-0">
+              {{ e.display_name }} <span class="text-muted">({{ e.email }})</span>
+            </span>
+            <span class="text-muted whitespace-nowrap">
+              {{ e.row_count }} rows · {{ ptFormatDate(e.created_at, { dateStyle: 'medium', timeStyle: 'short' }) }}
+            </span>
           </li>
         </ul>
       </UCard>
-      <UCard v-if="isOwner">
+
+      <UCard
+        v-if="isOwner"
+        :ui="{ root: 'ring-error/40' }"
+      >
         <template #header>
-          <h2 class="font-semibold text-(--ui-error)">
+          <h2 class="font-semibold text-error">
             Delete site
           </h2>
         </template>
-        <p class="text-sm mb-3">
-          Deletes the site, its campaigns, intercessors and stats. This can't be undone.
-        </p>
-        <UButton
-          color="error"
-          variant="soft"
-          label="Delete this site"
-          @click="deleteOpen = true"
-        />
+        <div class="space-y-3">
+          <p class="text-sm text-muted">
+            Deletes the site, its campaigns, intercessors and stats for good. This can't be undone.
+          </p>
+          <UButton
+            color="error"
+            variant="outline"
+            icon="i-lucide-trash-2"
+            label="Delete site"
+            @click="deleteOpen = true"
+          />
+        </div>
       </UCard>
     </template>
 
@@ -864,22 +863,47 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
       :language="site.site.default_language"
       @update:open="(v) => { if (!v) imagePicker = null }"
       @select="(a) => {
-        const key = imagePicker === 'share' ? 'share_image_url' : `${imagePicker}_url`
-        branding[key] = a.url
+        branding[`${imagePicker}_url`] = a.url
         if (imagePicker === 'image') { branding.image_alt = a.asset.alt ?? undefined; branding.image_credit = a.credit ?? undefined; branding.focal_x = a.asset.focal_x; branding.focal_y = a.asset.focal_y }
         imagePicker = null
       }"
     />
 
     <UModal
+      v-model:open="archiveOpen"
+      title="Archive this site?"
+      description="The site will show a short “this campaign has ended” page. Signup closes and reminders stop. You can un-archive it later."
+    >
+      <template #footer>
+        <div class="flex justify-end gap-2 w-full">
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="ghost"
+            @click="archiveOpen = false"
+          />
+          <UButton
+            label="Archive"
+            color="warning"
+            icon="i-lucide-archive"
+            :loading="statusBusy"
+            @click="setStatus('archive')"
+          />
+        </div>
+      </template>
+    </UModal>
+
+    <UModal
       v-model:open="deleteOpen"
       title="Delete this site?"
+      :description="`This permanently deletes ${site.org.name}, including everyone who signed up and all stats.`"
     >
       <template #body>
         <UFormField :label="`Type ${site.org.slug} to confirm`">
           <UInput
             v-model="deleteConfirm"
             class="w-full"
+            autocomplete="off"
           />
         </UFormField>
       </template>
@@ -894,6 +918,7 @@ watch(tab, t => { if (t === 'status' && can('pt.site.manage')) refreshNuxtData('
           <UButton
             label="Delete forever"
             color="error"
+            icon="i-lucide-trash-2"
             :disabled="deleteConfirm !== site.org.slug"
             @click="deleteSite"
           />

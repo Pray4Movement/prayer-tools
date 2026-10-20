@@ -2,7 +2,10 @@
 // Onboarding, continued on the draft site: template and campaign setup,
 // address and languages, content, landing page, look and publish. The
 // current step is saved on the site, so setup can be resumed.
+import { suggestedStartDate } from '@prayertools/shared/setup'
+import { addDays, todayIn } from '@prayertools/shared/dates'
 import type { SetupState } from '../../components/PtSetupForm.vue'
+import type { PtChecklist } from '../../components/PtLaunchChecklist.vue'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -45,11 +48,22 @@ function chooseTemplate(key: string) {
   if (!t) return
   setup.value = { ...setup.value, ...(t.setup as Partial<SetupState>) }
   if (t.setup.length_days && setup.value.start_mode === 'date') setup.value.length_days = null
+  const start = setup.value.start_mode === 'date' ? suggestedStartDate(key, todayIn(site.value?.site.timezone ?? 'UTC')) : null
+  if (start) setup.value.start_date = start
+  fillEndDate()
   if (!campaignName.value && site.value) {
     const year = (setup.value.start_date ?? new Date().toISOString()).slice(0, 4)
     campaignName.value = key === 'ramadan' ? `Ramadan ${year}` : site.value.org.name
   }
 }
+
+// Templates with a fixed length end their date campaigns that many days after the start.
+function fillEndDate() {
+  const days = meta.value?.templates.find(x => x.key === templateKey.value)?.setup.length_days as number | undefined
+  if (templateKey.value === 'generic' || !days || setup.value.start_mode !== 'date' || !setup.value.start_date) return
+  setup.value.end_date = addDays(setup.value.start_date, days - 1)
+}
+watch(() => setup.value.start_date, fillEndDate)
 
 const savingSetup = ref(false)
 async function saveSetup() {
@@ -223,19 +237,7 @@ async function makePreview() {
 watch(step, (s) => {
   if (s === 'publish' && !preview.value) makePreview()
 }, { immediate: true })
-const checklist = computed(() => {
-  const s = site.value
-  if (!s) return []
-  const desc = s.site.description?.values?.[s.site.default_language]
-  return [
-    { label: 'A campaign with dates and a goal', done: !!s.currentCampaign },
-    { label: 'Prayer content for the campaign', done: (content.value?.libraries.length ?? 0) > 0 },
-    { label: 'A description for the top of the page', done: !!desc },
-    { label: 'A top image', done: !!s.site.branding?.image_url },
-    { label: 'A reply-to address for emails', done: !!(s.site.email_identity?.reply_to || s.inboxAddress) },
-    { label: 'Translations for every language', done: (content.value?.libraries ?? []).every(l => !l.missingLanguages.length) }
-  ]
-})
+const checklist = ref<{ refresh: () => Promise<void>, data: PtChecklist | null } | null>(null)
 const publishing = ref(false)
 async function publish() {
   publishing.value = true
@@ -246,6 +248,7 @@ async function publish() {
     await navigateTo(`/@${slug.value}/site/landing/share`)
   } catch (err) {
     toast.fail(err, 'Could not publish')
+    await checklist.value?.refresh()
   } finally {
     publishing.value = false
   }
@@ -501,157 +504,154 @@ async function publish() {
       </template>
     </UCard>
 
-    <UCard v-else-if="step === 'publish'">
-      <template #header>
-        <h2 class="font-semibold">
-          Look and publish
-        </h2>
-      </template>
-      <div class="space-y-6">
-        <PtColorField v-model="color" />
-        <div class="grid sm:grid-cols-2 gap-6">
-          <UFormField
-            label="Top image"
-            description="A wide photo shown at the top of your page."
-          >
-            <div class="space-y-2">
-              <img
-                v-if="image"
-                :src="image.url"
-                :alt="image.alt"
-                class="rounded-md max-h-32 object-cover"
-              >
-              <UButton
-                :label="image ? 'Change image' : 'Choose image'"
-                icon="i-lucide-image"
-                variant="soft"
-                @click="openPicker('image')"
-              />
-            </div>
-          </UFormField>
-          <UFormField
-            label="Logo (optional)"
-            description="Shown in emails and the site header."
-          >
-            <div class="space-y-2">
-              <img
-                v-if="logo"
-                :src="logo.url"
-                alt=""
-                class="rounded-md max-h-20 object-contain"
-              >
-              <div class="flex flex-wrap gap-2">
+    <div
+      v-else-if="step === 'publish'"
+      class="space-y-6"
+    >
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Look and emails
+          </h2>
+        </template>
+        <div class="space-y-6">
+          <PtColorField v-model="color" />
+          <div class="grid sm:grid-cols-2 gap-6">
+            <UFormField
+              label="Top image"
+              description="A wide photo shown at the top of your page."
+            >
+              <div class="space-y-2">
+                <img
+                  v-if="image"
+                  :src="image.url"
+                  :alt="image.alt"
+                  class="rounded-md max-h-32 object-cover"
+                >
                 <UButton
-                  :label="logo ? 'Change logo' : 'Choose logo'"
+                  :label="image ? 'Change image' : 'Choose image'"
                   icon="i-lucide-image"
                   variant="soft"
-                  @click="openPicker('logo')"
-                />
-                <UButton
-                  v-if="logo"
-                  label="Remove"
-                  icon="i-lucide-x"
-                  color="neutral"
-                  variant="ghost"
-                  @click="logo = null"
+                  @click="openPicker('image')"
                 />
               </div>
-            </div>
-          </UFormField>
-        </div>
-        <div
-          v-if="can('pt.site.manage')"
-          class="grid sm:grid-cols-2 gap-4"
-        >
-          <UFormField
-            label="Emails come from"
-            :help="`Shown as the sender name. Default: ${site?.org.name}`"
-          >
-            <UInput
-              v-model="fromName"
-              :placeholder="site?.org.name"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField
-            label="Replies go to"
-            :help="site?.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}), or give your own address.` : 'Your email address, for people who reply to reminders.'"
-          >
-            <UInput
-              v-model="replyTo"
-              type="email"
-              :placeholder="site?.inboxAddress ?? undefined"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-        <div>
-          <h3 class="text-sm font-medium mb-2">
-            Launch checklist
-          </h3>
-          <ul class="space-y-1 text-sm">
-            <li
-              v-for="c in checklist"
-              :key="c.label"
-              class="flex items-center gap-2"
+            </UFormField>
+            <UFormField
+              label="Logo (optional)"
+              description="Shown in emails and the site header."
             >
-              <UIcon
-                :name="c.done ? 'i-lucide-circle-check' : 'i-lucide-circle'"
-                :class="c.done ? 'text-(--ui-success)' : 'text-(--ui-text-dimmed)'"
+              <div class="space-y-2">
+                <img
+                  v-if="logo"
+                  :src="logo.url"
+                  alt=""
+                  class="rounded-md max-h-20 object-contain"
+                >
+                <div class="flex flex-wrap gap-2">
+                  <UButton
+                    :label="logo ? 'Change logo' : 'Choose logo'"
+                    icon="i-lucide-image"
+                    variant="soft"
+                    @click="openPicker('logo')"
+                  />
+                  <UButton
+                    v-if="logo"
+                    label="Remove"
+                    icon="i-lucide-x"
+                    color="neutral"
+                    variant="ghost"
+                    @click="logo = null"
+                  />
+                </div>
+              </div>
+            </UFormField>
+          </div>
+          <div
+            v-if="can('pt.site.manage')"
+            class="grid sm:grid-cols-2 gap-4"
+          >
+            <UFormField
+              label="Emails come from"
+              :help="`Shown as the sender name. Default: ${site?.org.name}`"
+            >
+              <UInput
+                v-model="fromName"
+                :placeholder="site?.org.name"
+                class="w-full"
               />
-              {{ c.label }}
-            </li>
-          </ul>
-        </div>
-        <div
-          v-if="preview"
-          class="space-y-2"
-        >
-          <h3 class="text-sm font-medium">
-            Preview
-          </h3>
-          <div class="flex flex-col sm:flex-row gap-6 items-start">
-            <PtQrCode
-              :value="preview"
-              :size="150"
+            </UFormField>
+            <UFormField
+              label="Replies go to"
+              :help="site?.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}), or give your own address.` : 'Your email address, for people who reply to reminders.'"
+            >
+              <UInput
+                v-model="replyTo"
+                type="email"
+                :placeholder="site?.inboxAddress ?? undefined"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <div class="flex justify-end">
+            <UButton
+              label="Save look and emails"
+              color="neutral"
+              variant="outline"
+              :loading="savingLook"
+              @click="saveLook().then(() => checklist?.refresh())"
             />
-            <div class="space-y-3 text-sm">
-              <p class="text-(--ui-text-muted)">
-                Scan the code to open the draft on your phone, or open it here. Only people with this link can
-                see the draft. Save to see your latest changes.
-              </p>
-              <UButton
-                :to="preview"
-                target="_blank"
-                icon="i-lucide-external-link"
-                color="neutral"
-                variant="outline"
-                label="Open preview"
-              />
-            </div>
           </div>
         </div>
-      </div>
-      <template #footer>
-        <div class="flex justify-between">
-          <UButton
-            label="Save"
-            color="neutral"
-            variant="outline"
-            :loading="savingLook"
-            @click="saveLook"
+      </UCard>
+
+      <PtLaunchChecklist ref="checklist" />
+
+      <UCard v-if="preview">
+        <template #header>
+          <h3 class="font-semibold">
+            Preview
+          </h3>
+        </template>
+        <div class="flex flex-col sm:flex-row gap-6 items-start">
+          <PtQrCode
+            :value="preview"
+            :size="150"
           />
-          <UButton
-            v-if="can('pt.site.manage')"
-            label="Publish"
-            icon="i-lucide-rocket"
-            :loading="publishing"
-            :disabled="!existingCampaign"
-            @click="publish"
-          />
+          <div class="space-y-3 text-sm">
+            <p class="text-(--ui-text-muted)">
+              Scan the code to open the draft on your phone, or open it here. Only people with this link can
+              see the draft. Save to see your latest changes.
+            </p>
+            <UButton
+              :to="preview"
+              target="_blank"
+              icon="i-lucide-external-link"
+              color="neutral"
+              variant="outline"
+              label="Open preview"
+            />
+          </div>
         </div>
-      </template>
-    </UCard>
+      </UCard>
+
+      <div
+        v-if="can('pt.site.manage')"
+        class="flex items-center gap-3 flex-wrap"
+      >
+        <UButton
+          size="xl"
+          icon="i-lucide-rocket"
+          label="Publish site"
+          :loading="publishing"
+          :disabled="!checklist?.data?.canPublish"
+          @click="publish"
+        />
+        <span
+          v-if="!checklist?.data?.canPublish"
+          class="text-sm text-(--ui-text-muted)"
+        >Finish the items marked “needed to publish” first.</span>
+      </div>
+    </div>
 
     <PtImagePicker
       v-model:open="pickerOpen"

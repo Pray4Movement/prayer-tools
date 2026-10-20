@@ -13,6 +13,19 @@ const { data, refresh } = useFetch<{ rows: Member[] }>(() => `/api/o/${slug.valu
 const ROLE_ITEMS = PT_ROLE_KEYS.map(value => ({ value, label: PT_LABELS.role[value], description: PT_LABELS.roleDescription[value] }))
 const invite = reactive({ email: '', display_name: '', role: 'pt-editor' })
 const inviting = ref(false)
+const inviteOpen = ref(false)
+
+const STATUS_META: Record<string, { label: string, color: 'success' | 'warning' | 'info' | 'error', icon: string }> = {
+  active: { label: 'Active', color: 'success', icon: 'i-lucide-badge-check' },
+  not_verified: { label: 'Not verified', color: 'warning', icon: 'i-lucide-mail-warning' },
+  pending_invite: { label: 'Invitation sent', color: 'info', icon: 'i-lucide-mail' },
+  expired_invite: { label: 'Invitation expired', color: 'error', icon: 'i-lucide-mail-x' }
+}
+
+function initials(m: Member): string {
+  const parts = (m.display_name || m.email || '?').trim().split(/\s+/).filter(Boolean)
+  return (parts.length >= 2 ? parts[0]![0]! + parts[parts.length - 1]![0]! : (parts[0] ?? '?').slice(0, 2)).toUpperCase()
+}
 
 function roleOf(m: Member): string {
   return PT_ROLE_KEYS.find(r => m.roles.includes(r)) ?? m.roles[0] ?? 'member'
@@ -25,6 +38,7 @@ async function sendInvite() {
     toast.ok(res.status === 'pending' ? 'Invitation sent' : 'Added to the team')
     invite.email = ''
     invite.display_name = ''
+    inviteOpen.value = false
     await refresh()
   } catch (err) {
     toast.fail(err, 'Could not invite')
@@ -42,7 +56,15 @@ async function setRole(m: Member, role: string) {
     await refresh()
   }
 }
+const removing = ref<Member | null>(null)
+const removeOpen = computed({
+  get: () => !!removing.value,
+  set: (v: boolean) => {
+    if (!v) removing.value = null
+  }
+})
 async function remove(m: Member) {
+  removing.value = null
   try {
     await $fetch(`/api/o/${slug.value}/members/${m.user_id}`, { method: 'DELETE' })
     if (m.user_id === user.value?.id) return navigateTo('/orgs')
@@ -55,68 +77,64 @@ async function remove(m: Member) {
 
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
-    <div>
-      <h1 class="text-2xl font-semibold">
-        Team
-      </h1>
-      <p class="text-sm text-(--ui-text-muted)">
-        People you add see this site only, never your other sites.
-      </p>
-    </div>
-    <UCard v-if="can('org.members.invite')">
-      <template #header>
-        <h2 class="font-semibold">
-          Invite someone
-        </h2>
-      </template>
-      <div class="space-y-3">
-        <div class="grid sm:grid-cols-2 gap-3">
-          <UFormField label="Email">
-            <UInput
-              v-model="invite.email"
-              type="email"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField label="Name">
-            <UInput
-              v-model="invite.display_name"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-        <URadioGroup
-          v-model="invite.role"
-          :items="ROLE_ITEMS"
-          variant="card"
-        />
-        <div class="flex justify-end">
-          <UButton
-            label="Invite"
-            :loading="inviting"
-            :disabled="!invite.email.includes('@')"
-            @click="sendInvite"
-          />
-        </div>
+    <header class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold">
+          Team
+        </h1>
+        <p class="text-sm text-(--ui-text-muted)">
+          People you add see this site only, never your other sites.
+        </p>
       </div>
-    </UCard>
-    <UCard>
+      <UButton
+        v-if="can('org.members.invite')"
+        icon="i-lucide-user-plus"
+        label="Invite someone"
+        @click="inviteOpen = true"
+      />
+    </header>
+
+    <UCard :ui="{ body: 'p-0 sm:p-0' }">
       <ul class="divide-y divide-(--ui-border)">
         <li
           v-for="m in data?.rows ?? []"
           :key="m.membership_id"
-          class="py-3 flex flex-wrap items-center justify-between gap-3"
+          class="px-4 sm:px-6 py-4 flex flex-wrap items-center gap-4"
         >
-          <div>
-            <p class="font-medium">
-              {{ m.display_name }} <span
+          <div class="shrink-0 size-10 rounded-full bg-gradient-to-br from-(--ui-primary) to-(--ui-primary)/60 text-white flex items-center justify-center text-sm font-semibold">
+            {{ initials(m) }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="font-medium truncate">
+                {{ m.display_name }}
+              </p>
+              <UBadge
                 v-if="m.user_id === user?.id"
-                class="text-xs text-(--ui-text-muted)"
-              >(you)</span>
-            </p>
-            <p class="text-sm text-(--ui-text-muted)">
-              {{ m.email }}<span v-if="m.status === 'pending_invite'"> · invitation sent</span><span v-else-if="m.status === 'expired_invite'"> · invitation expired</span>
-            </p>
+                label="You"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+              />
+              <UBadge
+                v-if="m.status !== 'active' && STATUS_META[m.status]"
+                :color="STATUS_META[m.status]!.color"
+                :icon="STATUS_META[m.status]!.icon"
+                :label="STATUS_META[m.status]!.label"
+                variant="subtle"
+                size="sm"
+              />
+            </div>
+            <a
+              :href="`mailto:${m.email}`"
+              class="text-sm text-(--ui-text-muted) hover:text-(--ui-text) inline-flex items-center gap-1.5 max-w-full"
+            >
+              <UIcon
+                name="i-lucide-mail"
+                class="size-3.5 shrink-0"
+              />
+              <span class="truncate">{{ m.email }}</span>
+            </a>
           </div>
           <div class="flex items-center gap-2">
             <USelect
@@ -124,6 +142,7 @@ async function remove(m: Member) {
               :items="ROLE_ITEMS.map(r => ({ value: r.value, label: r.label }))"
               :disabled="!can('org.members.manage_roles')"
               class="w-36"
+              :aria-label="`Role of ${m.display_name}`"
               @update:model-value="(v) => setRole(m, v as string)"
             />
             <UButton
@@ -131,18 +150,143 @@ async function remove(m: Member) {
               size="sm"
               color="error"
               variant="ghost"
+              :icon="m.user_id === user?.id ? 'i-lucide-log-out' : 'i-lucide-user-minus'"
               :label="m.user_id === user?.id ? 'Leave' : 'Remove'"
-              @click="remove(m)"
+              @click="removing = m"
             />
           </div>
         </li>
       </ul>
+      <UEmpty
+        v-if="!data?.rows.length"
+        icon="i-lucide-users"
+        title="No team members yet"
+      />
     </UCard>
-    <p
+
+    <UAlert
       v-if="site"
-      class="text-xs text-(--ui-text-muted)"
+      color="neutral"
+      variant="subtle"
+      icon="i-lucide-shield"
+      description="A site can have several owners; the last owner can't leave or be demoted. If an owner leaves, Prayer.Tools can make another member an owner."
+    />
+
+    <UModal
+      v-model:open="inviteOpen"
+      :dismissible="!inviting"
+      :ui="{ content: 'max-w-xl' }"
     >
-      A site can have several owners; the last owner can't leave or be demoted. If an owner leaves, Prayer.Tools can make another member an owner.
-    </p>
+      <template #content>
+        <form
+          class="p-6 space-y-5"
+          @submit.prevent="sendInvite"
+        >
+          <div class="flex items-start gap-3">
+            <div class="shrink-0 size-10 rounded-full bg-(--ui-primary)/10 flex items-center justify-center">
+              <UIcon
+                name="i-lucide-user-plus"
+                class="size-5 text-(--ui-primary)"
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-lg font-semibold">
+                Invite someone
+              </h3>
+              <p class="text-sm text-(--ui-text-muted) mt-1">
+                Someone who already has an account is added right away. Anyone else gets an email invitation.
+              </p>
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <UFormField
+              label="Email"
+              required
+            >
+              <UInput
+                v-model="invite.email"
+                type="email"
+                placeholder="name@example.com"
+                autocomplete="off"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField label="Name">
+              <UInput
+                v-model="invite.display_name"
+                autocomplete="off"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+          <UFormField label="Role">
+            <URadioGroup
+              v-model="invite.role"
+              :items="ROLE_ITEMS"
+              variant="card"
+            />
+          </UFormField>
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <UButton
+              type="button"
+              variant="ghost"
+              color="neutral"
+              label="Cancel"
+              :disabled="inviting"
+              @click="inviteOpen = false"
+            />
+            <UButton
+              type="submit"
+              icon="i-lucide-send"
+              label="Send invite"
+              :loading="inviting"
+              :disabled="!invite.email.includes('@')"
+            />
+          </div>
+        </form>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="removeOpen">
+      <template #content>
+        <div class="p-6 space-y-5">
+          <div class="flex items-start gap-3">
+            <div class="shrink-0 size-10 rounded-full bg-(--ui-error)/10 flex items-center justify-center">
+              <UIcon
+                name="i-lucide-triangle-alert"
+                class="size-5 text-(--ui-error)"
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-lg font-semibold">
+                {{ removing?.user_id === user?.id ? 'Leave this site?' : 'Remove from the team?' }}
+              </h3>
+              <p class="text-sm text-(--ui-text-muted) mt-1">
+                <template v-if="removing?.user_id === user?.id">
+                  You lose access to this site. An owner can invite you again later.
+                </template>
+                <template v-else>
+                  <span class="font-medium text-(--ui-text)">{{ removing?.display_name }}</span> ({{ removing?.email }}) loses access to this site. Their account is not affected and they can be invited again later.
+                </template>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              label="Cancel"
+              @click="removing = null"
+            />
+            <UButton
+              color="error"
+              :icon="removing?.user_id === user?.id ? 'i-lucide-log-out' : 'i-lucide-user-minus'"
+              :label="removing?.user_id === user?.id ? 'Leave' : 'Remove'"
+              @click="removing && remove(removing)"
+            />
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

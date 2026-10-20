@@ -1,26 +1,59 @@
 <script setup lang="ts">
 // New campaign, or a relaunch: a new campaign on the same site that starts
 // from the previous one's answers and content.
+import { suggestedStartDate } from '@prayertools/shared/setup'
+import { addDays, todayIn } from '@prayertools/shared/dates'
 import type { SetupState } from '../../../components/PtSetupForm.vue'
+import type { PtCampaign } from '../../../utils/pt-campaign-ui'
 
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
 const relaunchOf = computed(() => (typeof route.query.relaunch === 'string' ? route.query.relaunch : null))
 const { data: site } = usePtSite()
+const { data: meta } = usePtMeta()
 const toast = usePtToast()
-const { data: previous } = useFetch<{ campaign: Record<string, any> }>(() => `/api/pt/campaigns/${relaunchOf.value}`, { immediate: !!relaunchOf.value, key: `pt-relaunch-${relaunchOf.value}` })
+const { data: previous } = useFetch<{ campaign: PtCampaign }>(() => `/api/pt/campaigns/${relaunchOf.value}`, { immediate: !!relaunchOf.value, key: `pt-relaunch-${relaunchOf.value}` })
 
 const templateKey = ref('generic')
 const name = ref('')
 const setup = ref<SetupState>({ start_mode: 'date', start_date: null, end_mode: 'date', end_date: null, length_days: null, goal: 'people', cadence: 'daily', track_time: false, goal_target: null })
-watch(site, s => { if (s?.site.template_key && !relaunchOf.value) templateKey.value = s.site.template_key }, { immediate: true })
 watch(previous, (p) => {
   const c = p?.campaign
   if (!c) return
   templateKey.value = c.template_key ?? 'generic'
   name.value = c.name.replace(/\d{4}/, (y: string) => String(Number(y) + 1))
   setup.value = { start_mode: c.start_mode, start_date: null, end_mode: c.end_mode, end_date: null, length_days: c.length_days, goal: c.goal, cadence: c.cadence, track_time: c.track_time, goal_target: c.goal_target }
+}, { immediate: true })
+
+const templateKeys = computed(() => meta.value?.templates.map(t => t.key) ?? Object.keys(PT_LABELS.template))
+const templateLength = () => meta.value?.templates.find(t => t.key === templateKey.value)?.setup.length_days as number | undefined
+
+function chooseTemplate(key: string) {
+  templateKey.value = key
+  const t = meta.value?.templates.find(x => x.key === key)
+  if (!t) return
+  setup.value = { ...setup.value, ...(t.setup as Partial<SetupState>) }
+  if (t.setup.length_days && setup.value.start_mode === 'date') setup.value.length_days = null
+  const start = setup.value.start_mode === 'date' ? suggestedStartDate(key, todayIn(site.value?.site.timezone ?? 'UTC')) : null
+  if (start) setup.value.start_date = start
+  if (!name.value.trim() && key === 'ramadan' && start) name.value = `Ramadan ${start.slice(0, 4)}`
+  fillEndDate()
+}
+
+// Templates with a fixed length end their dated campaigns that many days after the start.
+function fillEndDate() {
+  const days = templateLength()
+  if (relaunchOf.value || templateKey.value === 'generic' || !days || setup.value.start_mode !== 'date' || !setup.value.start_date) return
+  setup.value.end_date = addDays(setup.value.start_date, days - 1)
+}
+watch(() => setup.value.start_date, fillEndDate)
+
+const prefilled = ref(false)
+watch([site, meta], ([s, m]) => {
+  if (prefilled.value || relaunchOf.value || !s || !m) return
+  prefilled.value = true
+  chooseTemplate(s.site.template_key ?? 'generic')
 }, { immediate: true })
 
 const saving = ref(false)
@@ -43,30 +76,72 @@ async function create() {
 
 <template>
   <div class="max-w-3xl mx-auto space-y-6">
-    <h1 class="text-2xl font-semibold">
-      {{ relaunchOf ? `Relaunch ${previous?.campaign?.name ?? ''}` : 'New campaign' }}
-    </h1>
+    <header>
+      <UButton
+        to="/site/campaigns"
+        icon="i-lucide-arrow-left"
+        variant="link"
+        color="neutral"
+        label="Campaigns"
+        class="px-0"
+      />
+      <h1 class="text-2xl font-bold">
+        {{ relaunchOf ? `Relaunch ${previous?.campaign?.name ?? ''}` : 'New campaign' }}
+      </h1>
+      <p class="text-sm text-muted">
+        Dates may not overlap another campaign on this site.
+      </p>
+    </header>
+
     <UAlert
       v-if="relaunchOf"
-      icon="i-lucide-info"
-      variant="soft"
+      icon="i-lucide-rotate-ccw"
+      variant="subtle"
       color="info"
+      title="Starts from the previous campaign"
       description="The new campaign reuses the same prayer content. Libraries you follow pick up their latest version; content you edited carries over. You can invite people from the past campaign with a site email."
     />
+
     <UCard>
-      <div class="space-y-6">
-        <UFormField
+      <div class="space-y-8">
+        <section
           v-if="!relaunchOf"
-          label="Template"
+          class="space-y-3"
         >
-          <USelect
-            v-model="templateKey"
-            :items="Object.entries(PT_LABELS.template).map(([value, label]) => ({ value, label }))"
-            class="w-full sm:w-80"
-          />
-        </UFormField>
+          <div>
+            <h2 class="font-semibold">
+              Choose a template
+            </h2>
+            <p class="text-sm text-muted">
+              A template fills in the answers below. You can change any of them.
+            </p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <button
+              v-for="key in templateKeys"
+              :key="key"
+              type="button"
+              class="text-start rounded-lg border p-4 transition-colors"
+              :class="templateKey === key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-default hover:bg-elevated'"
+              :aria-pressed="templateKey === key"
+              @click="chooseTemplate(key)"
+            >
+              <div class="flex items-center gap-2 font-medium">
+                <UIcon
+                  :name="PT_TEMPLATE_ICONS[key] ?? 'i-lucide-sparkles'"
+                  class="size-5 text-primary"
+                />
+                {{ PT_LABELS.template[key] ?? key }}
+              </div>
+              <p class="text-sm text-muted mt-1">
+                {{ PT_LABELS.templateDescription[key] }}
+              </p>
+            </button>
+          </div>
+        </section>
         <UFormField
           label="Name"
+          description="Shown on the site and in emails, e.g. Ramadan 2027."
           required
         >
           <UInput
@@ -83,7 +158,9 @@ async function create() {
       <template #footer>
         <div class="flex justify-end">
           <UButton
+            :icon="relaunchOf ? 'i-lucide-rotate-ccw' : 'i-lucide-plus'"
             :label="relaunchOf ? 'Relaunch' : 'Create campaign'"
+            size="lg"
             :loading="saving"
             :disabled="name.trim().length < 2"
             @click="create"

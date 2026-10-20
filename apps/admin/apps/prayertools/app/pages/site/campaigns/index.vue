@@ -1,105 +1,251 @@
 <script setup lang="ts">
+// The site's campaigns, grouped by state, each with its dates, setup answers,
+// people and prayer times, and the actions that fit its state.
+import type { PtCampaign } from '../../../utils/pt-campaign-ui'
+
 definePageMeta({ middleware: 'auth' })
 
-interface CampaignRow {
-  id: string
-  slug: string
-  name: string
-  start_mode: string
-  start_date: string | null
-  end_date: string | null
-  goal: string
-  status: string
-  length: string
-  progress: { people: number, percent: number | null }
-}
+const { data: site, can } = usePtSite()
+const toast = usePtToast()
+const { data, status, refresh } = useFetch<{ campaigns: PtCampaign[] }>('/api/pt/campaigns', { key: 'pt-campaigns' })
+const canEdit = computed(() => can('pt.campaigns.write'))
 
-const { can } = usePtSite()
-const { data, status } = useFetch<{ campaigns: CampaignRow[] }>('/api/pt/campaigns', { key: 'pt-campaigns' })
-const latestEnded = computed(() => data.value?.campaigns.find(c => c.status === 'ended'))
+const groups = computed(() => {
+  const list = data.value?.campaigns ?? []
+  return (['active', 'upcoming', 'ended'] as const)
+    .map(state => ({ state, items: list.filter(c => c.status === state) }))
+    .filter(g => g.items.length)
+})
+const serving = (c: PtCampaign) => site.value?.currentCampaign?.id === c.id
+const resultsUrl = (c: PtCampaign) => site.value ? `${site.value.url}/${c.slug}/stats` : undefined
+
+const expanded = ref<string | null>(null)
+
+const confirm = reactive({ open: false, action: 'end' as 'end' | 'delete', campaign: null as PtCampaign | null })
+function ask(action: 'end' | 'delete', c: PtCampaign) {
+  Object.assign(confirm, { open: true, action, campaign: c })
+}
+const confirming = ref(false)
+async function doConfirm() {
+  if (!confirm.campaign) return
+  confirming.value = true
+  try {
+    if (confirm.action === 'end') {
+      await $fetch(`/api/pt/campaigns/${confirm.campaign.id}/close`, { method: 'POST' })
+      toast.ok('Campaign ended', 'Everyone in it will get the thank-you email.')
+    } else {
+      await $fetch(`/api/pt/campaigns/${confirm.campaign.id}`, { method: 'DELETE' })
+      toast.ok('Campaign deleted')
+    }
+    confirm.open = false
+    await refresh()
+  } catch (err) {
+    toast.fail(err, 'Could not change the campaign')
+  } finally {
+    confirming.value = false
+  }
+}
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <header class="flex items-start justify-between gap-4 flex-wrap">
       <div>
-        <h1 class="text-2xl font-semibold">
+        <h1 class="text-2xl font-bold">
           Campaigns
         </h1>
-        <p class="text-sm text-(--ui-text-muted)">
-          Each run of your site. Past campaigns stay online with their results.
+        <p class="text-sm text-muted max-w-xl">
+          A campaign is one round of prayer on your site, like Ramadan 2026. Each has its own dates and setup.
+          Relaunching creates a new campaign on the same site; past campaigns stay online with their results.
         </p>
       </div>
-      <div
-        v-if="can('pt.campaigns.write')"
-        class="flex gap-2"
-      >
-        <UButton
-          v-if="latestEnded"
-          :to="`/site/campaigns/new?relaunch=${latestEnded.id}`"
-          icon="i-lucide-refresh-cw"
-          variant="soft"
-          :label="`Relaunch ${latestEnded.name}`"
-        />
-        <UButton
-          to="/site/campaigns/new"
-          icon="i-lucide-plus"
-          label="New campaign"
-        />
-      </div>
-    </div>
-    <div
-      v-if="status === 'pending'"
-      class="text-sm text-(--ui-text-muted)"
-    >
-      Loading…
-    </div>
-    <UCard
-      v-else-if="!data?.campaigns.length"
-      :ui="{ body: 'text-center space-y-3 py-8' }"
-    >
-      <p>No campaigns yet.</p>
       <UButton
+        v-if="canEdit"
         to="/site/campaigns/new"
-        label="Create the first campaign"
+        icon="i-lucide-plus"
+        :label="data?.campaigns.length ? 'New campaign' : 'Create the first campaign'"
       />
-    </UCard>
+    </header>
+
     <div
-      v-else
+      v-if="status === 'pending' && !data"
       class="space-y-3"
     >
-      <NuxtLink
-        v-for="c in data.campaigns"
+      <USkeleton class="h-32" />
+      <USkeleton class="h-32" />
+    </div>
+
+    <UCard v-else-if="!data?.campaigns.length">
+      <p class="text-sm text-muted">
+        No campaigns yet. Create one to set its dates, goal and how often there is new prayer content.
+      </p>
+    </UCard>
+
+    <section
+      v-for="g in groups"
+      :key="g.state"
+      class="space-y-3"
+    >
+      <h2 class="text-sm font-semibold text-muted uppercase tracking-wide">
+        {{ PT_LABELS.campaignStatus[g.state] }}
+      </h2>
+      <UCard
+        v-for="c in g.items"
         :key="c.id"
-        :to="`/site/campaigns/${c.id}`"
-        class="block rounded-lg border border-(--ui-border) p-4 hover:bg-(--ui-bg-elevated) transition"
       >
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p class="font-semibold">
-              {{ c.name }}
-              <span class="text-xs font-normal text-(--ui-text-muted)">/{{ c.slug }}</span>
-            </p>
-            <p class="text-sm text-(--ui-text-muted)">
-              <template v-if="c.start_mode === 'join'">
-                Personal start
-              </template>
-              <template v-else>
-                {{ ptFormatDate(c.start_date) }} – {{ c.end_date ? ptFormatDate(c.end_date) : 'no end' }}
-              </template>
-              · {{ PT_LABELS.goal[c.goal] }} · {{ PT_LABELS.length[c.length] }}
-            </p>
+        <div class="space-y-3">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <NuxtLink
+                  :to="`/site/campaigns/${c.id}`"
+                  class="font-semibold hover:underline"
+                >
+                  {{ c.name }}
+                </NuxtLink>
+                <UBadge
+                  :color="ptStatusColor(c.status)"
+                  variant="subtle"
+                  :label="PT_LABELS.campaignStatus[c.status]"
+                />
+                <UBadge
+                  v-if="serving(c)"
+                  color="primary"
+                  variant="outline"
+                  label="On the site now"
+                />
+              </div>
+              <p class="text-sm text-muted">
+                {{ ptCampaignDates(c) }} · <span class="font-mono">/{{ c.slug }}</span>
+              </p>
+              <p class="text-xs text-muted mt-1">
+                {{ ptAnswersLine(c) }}
+              </p>
+            </div>
+            <div class="text-sm sm:text-end space-y-1">
+              <div>
+                <span class="font-semibold">{{ c.progress.people.toLocaleString() }}</span>
+                {{ c.progress.people === 1 ? 'person' : 'people' }}
+              </div>
+              <div class="text-muted">
+                {{ ptPlural(c.commitments, 'prayer time', 'prayer times') }}
+              </div>
+              <div
+                v-if="c.progress.percent !== null && ptGoalText(c.progress)"
+                class="w-48 space-y-1"
+              >
+                <UProgress
+                  :model-value="Math.min(100, c.progress.percent)"
+                  size="sm"
+                />
+                <p class="text-xs text-muted">
+                  {{ ptGoalText(c.progress) }}
+                </p>
+              </div>
+            </div>
           </div>
-          <div class="flex items-center gap-3">
-            <span class="text-sm">{{ c.progress.people.toLocaleString() }} people</span>
-            <UBadge
-              :label="PT_LABELS.campaignStatus[c.status]"
-              :color="ptStatusColor(c.status)"
-              variant="subtle"
+          <div class="flex items-center gap-2 flex-wrap">
+            <UButton
+              :to="`/site/campaigns/${c.id}`"
+              size="sm"
+              variant="outline"
+              color="neutral"
+              :icon="canEdit ? 'i-lucide-pencil' : 'i-lucide-eye'"
+              :label="canEdit ? 'Edit' : 'Open'"
+            />
+            <UButton
+              v-if="canEdit && c.status === 'ended'"
+              :to="`/site/campaigns/new?relaunch=${c.id}`"
+              size="sm"
+              variant="outline"
+              color="neutral"
+              icon="i-lucide-rotate-ccw"
+              label="Relaunch"
+            />
+            <UButton
+              v-if="canEdit && c.status === 'active' && c.start_mode !== 'join'"
+              size="sm"
+              variant="outline"
+              color="neutral"
+              icon="i-lucide-square"
+              label="End early"
+              @click="ask('end', c)"
+            />
+            <UButton
+              v-if="canEdit && c.commitments === 0"
+              size="sm"
+              variant="ghost"
+              color="error"
+              icon="i-lucide-trash-2"
+              label="Delete"
+              @click="ask('delete', c)"
+            />
+            <UButton
+              :to="{ path: '/site/stats', query: { campaign: c.id } }"
+              size="sm"
+              variant="ghost"
+              color="neutral"
+              icon="i-lucide-chart-line"
+              label="Stats"
+            />
+            <UButton
+              v-if="resultsUrl(c)"
+              :to="resultsUrl(c)"
+              target="_blank"
+              size="sm"
+              variant="ghost"
+              color="neutral"
+              icon="i-lucide-external-link"
+              label="Public results"
+            />
+            <UButton
+              size="sm"
+              variant="soft"
+              :icon="expanded === c.id ? 'i-lucide-chevron-up' : 'i-lucide-mail'"
+              label="Thank-you message"
+              @click="expanded = expanded === c.id ? null : c.id"
+            />
+          </div>
+          <div
+            v-if="expanded === c.id && site"
+            class="border-t border-default pt-4"
+          >
+            <PtCampaignThankYou
+              :campaign-id="c.id"
+              :end-message="c.end_message"
+              :cta="c.cta"
+              :languages="site.site.languages"
+              :default-language="site.site.default_language"
+              @saved="refresh"
             />
           </div>
         </div>
-      </NuxtLink>
-    </div>
+      </UCard>
+    </section>
+
+    <UModal
+      v-model:open="confirm.open"
+      :title="confirm.action === 'end' ? 'End this campaign early?' : 'Delete this campaign?'"
+      :description="confirm.action === 'end'
+        ? 'Yesterday becomes its last day. The site shows the final results and everyone in the campaign gets the thank-you email.'
+        : 'Nobody has signed up for it yet. Its setup and thank-you message are deleted too.'"
+    >
+      <template #footer>
+        <div class="flex justify-end gap-2 w-full">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            label="Cancel"
+            @click="confirm.open = false"
+          />
+          <UButton
+            :color="confirm.action === 'end' ? 'warning' : 'error'"
+            :loading="confirming"
+            :label="confirm.action === 'end' ? 'End campaign' : 'Delete campaign'"
+            @click="doConfirm"
+          />
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

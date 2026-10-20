@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// Share: the live link, QR codes, share messages per language (with a
-// WhatsApp link), and the Give line.
+// Share: the live link, QR code (PNG and SVG), share messages per language
+// with a WhatsApp preview, the share image for link previews, and the Give line.
 import type { TranslatableText } from '@prayertools/shared/db/schema'
 
 definePageMeta({ middleware: 'auth' })
@@ -11,24 +11,42 @@ const toast = usePtToast()
 const { data } = useFetch<{ url: string, qrPng: string, qrSvg: string, share: { messages?: TranslatableText }, languages: string[], defaultLanguage: string, donateUrl: string }>('/api/pt/share', { key: 'pt-share' })
 
 const messages = ref<TranslatableText | null>(null)
-watch(data, d => { messages.value = d?.share.messages ?? null }, { immediate: true })
+watch(data, (d) => {
+  messages.value = d?.share.messages ?? null
+}, { immediate: true })
 const lang = ref('en')
-watch(data, d => { if (d) lang.value = d.defaultLanguage }, { immediate: true })
+watch(data, (d) => {
+  if (d) lang.value = d.defaultLanguage
+}, { immediate: true })
 
+const activeDomain = computed(() => site.value?.domains.some(d => d.status === 'active') ?? false)
 const message = computed(() => messages.value?.values[lang.value] || `Pray with us: ${site.value?.org.name}`)
-const whatsapp = computed(() => `https://wa.me/?text=${encodeURIComponent(`${message.value} ${data.value?.url ?? ''}`)}`)
+const shareText = computed(() => [message.value.trim(), data.value?.url ?? ''].filter(Boolean).join('\n'))
+const whatsapp = computed(() => `https://wa.me/?text=${encodeURIComponent(shareText.value)}`)
+const langItems = computed(() => (site.value?.site.languages ?? []).map(l => ({ label: languageName(meta.value, l), value: l })))
+const langDir = computed(() => meta.value?.languages.find(l => l.code === lang.value)?.dir ?? 'ltr')
 
-async function copy(text: string) {
+async function copy(text: string, what = 'Link') {
   await navigator.clipboard.writeText(text)
-  toast.ok('Copied')
+  toast.ok(`${what} copied`)
+}
+function download(href: string, filename: string) {
+  const a = document.createElement('a')
+  a.href = href
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+function downloadPng() {
+  if (data.value) download(data.value.qrPng, `${site.value?.org.slug}-qr.png`)
 }
 function downloadSvg() {
-  const blob = new Blob([data.value?.qrSvg ?? ''], { type: 'image/svg+xml' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = `${site.value?.org.slug}-qr.svg`
-  a.click()
+  const href = URL.createObjectURL(new Blob([data.value?.qrSvg ?? ''], { type: 'image/svg+xml' }))
+  download(href, `${site.value?.org.slug}-qr.svg`)
+  setTimeout(() => URL.revokeObjectURL(href), 1000)
 }
+
 const saving = ref(false)
 async function save() {
   saving.value = true
@@ -42,6 +60,17 @@ async function save() {
     saving.value = false
   }
 }
+
+const pickingImage = ref(false)
+async function setShareImage(url: string | undefined) {
+  try {
+    await $fetch('/api/pt/site', { method: 'PATCH', body: { branding: { ...(site.value?.site.branding ?? {}), share_image_url: url } } })
+    await refreshSite()
+    toast.ok(url ? 'Share image saved' : 'Share image removed')
+  } catch (err) {
+    toast.fail(err)
+  }
+}
 </script>
 
 <template>
@@ -50,129 +79,235 @@ async function save() {
     class="max-w-4xl mx-auto space-y-6"
   >
     <PtLandingTabs />
-    <h1 class="text-2xl font-semibold">
-      Share
-    </h1>
+    <header>
+      <h1 class="text-2xl font-bold">
+        Share
+      </h1>
+      <p class="text-sm text-muted">
+        Invite people to pray with {{ site.org.name }}.
+      </p>
+    </header>
+
     <UAlert
       v-if="site.site.status !== 'published'"
       color="warning"
-      variant="soft"
-      description="Your site isn't published yet; people who open the link will not see it."
+      variant="subtle"
+      icon="i-lucide-info"
+      :title="site.site.status === 'draft' ? 'This site isn\'t published yet' : 'This site is archived'"
+      :description="site.site.status === 'draft' ? 'The link works once you publish. You can prepare your share message and image now.' : 'The link shows a short “this campaign has ended” page.'"
     />
-    <UCard>
-      <div class="grid md:grid-cols-[1fr_auto] gap-6 items-start">
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Site link
+          </h2>
+        </template>
         <div class="space-y-3">
-          <UFormField label="Your site's link">
-            <div class="flex gap-2">
-              <UInput
-                :model-value="data.url"
-                readonly
-                class="flex-1"
-              />
-              <UButton
-                icon="i-lucide-copy"
-                label="Copy"
-                variant="soft"
-                @click="copy(data.url)"
-              />
-            </div>
-          </UFormField>
-          <p class="text-sm text-(--ui-text-muted)">
-            When your own domain is active, this becomes the main address and the prayer.tools address redirects to it.
-          </p>
-        </div>
-        <div class="text-center space-y-2">
-          <img
-            :src="data.qrPng"
-            alt="QR code for your site"
-            class="size-40 mx-auto"
-          >
-          <div class="flex gap-1 justify-center">
-            <UButton
-              size="xs"
-              variant="soft"
-              :href="data.qrPng"
-              :download="`${site.org.slug}-qr.png`"
-              label="PNG"
+          <div class="flex items-center gap-2">
+            <UInput
+              :model-value="data.url"
+              readonly
+              class="flex-1 font-mono"
             />
             <UButton
-              size="xs"
-              variant="soft"
-              label="SVG"
-              @click="downloadSvg"
+              icon="i-lucide-copy"
+              aria-label="Copy link"
+              @click="copy(data.url)"
             />
           </div>
+          <p class="text-xs text-muted">
+            <template v-if="activeDomain">
+              Your own domain is active, so this is the address to share. The prayer.tools address redirects to it.
+            </template>
+            <template v-else-if="can('pt.site.manage')">
+              You can use your own domain instead on the
+              <ULink
+                to="/site/settings/domains"
+                class="underline"
+              >Domains</ULink> page. Once it's active it becomes the main address.
+            </template>
+            <template v-else>
+              When your own domain is active, it becomes the main address and the prayer.tools address redirects to it.
+            </template>
+          </p>
         </div>
-      </div>
-    </UCard>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            QR code
+          </h2>
+        </template>
+        <div class="flex items-center gap-4">
+          <img
+            :src="data.qrPng"
+            alt="QR code for the site link"
+            class="size-32 rounded border border-default bg-white"
+          >
+          <div class="space-y-2">
+            <p class="text-sm text-muted">
+              For posters, slides and bulletins.
+            </p>
+            <div class="flex gap-2">
+              <UButton
+                size="sm"
+                variant="outline"
+                icon="i-lucide-download"
+                label="PNG"
+                @click="downloadPng"
+              />
+              <UButton
+                size="sm"
+                variant="outline"
+                icon="i-lucide-download"
+                label="SVG"
+                @click="downloadSvg"
+              />
+            </div>
+          </div>
+        </div>
+      </UCard>
+    </div>
 
     <UCard>
       <template #header>
         <h2 class="font-semibold">
           Share message
         </h2>
-        <p class="text-sm text-(--ui-text-muted)">
-          Pre-filled when people share your site from their phone, in their language.
-        </p>
       </template>
-      <div class="space-y-4">
-        <PtTranslatableInput
-          v-model="messages"
-          :languages="site.site.languages"
-          :default-language="site.site.default_language"
-          label="Message"
-          multiline
-          :source-locked="!can('pt.site.write')"
-        />
-        <div class="flex flex-wrap items-center gap-2">
-          <USelect
-            v-model="lang"
-            :items="site.site.languages.map(l => ({ label: languageName(meta, l), value: l }))"
-            class="w-44"
+      <div class="space-y-6">
+        <div class="space-y-3">
+          <PtTranslatableInput
+            v-model="messages"
+            :languages="site.site.languages"
+            :default-language="site.site.default_language"
+            label="Message"
+            help="Pre-filled when people share your site from their phone, in their language. The link is added after it."
+            multiline
+            :source-locked="!can('pt.site.write')"
           />
-          <UButton
-            :href="whatsapp"
-            target="_blank"
-            icon="i-simple-icons-whatsapp"
-            label="Share on WhatsApp"
-            color="success"
-            variant="soft"
-          />
-          <UButton
-            icon="i-lucide-copy"
-            variant="soft"
-            label="Copy message"
-            @click="copy(`${message} ${data.url}`)"
-          />
+          <div
+            v-if="can('pt.site.write')"
+            class="flex justify-end"
+          >
+            <UButton
+              label="Save"
+              :loading="saving"
+              @click="save"
+            />
+          </div>
         </div>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <h3 class="text-sm font-medium">
+              WhatsApp preview
+            </h3>
+            <USelect
+              v-if="langItems.length > 1"
+              v-model="lang"
+              :items="langItems"
+              size="sm"
+              class="w-44"
+            />
+          </div>
+          <div class="rounded-lg bg-[#e5ddd5] dark:bg-neutral-800 p-4">
+            <div
+              class="max-w-sm rounded-lg bg-[#dcf8c6] dark:bg-emerald-900 text-neutral-900 dark:text-neutral-100 px-3 py-2 shadow-sm text-sm whitespace-pre-wrap break-words"
+              :dir="langDir"
+            >
+              <div
+                v-if="site.site.branding.share_image_url"
+                class="mb-2 overflow-hidden rounded"
+              >
+                <img
+                  :src="site.site.branding.share_image_url"
+                  alt=""
+                  class="w-full h-32 object-cover"
+                >
+              </div>{{ shareText }}
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              :href="whatsapp"
+              target="_blank"
+              icon="i-simple-icons-whatsapp"
+              label="Share on WhatsApp"
+              color="success"
+            />
+            <UButton
+              variant="outline"
+              color="neutral"
+              icon="i-lucide-copy"
+              label="Copy message"
+              @click="copy(shareText, 'Message')"
+            />
+          </div>
+        </div>
+      </div>
+    </UCard>
+
+    <UCard v-if="can('pt.site.write')">
+      <template #header>
+        <h2 class="font-semibold">
+          Share image
+        </h2>
+      </template>
+      <p class="text-sm text-muted mb-3">
+        Shown in link previews on WhatsApp, Facebook and elsewhere. A wide image (1200 × 630) works best.
+      </p>
+      <div class="flex flex-wrap items-end gap-4">
         <div
-          v-if="can('pt.site.write')"
-          class="flex justify-end"
+          v-if="site.site.branding.share_image_url"
+          class="w-64 aspect-[1200/630] rounded-md overflow-hidden border border-default"
         >
+          <img
+            :src="site.site.branding.share_image_url"
+            alt=""
+            class="size-full object-cover"
+          >
+        </div>
+        <div class="flex gap-2">
           <UButton
-            label="Save"
-            :loading="saving"
-            @click="save"
+            size="sm"
+            variant="soft"
+            icon="i-lucide-image"
+            :label="site.site.branding.share_image_url ? 'Change' : 'Choose an image'"
+            @click="pickingImage = true"
+          />
+          <UButton
+            v-if="site.site.branding.share_image_url"
+            size="sm"
+            variant="ghost"
+            color="neutral"
+            icon="i-lucide-x"
+            label="Remove"
+            @click="setShareImage(undefined)"
           />
         </div>
       </div>
     </UCard>
 
-    <UCard>
-      <div class="flex items-center gap-3 text-sm">
-        <UIcon
-          name="i-lucide-heart"
-          class="size-5 text-(--ui-primary)"
-        />
-        <span>Prayer.Tools is free and kept running by gifts.</span>
-        <UButton
-          :href="data.donateUrl"
-          target="_blank"
-          size="sm"
-          variant="link"
-          label="Give"
-        />
-      </div>
-    </UCard>
+    <p class="text-sm text-muted flex items-center gap-2">
+      <UIcon
+        name="i-lucide-hand-heart"
+        class="text-primary"
+      />
+      Prayer.Tools is free for every site.
+      <ULink
+        :to="data.donateUrl"
+        target="_blank"
+        class="text-primary underline"
+      >Support Prayer.Tools</ULink>
+    </p>
+
+    <PtImagePicker
+      v-model:open="pickingImage"
+      :language="site.site.default_language"
+      @select="(a) => { pickingImage = false; setShareImage(a.url) }"
+    />
   </div>
 </template>

@@ -3,7 +3,7 @@ import type { SignupFormView } from '~~/shared/view'
 import { browserTimezone, newCommitment, timezones, type CommitmentInput } from '~/utils/commitment'
 
 const props = defineProps<{ form: SignupFormView }>()
-const { site, link, st, date } = useSite()
+const { site, link, st } = useSite()
 const { t } = useI18n()
 const route = useRoute()
 
@@ -48,8 +48,6 @@ function removePick(iso: string) {
 function pickLabel(iso: string): string {
   return new Intl.DateTimeFormat(site.value.lang, { dateStyle: 'medium', timeStyle: 'short', timeZone: state.timezone || undefined }).format(new Date(iso))
 }
-
-const startNote = computed(() => campaign.value.state === 'upcoming' && campaign.value.startDate ? t('signup.starts_on', { date: date(campaign.value.startDate) }) : '')
 
 async function submit() {
   error.value = null
@@ -111,81 +109,79 @@ function onIdToken(provider: 'google' | 'apple', token: string) {
 </script>
 
 <template>
-  <form class="space-y-6" novalidate @submit.prevent="submit">
-    <p v-if="startNote" class="text-stone-700">{{ startNote }}</p>
+  <form class="@container" novalidate @submit.prevent="submit">
+    <div class="grid gap-8 @2xl:grid-cols-2 @2xl:gap-10">
+      <fieldset class="space-y-4">
+        <legend class="text-lg font-semibold">{{ t('signup.when_title') }}</legend>
+        <p class="text-sm text-stone-600">{{ t('signup.when_help') }}</p>
+        <div v-for="(c, i) in state.commitments" :key="i" class="rounded-lg border border-stone-200 bg-white p-4 space-y-3">
+          <CommitmentFields v-model="state.commitments[i]!" :duration-rule="campaign.durationRule" :durations="form.durations" :id-prefix="`c${i}`" :lang="site.lang" />
+          <UButton v-if="state.commitments.length > 1 || state.picks.length" variant="link" color="neutral" icon="i-lucide-x" :label="t('commitment.remove')" @click="state.commitments.splice(i, 1)" />
+        </div>
+        <div v-if="state.picks.length" class="rounded-lg border border-stone-200 bg-white p-4">
+          <p class="font-medium">{{ t('signup.picked_times') }}</p>
+          <ul class="mt-2 space-y-1">
+            <li v-for="p in state.picks" :key="p" class="flex items-center gap-2">
+              <span>{{ pickLabel(p) }}</span>
+              <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-x" :aria-label="t('commitment.remove')" @click="removePick(p)" />
+            </li>
+          </ul>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <UButton variant="soft" icon="i-lucide-plus" :label="t('signup.add_time')" @click="addCommitment" />
+          <UButton v-if="campaign.goal === 'coverage'" variant="ghost" icon="i-lucide-calendar" :label="t('signup.pick_slots')" :to="link('coverage')" />
+        </div>
+        <UFormField :label="t('signup.timezone')" name="timezone" :help="t('signup.timezone_help')">
+          <USelectMenu v-model="state.timezone" :items="tzItems" class="w-full" />
+        </UFormField>
+      </fieldset>
 
-    <SignInButtons
-      v-if="(form.googleClientId || form.appleServicesId) && !state.idToken"
-      :google-client-id="form.googleClientId"
-      :apple-services-id="form.appleServicesId"
-      @token="onIdToken"
-    />
+      <div class="space-y-8">
+        <fieldset class="space-y-4">
+          <legend class="text-lg font-semibold">{{ t('signup.contact_title') }}</legend>
+          <SignInButtons
+            v-if="(form.googleClientId || form.appleServicesId) && !state.idToken"
+            :google-client-id="form.googleClientId"
+            :apple-services-id="form.appleServicesId"
+            @token="onIdToken"
+          />
+          <UFormField v-if="!state.idToken" :label="t('signup.email')" name="email" required>
+            <UInput v-model="state.email" type="email" autocomplete="email" inputmode="email" required class="w-full" />
+          </UFormField>
+          <UAlert v-else color="success" variant="soft" icon="i-lucide-badge-check" :title="t('signup.signed_in_as', { email: state.idToken.email })" />
+          <UFormField :label="t('signup.name')" :hint="t('common.optional')" name="name">
+            <UInput v-model="state.name" autocomplete="given-name" class="w-full" />
+          </UFormField>
+          <UFormField v-if="languageItems.length > 1" :label="t('signup.language')" name="language">
+            <USelect v-model="state.language" :items="languageItems" class="w-full" />
+          </UFormField>
+          <UFormField v-for="f in form.fields" :key="f.key" :label="f.kind === 'checkbox' ? undefined : f.label" :name="`field-${f.key}`" :required="f.required">
+            <UInput v-if="f.kind === 'text'" v-model="(state.answers[f.key] as string)" :required="f.required" class="w-full" :aria-label="f.label" />
+            <USelect v-else-if="f.kind === 'select'" v-model="(state.answers[f.key] as string)" :items="f.options.map(o => ({ label: o.label, value: o.key }))" :placeholder="t('common.choose')" class="w-full" :aria-label="f.label" />
+            <UCheckbox v-else v-model="(state.answers[f.key] as boolean)" :label="f.label" :required="f.required" />
+          </UFormField>
+        </fieldset>
 
-    <div class="grid gap-4 sm:grid-cols-2">
-      <UFormField v-if="!state.idToken" :label="t('signup.email')" name="email" required>
-        <UInput v-model="state.email" type="email" autocomplete="email" required class="w-full" />
-      </UFormField>
-      <UAlert v-else color="success" variant="soft" icon="i-lucide-badge-check" :title="t('signup.signed_in_as', { email: state.idToken.email })" class="sm:col-span-1" />
-      <UFormField :label="t('signup.name')" :hint="t('common.optional')" name="name">
-        <UInput v-model="state.name" autocomplete="given-name" class="w-full" />
-      </UFormField>
-      <UFormField v-if="languageItems.length > 1" :label="t('signup.language')" name="language">
-        <USelect v-model="state.language" :items="languageItems" class="w-full" />
-      </UFormField>
-      <UFormField :label="t('signup.timezone')" name="timezone" :help="t('signup.timezone_help')">
-        <USelectMenu v-model="state.timezone" :items="tzItems" class="w-full" />
-      </UFormField>
+        <fieldset class="space-y-3">
+          <legend class="text-sm font-semibold">{{ t('signup.consent_title') }}</legend>
+          <UCheckbox v-model="state.siteUpdates" :label="t('consent.site_updates', { site: site.name })" />
+          <UCheckbox v-model="state.platformNews" :label="t('consent.platform_news')" />
+          <UCheckbox
+            v-for="o in form.consentOptions"
+            :key="o.key"
+            :model-value="state.custom.includes(o.key)"
+            :label="o.label"
+            @update:model-value="v => v ? state.custom.push(o.key) : state.custom.splice(state.custom.indexOf(o.key), 1)"
+          />
+          <p class="text-xs text-stone-500">{{ t('signup.reminders_note') }}</p>
+        </fieldset>
+
+        <TurnstileWidget ref="turnstile" v-model="state.turnstile" :site-key="site.turnstileSiteKey" />
+
+        <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" :title="error" role="alert" />
+
+        <UButton type="submit" size="xl" block :loading="sending" :label="st('landing.signup.title')" />
+      </div>
     </div>
-
-    <fieldset class="space-y-4">
-      <legend class="text-lg font-semibold">{{ t('signup.when_title') }}</legend>
-      <p class="text-sm text-stone-600">{{ t('signup.when_help') }}</p>
-      <div v-for="(c, i) in state.commitments" :key="i" class="rounded-lg border border-stone-200 bg-white p-4 space-y-3">
-        <CommitmentFields v-model="state.commitments[i]!" :duration-rule="campaign.durationRule" :durations="form.durations" :id-prefix="`c${i}`" :lang="site.lang" />
-        <UButton v-if="state.commitments.length > 1 || state.picks.length" variant="link" color="neutral" icon="i-lucide-x" :label="t('commitment.remove')" @click="state.commitments.splice(i, 1)" />
-      </div>
-      <div v-if="state.picks.length" class="rounded-lg border border-stone-200 bg-white p-4">
-        <p class="font-medium">{{ t('signup.picked_times') }}</p>
-        <ul class="mt-2 space-y-1">
-          <li v-for="p in state.picks" :key="p" class="flex items-center gap-2">
-            <span>{{ pickLabel(p) }}</span>
-            <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-x" :aria-label="t('commitment.remove')" @click="removePick(p)" />
-          </li>
-        </ul>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <UButton variant="outline" icon="i-lucide-plus" :label="t('signup.add_time')" @click="addCommitment" />
-        <UButton v-if="campaign.goal === 'coverage'" variant="ghost" icon="i-lucide-calendar" :label="t('signup.pick_slots')" :to="link('coverage')" />
-      </div>
-    </fieldset>
-
-    <fieldset v-if="form.fields.length" class="space-y-4">
-      <legend class="sr-only">{{ t('signup.about_you') }}</legend>
-      <UFormField v-for="f in form.fields" :key="f.key" :label="f.kind === 'checkbox' ? undefined : f.label" :name="`field-${f.key}`" :required="f.required">
-        <UInput v-if="f.kind === 'text'" v-model="(state.answers[f.key] as string)" :required="f.required" class="w-full" :aria-label="f.label" />
-        <USelect v-else-if="f.kind === 'select'" v-model="(state.answers[f.key] as string)" :items="f.options.map(o => ({ label: o.label, value: o.key }))" :placeholder="t('common.choose')" class="w-full" :aria-label="f.label" />
-        <UCheckbox v-else v-model="(state.answers[f.key] as boolean)" :label="f.label" :required="f.required" />
-      </UFormField>
-    </fieldset>
-
-    <fieldset class="space-y-3">
-      <legend class="text-lg font-semibold">{{ t('signup.consent_title') }}</legend>
-      <UCheckbox v-model="state.siteUpdates" :label="t('consent.site_updates', { site: site.name })" />
-      <UCheckbox v-model="state.platformNews" :label="t('consent.platform_news')" />
-      <UCheckbox
-        v-for="o in form.consentOptions"
-        :key="o.key"
-        :model-value="state.custom.includes(o.key)"
-        :label="o.label"
-        @update:model-value="v => v ? state.custom.push(o.key) : state.custom.splice(state.custom.indexOf(o.key), 1)"
-      />
-      <p class="text-xs text-stone-500">{{ t('signup.reminders_note') }}</p>
-    </fieldset>
-
-    <TurnstileWidget ref="turnstile" v-model="state.turnstile" :site-key="site.turnstileSiteKey" />
-
-    <UAlert v-if="error" color="error" variant="soft" icon="i-lucide-circle-alert" :title="error" role="alert" />
-
-    <UButton type="submit" size="xl" :loading="sending" :label="st('landing.signup.title')" />
   </form>
 </template>
