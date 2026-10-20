@@ -15,7 +15,7 @@ import { exchangeMyToken } from '../utils/my-auth'
 const ASSET_PREFIXES = ['/_nuxt/', '/__nuxt', '/@', '/node_modules/', '/_fonts/', '/__vite', '/api/_nuxt_icon/', '/_i18n/']
 
 function isAsset(path: string): boolean {
-  return ASSET_PREFIXES.some(p => path.startsWith(p)) || path === '/favicon.svg' || path === '/favicon.ico'
+  return ASSET_PREFIXES.some(p => path.startsWith(p)) || path === '/favicon.ico' || path === '/apple-touch-icon.png'
 }
 
 export function notFound(event: H3Event, cacheable = true) {

@@ -55,7 +55,11 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: process.env.APP_TITLE || 'Prayer.Tools'
+      title: process.env.APP_TITLE || 'Prayer.Tools',
+      link: [
+        { rel: 'icon', href: '/favicon.ico', sizes: '48x48' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }
+      ]
     }
   },
 
