@@ -12,7 +12,7 @@ import { previewCookieMatches } from '../utils/cookies'
 import { checkinAnswer, exchangeManageLink, legacyFuel, legacyManage, previewLink, unsubscribePost, verifyLink } from '../utils/actions'
 import { exchangeMyToken } from '../utils/my-auth'
 
-const ASSET_PREFIXES = ['/_nuxt/', '/__nuxt', '/@', '/node_modules/', '/_fonts/', '/__vite', '/api/_nuxt_icon/']
+const ASSET_PREFIXES = ['/_nuxt/', '/__nuxt', '/@', '/node_modules/', '/_fonts/', '/__vite', '/api/_nuxt_icon/', '/_i18n/']
 
 function isAsset(path: string): boolean {
   return ASSET_PREFIXES.some(p => path.startsWith(p)) || path === '/favicon.svg' || path === '/favicon.ico'
