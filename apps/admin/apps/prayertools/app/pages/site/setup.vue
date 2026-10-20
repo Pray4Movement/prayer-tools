@@ -30,7 +30,7 @@ async function go(next: Step) {
 const templateKey = ref('generic')
 watch(site, s => { if (s?.site.template_key) templateKey.value = s.site.template_key }, { immediate: true })
 const campaignName = ref('')
-const setup = ref<SetupState>({ start_mode: 'date', start_date: null, end_mode: 'date', end_date: null, length_days: null, goal: 'people', cadence: 'daily', track_time: false, goal_target: null })
+const setup = ref<SetupState>({ start_mode: 'date', start_date: null, end_mode: 'date', end_date: null, length_days: null, goal: 'people', cadence: 'daily', track_time: false, goal_target: 100 })
 const existingCampaign = computed(() => site.value?.currentCampaign ?? null)
 
 watch(existingCampaign, (c) => {
@@ -80,6 +80,23 @@ watch(site, (s) => {
   defaultLanguage.value = s.site.default_language
 }, { immediate: true })
 const languageItems = computed(() => (meta.value?.languages ?? []).map(l => ({ label: `${l.name} — ${l.native}`, value: l.code })))
+const slugState = ref<{ available: boolean, reason?: string, suggestion?: string } | null>(null)
+let slugTimer: ReturnType<typeof setTimeout> | undefined
+watch(newSlug, (value) => {
+  clearTimeout(slugTimer)
+  slugState.value = null
+  if (!value || value === slug.value) return
+  slugTimer = setTimeout(async () => {
+    slugState.value = await $fetch('/api/pt/sites/slug-check', { query: { slug: value } })
+  }, 400)
+})
+const slugError = computed(() => {
+  const s = slugState.value
+  if (!s || s.available) return undefined
+  if (s.reason === 'taken') return `Taken${s.suggestion ? ` — try ${s.suggestion}` : ''}`
+  if (s.reason === 'reserved') return 'This address is reserved.'
+  return 'Use 3–40 lowercase letters, digits and single hyphens.'
+})
 const savingAddress = ref(false)
 async function saveAddress() {
   savingAddress.value = true
@@ -157,26 +174,24 @@ async function saveLanding() {
 // ── Step: look and publish ──────────────────────────────────────────────
 const color = ref('#2f6f5e')
 const image = ref<{ url: string, alt: string, credit: string | null } | null>(null)
+const logo = ref<{ url: string, assetId: string | null } | null>(null)
 const fromName = ref('')
 const replyTo = ref('')
 const pickerOpen = ref(false)
+const pickerFor = ref<'image' | 'logo'>('image')
+function openPicker(target: 'image' | 'logo') {
+  pickerFor.value = target
+  pickerOpen.value = true
+}
 watch(site, (s) => {
   if (!s) return
   color.value = s.site.branding?.color ?? s.brand.color
   image.value = s.site.branding?.image_url ? { url: s.site.branding.image_url, alt: s.site.branding.image_alt?.values?.[s.site.default_language] ?? '', credit: s.site.branding.image_credit ?? null } : null
+  logo.value = s.site.branding?.logo_url ? { url: s.site.branding.logo_url, assetId: s.site.branding.logo_asset_id ?? null } : null
   fromName.value = s.site.email_identity?.from_name ?? ''
   replyTo.value = s.site.email_identity?.reply_to ?? ''
 }, { immediate: true })
-const contrast = computed(() => {
-  const hex = color.value.replace('#', '')
-  if (!/^[0-9a-f]{6}$/i.test(hex)) return null
-  const c = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-  const lum = 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!
-  const onWhite = 1.05 / (lum + 0.05)
-  return { text: onWhite >= (lum + 0.05) / (0.01 + 0.05) ? '#ffffff' : '#18181b', tooPale: onWhite < 3 }
-})
 const preview = ref<string | null>(null)
-const previewWidth = ref<'desktop' | 'phone'>('desktop')
 const savingLook = ref(false)
 async function saveLook() {
   savingLook.value = true
@@ -185,7 +200,7 @@ async function saveLook() {
     await $fetch('/api/pt/site', {
       method: 'PATCH',
       body: {
-        branding: { ...(site.value?.site.branding ?? {}), color: color.value, image_url: image.value?.url, image_alt: image.value ? { source: lang, values: { [lang]: image.value.alt } } : undefined, image_credit: image.value?.credit ?? undefined },
+        branding: { ...(site.value?.site.branding ?? {}), color: color.value, image_url: image.value?.url, image_alt: image.value ? { source: lang, values: { [lang]: image.value.alt } } : undefined, image_credit: image.value?.credit ?? undefined, logo_url: logo.value?.url, logo_asset_id: logo.value?.assetId ?? undefined },
         ...(can('pt.site.manage') ? { email_identity: { ...(site.value?.site.email_identity ?? {}), from_name: fromName.value || undefined, reply_to: replyTo.value || undefined } } : {})
       }
     })
@@ -205,6 +220,9 @@ async function makePreview() {
     toast.fail(err)
   }
 }
+watch(step, (s) => {
+  if (s === 'publish' && !preview.value) makePreview()
+}, { immediate: true })
 const checklist = computed(() => {
   const s = site.value
   if (!s) return []
@@ -276,11 +294,17 @@ async function publish() {
             :key="t.key"
             type="button"
             class="text-start rounded-lg border p-3 transition focus-visible:ring-2 focus-visible:ring-(--ui-primary)"
-            :class="templateKey === t.key ? 'border-(--ui-primary) bg-(--ui-bg-elevated)' : 'border-(--ui-border) hover:bg-(--ui-bg-elevated)'"
+            :class="templateKey === t.key ? 'border-(--ui-primary) ring-1 ring-(--ui-primary) bg-(--ui-bg-elevated)' : 'border-(--ui-border) hover:bg-(--ui-bg-elevated)'"
             @click="chooseTemplate(t.key)"
           >
-            <span class="font-medium">{{ PT_LABELS.template[t.key] }}</span>
-            <span class="block text-sm text-(--ui-text-muted)">{{ PT_LABELS.templateDescription[t.key] }}</span>
+            <span class="flex items-center gap-2">
+              <UIcon
+                :name="PT_TEMPLATE_ICONS[t.key] ?? 'i-lucide-sparkles'"
+                class="size-5 shrink-0 text-(--ui-primary)"
+              />
+              <span class="font-medium">{{ PT_LABELS.template[t.key] }}</span>
+            </span>
+            <span class="block text-sm text-(--ui-text-muted) mt-1">{{ PT_LABELS.templateDescription[t.key] }}</span>
           </button>
         </div>
         <UFormField
@@ -318,6 +342,7 @@ async function publish() {
         <UFormField
           label="Address"
           help="Changing it later breaks links people already have."
+          :error="slugError"
         >
           <UInput
             v-model="newSlug"
@@ -356,7 +381,7 @@ async function publish() {
           <UButton
             label="Save and continue"
             :loading="savingAddress"
-            :disabled="!languages.length"
+            :disabled="!languages.length || !newSlug || (newSlug !== slug && !slugState?.available)"
             @click="saveAddress"
           />
         </div>
@@ -483,37 +508,12 @@ async function publish() {
         </h2>
       </template>
       <div class="space-y-6">
+        <PtColorField v-model="color" />
         <div class="grid sm:grid-cols-2 gap-6">
-          <UFormField label="Brand color">
-            <div class="flex items-center gap-3">
-              <UPopover>
-                <UButton
-                  :style="{ background: color, color: contrast?.text }"
-                  :label="color"
-                  aria-label="Choose a color"
-                />
-                <template #content>
-                  <UColorPicker
-                    v-model="color"
-                    class="p-2"
-                  />
-                </template>
-              </UPopover>
-              <span
-                class="rounded px-3 py-1 text-sm font-medium"
-                :style="{ background: color, color: contrast?.text }"
-              >Pray with us</span>
-            </div>
-            <UAlert
-              v-if="contrast?.tooPale"
-              class="mt-2"
-              color="warning"
-              variant="soft"
-              icon="i-lucide-triangle-alert"
-              description="This color is very pale: buttons and links may be hard to read. Consider a darker shade."
-            />
-          </UFormField>
-          <UFormField label="Top image">
+          <UFormField
+            label="Top image"
+            description="A wide photo shown at the top of your page."
+          >
             <div class="space-y-2">
               <img
                 v-if="image"
@@ -525,8 +525,37 @@ async function publish() {
                 :label="image ? 'Change image' : 'Choose image'"
                 icon="i-lucide-image"
                 variant="soft"
-                @click="pickerOpen = true"
+                @click="openPicker('image')"
               />
+            </div>
+          </UFormField>
+          <UFormField
+            label="Logo (optional)"
+            description="Shown in emails and the site header."
+          >
+            <div class="space-y-2">
+              <img
+                v-if="logo"
+                :src="logo.url"
+                alt=""
+                class="rounded-md max-h-20 object-contain"
+              >
+              <div class="flex flex-wrap gap-2">
+                <UButton
+                  :label="logo ? 'Change logo' : 'Choose logo'"
+                  icon="i-lucide-image"
+                  variant="soft"
+                  @click="openPicker('logo')"
+                />
+                <UButton
+                  v-if="logo"
+                  label="Remove"
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  @click="logo = null"
+                />
+              </div>
             </div>
           </UFormField>
         </div>
@@ -574,47 +603,32 @@ async function publish() {
             </li>
           </ul>
         </div>
-        <div class="space-y-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <UButton
-              label="Preview"
-              icon="i-lucide-eye"
-              variant="outline"
-              @click="saveLook().then(makePreview)"
+        <div
+          v-if="preview"
+          class="space-y-2"
+        >
+          <h3 class="text-sm font-medium">
+            Preview
+          </h3>
+          <div class="flex flex-col sm:flex-row gap-6 items-start">
+            <PtQrCode
+              :value="preview"
+              :size="150"
             />
-            <template v-if="preview">
-              <UButton
-                :color="previewWidth === 'desktop' ? 'primary' : 'neutral'"
-                variant="ghost"
-                icon="i-lucide-monitor"
-                aria-label="Desktop"
-                @click="previewWidth = 'desktop'"
-              />
-              <UButton
-                :color="previewWidth === 'phone' ? 'primary' : 'neutral'"
-                variant="ghost"
-                icon="i-lucide-smartphone"
-                aria-label="Phone"
-                @click="previewWidth = 'phone'"
-              />
+            <div class="space-y-3 text-sm">
+              <p class="text-(--ui-text-muted)">
+                Scan the code to open the draft on your phone, or open it here. Only people with this link can
+                see the draft. Save to see your latest changes.
+              </p>
               <UButton
                 :to="preview"
                 target="_blank"
-                variant="link"
-                label="Open in a new tab"
+                icon="i-lucide-external-link"
+                color="neutral"
+                variant="outline"
+                label="Open preview"
               />
-            </template>
-          </div>
-          <div
-            v-if="preview"
-            class="rounded-md border border-(--ui-border) overflow-hidden mx-auto"
-            :style="{ width: previewWidth === 'phone' ? '390px' : '100%', maxWidth: '100%' }"
-          >
-            <iframe
-              :src="preview"
-              title="Preview of your site"
-              class="w-full h-[640px] bg-white"
-            />
+            </div>
           </div>
         </div>
       </div>
@@ -642,7 +656,7 @@ async function publish() {
     <PtImagePicker
       v-model:open="pickerOpen"
       :language="site?.site.default_language"
-      @select="(a) => { image = { url: a.url, alt: a.alt, credit: a.credit }; pickerOpen = false }"
+      @select="(a) => { if (pickerFor === 'logo') logo = { url: a.url, assetId: a.asset.id }; else image = { url: a.url, alt: a.alt, credit: a.credit }; pickerOpen = false }"
     />
   </div>
 </template>

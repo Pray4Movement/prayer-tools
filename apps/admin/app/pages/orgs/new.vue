@@ -10,7 +10,6 @@ const toast = usePtToast()
 
 const form = reactive({
   name: '',
-  slug: '',
   description: '',
   purpose: 'place',
   place_name: '',
@@ -20,34 +19,12 @@ const form = reactive({
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
   turnstile: ''
 })
-const slugTouched = ref(false)
-const slugState = ref<{ available: boolean, reason?: string, suggestion?: string } | null>(null)
 const errors = ref<Record<string, string>>({})
 const saving = ref(false)
 const geocoding = ref(false)
 const turnstile = ref<{ reset: () => void } | null>(null)
 
-const purposeItems = Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label }))
-
-let slugTimer: ReturnType<typeof setTimeout> | undefined
-watch(() => form.name, (name) => {
-  if (slugTouched.value) return
-  clearTimeout(slugTimer)
-  slugTimer = setTimeout(async () => {
-    if (!name.trim()) return
-    const res = await $fetch<{ slug: string, available: boolean, suggestion?: string }>('/api/pt/sites/slug-check', { query: { name } })
-    form.slug = res.available ? res.slug : (res.suggestion ?? res.slug)
-    slugState.value = { available: true }
-  }, 400)
-})
-watch(() => form.slug, (slug) => {
-  if (!slugTouched.value) return
-  clearTimeout(slugTimer)
-  slugTimer = setTimeout(async () => {
-    if (!slug) return
-    slugState.value = await $fetch('/api/pt/sites/slug-check', { query: { slug } })
-  }, 400)
-})
+const purposeItems = Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label, description: PT_LABELS.purposeDescription[value] }))
 
 async function findPlace() {
   const query = form.place_name || form.people_group || form.name
@@ -169,22 +146,6 @@ async function create() {
           />
         </UFormField>
         <UFormField
-          label="Address"
-          :error="errors.slug || (slugState && !slugState.available ? (slugState.reason === 'taken' ? `Taken${slugState.suggestion ? ` — try ${slugState.suggestion}` : ''}` : 'Not allowed') : undefined)"
-          help="You can add your own domain later."
-          required
-        >
-          <UInput
-            v-model="form.slug"
-            class="w-full"
-            @focus="slugTouched = true"
-          >
-            <template #trailing>
-              <span class="text-xs text-(--ui-text-muted)">.{{ meta?.siteBaseHost }}</span>
-            </template>
-          </UInput>
-        </UFormField>
-        <UFormField
           label="Description"
           help="A sentence or two for the top of your landing page."
         >
@@ -199,7 +160,10 @@ async function create() {
           <URadioGroup
             v-model="form.purpose"
             :items="purposeItems"
+            variant="card"
             orientation="horizontal"
+            class="w-full"
+            :ui="{ fieldset: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }"
           />
         </UFormField>
         <div class="grid sm:grid-cols-2 gap-4">
@@ -277,7 +241,7 @@ async function create() {
             icon="i-lucide-arrow-right"
             trailing
             :loading="saving"
-            :disabled="form.name.trim().length < 2 || !form.slug || (!!meta?.turnstileSiteKey && !form.turnstile)"
+            :disabled="form.name.trim().length < 2 || (!!meta?.turnstileSiteKey && !form.turnstile)"
             @click="create"
           />
         </div>

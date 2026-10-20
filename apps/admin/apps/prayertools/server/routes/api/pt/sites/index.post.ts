@@ -10,9 +10,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 429, statusMessage: 'Too many sites created. Try again later.' })
   }
   const body = await readBody(event)
+  const name = String(body?.name ?? '').trim()
   const input: CreateSiteInput = {
-    name: String(body?.name ?? '').trim(),
-    slug: String(body?.slug ?? '').trim().toLowerCase(),
+    name,
+    slug: String(body?.slug ?? '').trim().toLowerCase() || await ptFreeSlug(name),
     description: typeof body?.description === 'string' ? body.description.slice(0, 2000) : undefined,
     purpose: typeof body?.purpose === 'string' ? body.purpose : null,
     place_name: typeof body?.place_name === 'string' ? body.place_name.slice(0, 200) : null,

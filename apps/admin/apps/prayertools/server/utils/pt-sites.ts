@@ -1,6 +1,6 @@
 import { sql } from 'kysely'
 import { db } from '#core/server/utils/database'
-import { slugError } from '@prayertools/shared/config'
+import { slugError, slugify } from '@prayertools/shared/config'
 import { containsBlockedWord } from '@prayertools/shared/moderation'
 import { isLanguage, LANGUAGES } from '@prayertools/shared/languages'
 import { isValidTimezone } from '@prayertools/shared/dates'
@@ -48,6 +48,20 @@ export function ptValidateSiteInput(input: CreateSiteInput): Record<string, stri
 export async function ptSlugTaken(slug: string): Promise<boolean> {
   const row = await db.selectFrom('orgs').select('id').where('slug', '=', slug).executeTakeFirst()
   return !!row
+}
+
+// An unused address for a new site: the name's slug, numbered when taken, or a
+// random one when the name gives no usable slug.
+export async function ptFreeSlug(name: string): Promise<string> {
+  const base = slugify(name)
+  if (!slugError(base) && !containsBlockedWord(base)) {
+    if (!(await ptSlugTaken(base))) return base
+    const stem = base.slice(0, 36).replace(/-+$/, '')
+    for (let i = 2; i < 50; i++) {
+      if (!(await ptSlugTaken(`${stem}-${i}`))) return `${stem}-${i}`
+    }
+  }
+  return `site-${crypto.randomUUID().slice(0, 8)}`
 }
 
 // Creates the org (the site), the owner's membership, the site's apps, and the

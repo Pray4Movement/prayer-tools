@@ -29,6 +29,7 @@ export const PT_LABELS = {
     coverage: 'Fill every 15 minutes of the day and night with someone praying.'
   } as Record<string, string>,
   purpose: { place: 'A place', people_group: 'A people group', event: 'An event', other: 'Something else' } as Record<string, string>,
+  purposeDescription: { place: 'A city, region or country', people_group: 'People sharing a language or culture', event: 'A season, crisis or gathering' } as Record<string, string>,
   license: { own: 'Our own content', permission: 'Used with permission', cc_by: 'CC BY', cc_by_sa: 'CC BY-SA', other: 'Other (described)' } as Record<string, string>,
   landingSection: {
     top: 'Top', why: 'Why this campaign', custom: 'Your sections', stories: 'Stories', how: 'How it works', signup: 'Signup',
@@ -52,6 +53,14 @@ export const PT_LABELS = {
     share_prompts: 'Invite people to share after they sign up and pray',
     auto_ack_contact: 'Confirm to people that their message was received'
   } as Record<string, string>
+}
+
+export const PT_TEMPLATE_ICONS: Record<string, string> = {
+  generic: 'i-lucide-sparkles',
+  ramadan: 'i-lucide-moon-star',
+  disaster_4: 'i-lucide-siren',
+  disaster_12: 'i-lucide-life-buoy',
+  demo: 'i-lucide-presentation'
 }
 
 export function ptStatusColor(status: string): 'success' | 'warning' | 'neutral' | 'info' | 'error' {
