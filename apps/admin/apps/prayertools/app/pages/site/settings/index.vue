@@ -87,7 +87,6 @@ watch(site, (s) => {
   settings.value = { ...s.site.settings }
 }, { immediate: true })
 
-const languageItems = computed(() => (meta.value?.languages ?? []).map(l => ({ label: `${l.name} — ${l.native}`, value: l.code })))
 const purposeItems = computed(() => Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label, description: PT_LABELS.purposeDescription[value] })))
 
 // Behaviour: booleans save on toggle; numbers save with their own button.
@@ -330,36 +329,22 @@ watch(tab, (t) => {
             label="Languages"
             description="The public site's language switcher, signup languages, and which languages content should exist in."
           >
-            <USelectMenu
+            <PtLanguagePicker
               v-model="languages"
-              :items="languageItems"
-              value-key="value"
-              multiple
-              class="w-full"
+              v-model:default="defaultLanguage"
+              :disabled="!can('pt.site.write')"
             />
           </UFormField>
-          <div class="grid sm:grid-cols-2 gap-4">
-            <UFormField
-              label="Default language"
-              description="Used when a visitor's language isn't one of the site's."
-            >
-              <USelect
-                v-model="defaultLanguage"
-                :items="languageItems.filter(l => languages.includes(l.value))"
-                class="w-full"
-              />
-            </UFormField>
-            <UFormField
-              label="Time zone"
-              description="Used for campaign dates and the daily schedule."
-            >
-              <USelectMenu
-                v-model="timezone"
-                :items="ptTimezones()"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
+          <UFormField
+            label="Time zone"
+            description="Used for campaign dates and the daily schedule."
+          >
+            <USelectMenu
+              v-model="timezone"
+              :items="ptTimezones()"
+              class="w-full sm:w-72"
+            />
+          </UFormField>
           <UButton
             label="Save"
             :disabled="!languages.length || !languages.includes(defaultLanguage)"

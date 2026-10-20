@@ -1,6 +1,6 @@
 // Code-owned option lists for the admin UI: languages, templates, setup
 // options, landing sections, licenses. Labels live in the client.
-import { LANGUAGES } from '@prayertools/shared/languages'
+import { LANGUAGES, UI_LANGUAGES } from '@prayertools/shared/languages'
 import { TEMPLATES, START_MODES, END_MODES, GOALS, CADENCES, DURATION_OPTIONS, DEFAULT_DURATION_MIN, FIXED_MAX_DAYS } from '@prayertools/shared/setup'
 import { LANDING_SECTIONS, HIDEABLE_SECTIONS } from '@prayertools/shared/landing'
 import { LICENSES } from '@prayertools/shared/content'
@@ -11,6 +11,7 @@ export default defineEventHandler(() => {
   const c = platformConfig()
   return {
     languages: LANGUAGES,
+    uiLanguages: UI_LANGUAGES,
     templates: TEMPLATES,
     setup: { startModes: START_MODES, endModes: END_MODES, goals: GOALS, cadences: CADENCES, durations: DURATION_OPTIONS, defaultDuration: DEFAULT_DURATION_MIN, fixedMaxDays: FIXED_MAX_DAYS },
     landing: { sections: LANDING_SECTIONS, hideable: HIDEABLE_SECTIONS },

@@ -94,7 +94,6 @@ watch(site, (s) => {
   languages.value = [...s.site.languages]
   defaultLanguage.value = s.site.default_language
 }, { immediate: true })
-const languageItems = computed(() => (meta.value?.languages ?? []).map(l => ({ label: `${l.name} — ${l.native}`, value: l.code })))
 const slugState = ref<{ available: boolean, reason?: string, suggestion?: string } | null>(null)
 let slugTimer: ReturnType<typeof setTimeout> | undefined
 watch(newSlug, (value) => {
@@ -342,26 +341,13 @@ async function publish() {
         </UFormField>
         <UFormField
           label="Languages the site runs in"
-          help="Visitors can switch between these; content should exist in each."
+          description="Visitors can switch between these; content should exist in each."
         >
-          <USelectMenu
+          <PtLanguagePicker
             v-model="languages"
-            :items="languageItems"
-            value-key="value"
-            multiple
-            class="w-full"
+            v-model:default="defaultLanguage"
           />
         </UFormField>
-        <UFormField label="Default language">
-          <USelect
-            v-model="defaultLanguage"
-            :items="languageItems.filter(l => languages.includes(l.value))"
-            class="w-full sm:w-72"
-          />
-        </UFormField>
-        <p class="text-sm text-(--ui-text-muted)">
-          You can add your own domain after publishing, under Domains.
-        </p>
       </div>
       <template #footer>
         <div class="flex justify-end">

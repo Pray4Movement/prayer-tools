@@ -37,6 +37,10 @@ export const LANGUAGES: readonly Language[] = [
   { code: 'vi', name: 'Vietnamese', native: 'Tiếng Việt', dir: 'ltr', bible: 'VI1934' }
 ]
 
+// Languages the public site's interface and emails are translated into. A site
+// can run in any of LANGUAGES; the others fall back to English for interface text.
+export const UI_LANGUAGES: readonly string[] = ['en', 'es', 'fr', 'pt', 'ar']
+
 const BY_CODE = new Map(LANGUAGES.map(l => [l.code, l]))
 
 export function getLanguage(code: string | null | undefined): Language | undefined {

@@ -4,6 +4,7 @@ export interface PtLanguage { code: string, name: string, native: string, dir: '
 
 export interface PtMeta {
   languages: PtLanguage[]
+  uiLanguages: string[]
   templates: { key: string, setup: Record<string, unknown>, open: string[], topics: string[], hiddenSections: string[], cta: string }[]
   setup: { startModes: string[], endModes: string[], goals: string[], cadences: string[], durations: number[], defaultDuration: number, fixedMaxDays: number }
   landing: { sections: string[], hideable: string[] }

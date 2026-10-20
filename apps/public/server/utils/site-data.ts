@@ -7,7 +7,7 @@ import { entryNumber } from '@prayertools/shared/schedule'
 import { todayIn } from '@prayertools/shared/dates'
 import { normalizeCampaign, type CampaignRow } from '@prayertools/shared/subscriptions'
 import { siteSettings, type SiteSettings } from '@prayertools/shared/site'
-import { getLanguage, languageDir } from '@prayertools/shared/languages'
+import { getLanguage, languageDir, UI_LANGUAGES } from '@prayertools/shared/languages'
 import { textIn } from '@prayertools/shared/translatable'
 import { brandColor } from '@prayertools/shared/colors'
 import { goOrigin, platformConfig, platformOrigin } from '@prayertools/shared/config'
@@ -25,7 +25,7 @@ export interface SiteData {
   settings: SiteSettings
 }
 
-export const UI_LANGUAGES = ['en', 'es', 'fr', 'pt', 'ar']
+export { UI_LANGUAGES }
 
 export async function loadSiteData(tx: Tx): Promise<SiteData> {
   const site = await tx.selectFrom('pt_site').selectAll().executeTakeFirst()
