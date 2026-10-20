@@ -205,7 +205,7 @@ export interface PlatformResponse {
   host: 'platform'
   lang: string
   donateUrl: string
-  page: { kind: 'my', my: MyView, notice: string | null } | { kind: 'not_found' }
+  page: { kind: 'my', my: MyView, notice: string | null } | { kind: 'home', adminUrl: string } | { kind: 'not_found' }
   status: number
   cache: 'private'
   title: string

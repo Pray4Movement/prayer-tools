@@ -118,6 +118,7 @@
     "timezone_help": "Reminders are sent at your local time.",
     "when_title": "When will you pray?",
     "when_help": "Choose when we should remind you. You can add more than one prayer time.",
+    "contact_title": "Your details",
     "add_time": "Add another prayer time",
     "pick_slots": "Pick times on the prayer calendar",
     "picked_times": "Times you picked on the calendar",
@@ -303,5 +304,18 @@
     "status_inactive": "Paused",
     "status_completed": "Completed",
     "status_unsubscribed": "Unsubscribed"
+  },
+  "home": {
+    "title": "Prayer campaigns for the places and peoples you care about",
+    "intro": "Set up a campaign, invite people to pray, and cover every hour with daily prayer content and reminders.",
+    "start": "Start a prayer campaign",
+    "sign_in": "Sign in",
+    "features": "What you get",
+    "coverage_title": "24/7 coverage",
+    "coverage_body": "People choose times to pray so no hour of the day or night is left uncovered.",
+    "content_title": "Daily prayer content",
+    "content_body": "Guided prayer for each day, ready to use or written by your team.",
+    "reminders_title": "Reminders",
+    "reminders_body": "Everyone praying gets an email or app reminder at the times they chose."
   }
 }

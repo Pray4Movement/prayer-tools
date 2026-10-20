@@ -5,6 +5,8 @@ const HEARTBEAT_PATH = '/api/collect/heartbeat'
 
 export default defineNuxtPlugin((nuxtApp) => {
   if (location.pathname === '/my' || location.pathname.startsWith('/my/')) return
+  // The platform host has no site to count pageviews against.
+  if ((nuxtApp.payload.data[`view:${location.pathname}`] as { host?: string } | undefined)?.host === 'platform') return
   const router = useRouter()
   let eventId: string | null = null
   let timer: ReturnType<typeof setInterval> | null = null

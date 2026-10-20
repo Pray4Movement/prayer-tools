@@ -85,7 +85,7 @@ check('unknown host → 404', (await req('nope-nope.localhost', '/')).status ===
 check('custom domain not in pt_site_domain → 404', (await req('example.org', '/')).status === 404)
 check('draft site without preview → 404', (await req('draft-site.localhost', '/')).status === 404)
 const plat = await req('localhost', '/')
-check('platform / → marketing redirect', plat.status === 302 && /prayer\.tools/.test(plat.headers.get('location') ?? ''))
+check('platform / → landing page or marketing redirect', plat.status === 200 || (plat.status === 302 && /prayer\.tools/.test(plat.headers.get('location') ?? '')))
 check('api host root → 404', (await req('api.localhost', '/')).status === 404)
 check('api host serves no site pages', (await req('api.localhost', '/pray')).status === 404)
 const go = await req('go.localhost', '/ramadan-demo?utm_source=qr')

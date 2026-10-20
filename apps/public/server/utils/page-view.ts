@@ -14,6 +14,7 @@ export async function buildPlatformResponse(event: H3Event, fullPath: string): P
   const url = new URL(fullPath, 'http://x')
   const wanted = url.searchParams.get('lang')
   const lang = wanted && UI_LANGUAGES.includes(wanted) ? wanted : negotiateLanguage(getRequestHeader(event, 'accept-language'), UI_LANGUAGES, 'en')
+  if (url.pathname === '/') return { host: 'platform', lang, donateUrl: platformConfig().donateUrl, page: { kind: 'home', adminUrl: platformConfig().adminUrl }, status: 200, cache: 'private', title: 'Prayer.Tools' }
   if (url.pathname !== '/my') return { host: 'platform', lang, donateUrl: platformConfig().donateUrl, page: { kind: 'not_found' }, status: 404, cache: 'private', title: 'Prayer.Tools' }
   const notice = url.searchParams.get('notice')
   return {

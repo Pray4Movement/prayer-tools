@@ -118,6 +118,7 @@
     "timezone_help": "Los recordatorios se envían según tu hora local.",
     "when_title": "¿Cuándo vas a orar?",
     "when_help": "Elige cuándo quieres que te lo recordemos. Puedes agregar más de un horario de oración.",
+    "contact_title": "Tus datos",
     "add_time": "Agregar otro horario de oración",
     "pick_slots": "Elegir horarios en el calendario de oración",
     "picked_times": "Horarios que elegiste en el calendario",
@@ -303,5 +304,18 @@
     "status_inactive": "En pausa",
     "status_completed": "Completada",
     "status_unsubscribed": "Suscripción cancelada"
+  },
+  "home": {
+    "title": "Campañas de oración por los lugares y pueblos que te importan",
+    "intro": "Crea una campaña, invita a otros a orar y cubre cada hora con contenido de oración diario y recordatorios.",
+    "start": "Crear una campaña de oración",
+    "sign_in": "Iniciar sesión",
+    "features": "Qué obtienes",
+    "coverage_title": "Cobertura 24/7",
+    "coverage_body": "Las personas eligen horarios para orar para que ninguna hora del día o de la noche quede sin cubrir.",
+    "content_title": "Contenido de oración diario",
+    "content_body": "Oración guiada para cada día, lista para usar o escrita por tu equipo.",
+    "reminders_title": "Recordatorios",
+    "reminders_body": "Cada persona que ora recibe un recordatorio por correo o en la app en los horarios que eligió."
   }
 }

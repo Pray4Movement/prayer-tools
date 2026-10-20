@@ -66,8 +66,9 @@ export default defineEventHandler(async (event) => {
   }
 
   if (kind.kind === 'platform') {
-    if (pathname === '/' || pathname === '') return sendRedirect(event, marketingUrl(), 302)
-    if (pathname === '/robots.txt') return
+    // With PT_MARKETING_URL set, the marketing site owns "/"; otherwise the landing view renders.
+    if ((pathname === '/' || pathname === '') && process.env.PT_MARKETING_URL) return sendRedirect(event, marketingUrl(), 302)
+    if (pathname === '/' || pathname === '' || pathname === '/robots.txt') return
     const m = pathname.match(/^\/my\/login\/([^/]+)$/)
     if (m && isGet) return await exchangeMyToken(event, decodeURIComponent(m[1]!))
     if (pathname === '/my' || pathname.startsWith('/my/') || pathname.startsWith('/api/my/') || pathname === '/api/view') return

@@ -118,6 +118,7 @@
     "timezone_help": "Os lembretes são enviados no seu horário local.",
     "when_title": "Quando você vai orar?",
     "when_help": "Escolha quando devemos lembrar você. Você pode adicionar mais de um horário de oração.",
+    "contact_title": "Seus dados",
     "add_time": "Adicionar outro horário de oração",
     "pick_slots": "Escolher horários no calendário de oração",
     "picked_times": "Horários que você escolheu no calendário",
@@ -303,5 +304,18 @@
     "status_inactive": "Pausada",
     "status_completed": "Concluída",
     "status_unsubscribed": "Inscrição cancelada"
+  },
+  "home": {
+    "title": "Campanhas de oração pelos lugares e povos que importam para você",
+    "intro": "Crie uma campanha, convide pessoas para orar e cubra cada hora com conteúdo de oração diário e lembretes.",
+    "start": "Criar uma campanha de oração",
+    "sign_in": "Entrar",
+    "features": "O que você recebe",
+    "coverage_title": "Cobertura 24/7",
+    "coverage_body": "As pessoas escolhem horários para orar, para que nenhuma hora do dia ou da noite fique sem cobertura.",
+    "content_title": "Conteúdo de oração diário",
+    "content_body": "Oração guiada para cada dia, pronta para usar ou escrita pela sua equipe.",
+    "reminders_title": "Lembretes",
+    "reminders_body": "Cada pessoa que ora recebe um lembrete por e-mail ou no aplicativo nos horários que escolheu."
   }
 }

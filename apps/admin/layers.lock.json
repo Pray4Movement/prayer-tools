@@ -36,8 +36,8 @@
   },
   "inbox": {
     "pkg": "@nuxtinator/inbox",
-    "version": "~0.5.4",
-    "ref": "@nuxtinator/inbox@0.5.4",
+    "version": "~0.6.0",
+    "ref": "@nuxtinator/inbox@0.6.0",
     "source": "github:corsacca/nuxtinator/layers/apps/inbox",
     "tagPrefix": "@nuxtinator/inbox@"
   }

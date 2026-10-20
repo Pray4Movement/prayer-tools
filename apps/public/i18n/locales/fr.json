@@ -118,6 +118,7 @@
     "timezone_help": "Les rappels sont envoyés à votre heure locale.",
     "when_title": "Quand allez-vous prier ?",
     "when_help": "Choisissez quand nous devons vous le rappeler. Vous pouvez ajouter plusieurs moments de prière.",
+    "contact_title": "Vos coordonnées",
     "add_time": "Ajouter un autre moment de prière",
     "pick_slots": "Choisir des créneaux dans le calendrier de prière",
     "picked_times": "Créneaux choisis dans le calendrier",
@@ -303,5 +304,18 @@
     "status_inactive": "En pause",
     "status_completed": "Terminée",
     "status_unsubscribed": "Désabonné"
+  },
+  "home": {
+    "title": "Des campagnes de prière pour les lieux et les peuples qui vous tiennent à cœur",
+    "intro": "Créez une campagne, invitez des personnes à prier et couvrez chaque heure avec un contenu de prière quotidien et des rappels.",
+    "start": "Lancer une campagne de prière",
+    "sign_in": "Se connecter",
+    "features": "Ce que vous obtenez",
+    "coverage_title": "Couverture 24h/24, 7j/7",
+    "coverage_body": "Chacun choisit ses heures de prière pour qu’aucune heure du jour ou de la nuit ne reste sans prière.",
+    "content_title": "Contenu de prière quotidien",
+    "content_body": "Une prière guidée pour chaque jour, prête à l’emploi ou rédigée par votre équipe.",
+    "reminders_title": "Rappels",
+    "reminders_body": "Chaque personne qui prie reçoit un rappel par e-mail ou dans l’application aux heures choisies."
   }
 }
