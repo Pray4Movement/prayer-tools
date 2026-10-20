@@ -25,8 +25,20 @@ export function testDb(): { name: string, adminUrl: string, appUrl: string } {
 }
 
 // The migration runner's layer source for the test database, so tests migrate
-// with the same Nuxtinator layers the admin app loads.
+// with the same Nuxtinator layers the admin app loads: NUXTINATOR_SOURCE_DIR
+// and NUXTINATOR_<ID>_PATH from the process, the repo-root .env or the admin
+// app's .env, in that order.
 export function testMigrationEnv(): Record<string, string> {
-  const source = rootEnv('NUXTINATOR_SOURCE_DIR')
-  return source ? { NUXTINATOR_SOURCE_DIR: source } : {}
+  const out: Record<string, string> = {}
+  for (const file of [path.resolve(import.meta.dirname, '../apps/admin/.env'), path.resolve(import.meta.dirname, '../.env')]) {
+    if (!existsSync(file)) continue
+    for (const line of readFileSync(file, 'utf8').split('\n')) {
+      const m = line.match(/^(NUXTINATOR_SOURCE_DIR|NUXTINATOR_[A-Z_]+_PATH)=(.+)$/)
+      if (m) out[m[1]!] = m[2]!.trim()
+    }
+  }
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v && /^(NUXTINATOR_SOURCE_DIR|NUXTINATOR_[A-Z_]+_PATH)$/.test(k)) out[k] = v
+  }
+  return out
 }

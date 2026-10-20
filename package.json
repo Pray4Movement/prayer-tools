@@ -15,6 +15,7 @@
     "dev:admin": "bun run --cwd apps/admin dev",
     "dev:public": "bun run --cwd apps/public dev",
     "dev:worker": "bun run --cwd apps/worker dev",
+    "all": "bun run --parallel dev:admin \"bun run dev:public --port 3031\" dev:worker",
     "db:setup": "bun run scripts/db-setup.ts",
     "test": "bun run --cwd packages/shared test && bun run --cwd apps/worker test && bun run --cwd apps/public test && cd apps/admin/apps/marketing && npx vitest run",
     "typecheck": "bun run --cwd packages/shared typecheck",
