@@ -24,7 +24,7 @@ function run(host: ReturnType<typeof captureHost>, now = new Date(), limit?: num
 
 describe('single-site send', () => {
   it('materializes the audience, skips people without consent or suppressed, and sends the rest once', async () => {
-    const site = await createSite(env, 'Tunis Prays')
+    const site = await createSite(env, 'City Prays')
     const a = await addPerson(env, site, { name: 'Amira Haddad' })
     const fr = await addPerson(env, site, { language: 'fr', name: 'Jean Dupont' })
     const noConsent = await addPerson(env, site, { consent: false })
@@ -50,7 +50,7 @@ describe('single-site send', () => {
 
     const mail = host.mails.find(m => m.to === a.email)!
     expect(mail.subject).toBe('Hello Amira')
-    expect(mail.text).toContain('News from Tunis Prays: Lent')
+    expect(mail.text).toContain('News from City Prays: Lent')
     expect(mail.text).toContain(`http://${site.slug}.localhost:3380`)
     expect(mail.html).toContain('A short note')
     expect(mail.unsubscribeUrl).toMatch(/^http:\/\/localhost:2380\/api\/marketing\/unsubscribe\?token=/)

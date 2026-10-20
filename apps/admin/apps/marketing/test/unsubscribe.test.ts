@@ -26,7 +26,7 @@ function tokenOf(url: string | null): string {
 
 describe('unsubscribe', () => {
   it('withdraws the audience purpose on the site, once, and counts it on the email', async () => {
-    const site = await createSite(env, 'Tunis Prays')
+    const site = await createSite(env, 'City Prays')
     const p = await addPerson(env, site)
     const other = await addPerson(env, site)
     const emailId = await createEmail(env, site.orgId)
@@ -35,7 +35,7 @@ describe('unsubscribe', () => {
     const token = tokenOf(host.mails.find(m => m.to === p.email)!.unsubscribeUrl)
 
     const info = await describeUnsubscribe(host, env.app as never, token)
-    expect(info).toMatchObject({ test: false, sites: [{ id: site.orgId, name: 'Tunis Prays' }] })
+    expect(info).toMatchObject({ test: false, sites: [{ id: site.orgId, name: 'City Prays' }] })
     expect(info!.address).not.toContain(p.email.split('@')[0])
 
     const res = await applyUnsubscribe(host, env.app as never, token, capture)
