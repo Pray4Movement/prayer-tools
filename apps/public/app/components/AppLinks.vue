@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Store links and a QR code that opens this site in the app (or its page).
-const { site } = useSite()
+const { site, st } = useSite()
 const { t } = useI18n()
 const qrSrc = '/api/qr.svg'
 </script>
@@ -8,7 +8,7 @@ const qrSrc = '/api/qr.svg'
 <template>
   <div class="flex flex-wrap items-center gap-6">
     <div class="space-y-2">
-      <p class="text-stone-700">{{ t('landing.app.body') }}</p>
+      <p class="text-stone-700">{{ st('landing.app.body') }}</p>
       <div class="flex flex-wrap gap-2">
         <UButton v-if="site.appStoreUrl" :to="site.appStoreUrl" target="_blank" color="neutral" icon="i-lucide-apple" :label="t('app.app_store')" />
         <UButton v-if="site.playStoreUrl" :to="site.playStoreUrl" target="_blank" color="neutral" icon="i-lucide-play" :label="t('app.play_store')" />

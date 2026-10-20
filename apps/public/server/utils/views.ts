@@ -19,6 +19,7 @@ import { buildSiteView, campaignView, landingOf, loadSiteData, stateOf, type Sit
 import { contentBlocks, contentVars, docHtml, formatDate, lastEntry } from './content'
 import { progressFor, statsFor } from './site-stats'
 import { managedSubscription, manageView } from './manage'
+import { withDraftStrings, type LandingDraft } from './editor'
 
 const PRIVATE_PAGES = new Set(['manage', 'm', 'u', 'verify', 'notice', 'checkin'])
 const ARCHIVED_ALLOWED = new Set(['manage', 'm', 'u', 'verify', 'notice'])
@@ -31,10 +32,11 @@ export function appAvailable(): boolean {
   return !!(c.appStoreUrl || c.playStoreUrl)
 }
 
-export async function buildSiteResponse(event: H3Event, ctx: SiteContext, fullPath: string): Promise<SiteResponse> {
+export async function buildSiteResponse(event: H3Event, ctx: SiteContext, fullPath: string, draft?: LandingDraft): Promise<SiteResponse> {
   const url = new URL(fullPath, 'http://x')
   return await withOrg(useDb(), ctx.orgId, async (tx) => {
     const data = await loadSiteData(tx)
+    if (draft) data.site = { ...data.site, landing: draft.landing, description: draft.description }
     const parsed = parseSitePath(url.pathname, data.site.languages, data.campaigns.map(c => c.slug))
     const lang = parsed.lang ?? data.site.default_language
     const def = data.site.default_language
@@ -42,6 +44,7 @@ export async function buildSiteResponse(event: H3Event, ctx: SiteContext, fullPa
       ? data.campaigns.find(c => c.slug === parsed.campaignSlug) ?? null
       : data.current?.campaign ?? null
     const site = await buildSiteView(tx, ctx, data, lang, campaign, url.pathname)
+    if (draft) site.strings = withDraftStrings(site.strings, draft.strings)
     const cv = site.campaign
     let status = 200
     let page: PageView
@@ -166,6 +169,11 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
     hasWhy: !!why,
     appAvailable: appAvailable()
   }).filter(s => s !== 'today' || today)
+  // In the admin editor, sections that are switched on but have nothing to
+  // show yet appear as placeholders.
+  const placeholders = ctx.editor
+    ? visibleSections(landing.hidden, data.site.template_key, { hasStories: true, hasCustom: true, hasWhy: true, appAvailable: true }).filter(s => !sections.includes(s))
+    : []
   return {
     kind: 'landing',
     sections,
@@ -175,7 +183,8 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
     stories: stories.map(s => ({ id: s.id, body: s.body, name: s.use_name ? s.name : null })),
     custom,
     prayingNow: data.settings.show_praying_now ? await prayingNow(tx) : 0,
-    form: await signupForm(tx, data, lang, !!campaign)
+    form: await signupForm(tx, data, lang, !!campaign),
+    placeholders
   }
 }
 

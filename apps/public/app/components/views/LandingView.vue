@@ -5,6 +5,7 @@ const props = defineProps<{ page: Extract<PageView, { kind: 'landing' }> }>()
 const { site, link, st, num, date } = useSite()
 const { t } = useI18n()
 const has = (s: string) => props.page.sections.includes(s)
+const placeholder = (s: string) => props.page.placeholders?.includes(s)
 const campaign = computed(() => site.value.campaign)
 
 useHead({ title: () => site.value.name })
@@ -18,7 +19,7 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
 
 <template>
   <div>
-    <section class="brand-bg" aria-labelledby="top-title">
+    <section class="brand-bg" aria-labelledby="top-title" data-pt-section="top">
       <div class="max-w-5xl mx-auto px-4 py-10 sm:py-16 grid gap-8 md:grid-cols-2 md:items-center">
         <div class="space-y-5">
           <p v-if="campaign" class="text-sm uppercase tracking-wide opacity-90">{{ campaign.name }}</p>
@@ -40,13 +41,14 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
     </section>
 
     <div class="max-w-3xl mx-auto px-4 py-10 space-y-14">
-      <section v-if="has('why')" aria-labelledby="why-title">
+      <EditorPlaceholder v-if="placeholder('why')" section="why" :title="st('landing.why.title')" />
+      <section v-if="has('why')" aria-labelledby="why-title" data-pt-section="why">
         <h2 id="why-title" class="text-2xl font-bold mb-4">{{ st('landing.why.title') }}</h2>
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div class="pt-content" v-html="page.why" />
       </section>
 
-      <section v-for="c in has('custom') ? page.custom : []" :key="c.id" :aria-labelledby="`custom-${c.id}`" class="space-y-4">
+      <section v-for="c in has('custom') ? page.custom : []" :key="c.id" :aria-labelledby="`custom-${c.id}`" :data-pt-custom="c.id" class="space-y-4">
         <h2 :id="`custom-${c.id}`" class="text-2xl font-bold">{{ c.heading }}</h2>
         <img v-if="c.imageUrl" :src="c.imageUrl" :alt="c.imageAlt" class="w-full rounded-xl" loading="lazy">
         <!-- eslint-disable-next-line vue/no-v-html -->
@@ -54,7 +56,9 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
         <UButton v-if="c.buttonUrl && c.buttonLabel" :to="c.buttonUrl" target="_blank" :label="c.buttonLabel" trailing-icon="i-lucide-external-link" />
       </section>
 
-      <section v-if="has('stories')" aria-labelledby="stories-title">
+      <EditorPlaceholder v-if="placeholder('custom')" section="custom" title="Custom sections" />
+      <EditorPlaceholder v-if="placeholder('stories')" section="stories" :title="st('landing.stories.title')" />
+      <section v-if="has('stories')" aria-labelledby="stories-title" data-pt-section="stories">
         <h2 id="stories-title" class="text-2xl font-bold mb-4">{{ st('landing.stories.title') }}</h2>
         <div class="grid gap-4 sm:grid-cols-2">
           <figure v-for="s in page.stories" :key="s.id" class="m-0 rounded-xl bg-white border border-stone-200 p-5">
@@ -65,13 +69,13 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
         <p class="mt-4"><NuxtLink :to="link('stories')" class="underline">{{ t('stories.share_link') }}</NuxtLink></p>
       </section>
 
-      <section v-if="has('how')" aria-labelledby="how-title">
+      <section v-if="has('how')" aria-labelledby="how-title" data-pt-section="how">
         <h2 id="how-title" class="text-2xl font-bold mb-4">{{ st('landing.how.title') }}</h2>
         <p class="whitespace-pre-line text-stone-800">{{ st('landing.how.body', { site: site.name }) }}</p>
       </section>
     </div>
 
-    <section id="signup" class="scroll-mt-4 bg-stone-100/70" aria-labelledby="signup-title">
+    <section id="signup" class="scroll-mt-4 bg-stone-100/70" aria-labelledby="signup-title" data-pt-section="signup">
       <div class="max-w-5xl mx-auto px-4 py-12">
         <div class="rounded-xl border border-stone-200 bg-white shadow-sm">
           <div class="border-b border-stone-200 px-5 py-6 text-center sm:px-8">
@@ -88,7 +92,7 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
 
     <div class="max-w-3xl mx-auto px-4 py-10 space-y-14">
 
-      <section v-if="has('today') && page.today" aria-labelledby="today-title">
+      <section v-if="has('today') && page.today" aria-labelledby="today-title" data-pt-section="today">
         <h2 id="today-title" class="text-2xl font-bold mb-1">{{ st('landing.today.title') }}</h2>
         <p class="text-sm text-stone-600 mb-4">{{ t('pray.day', { n: num(page.today.day) }) }}</p>
         <div class="relative max-h-80 overflow-hidden">
@@ -99,20 +103,22 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
         <UButton :to="link('pray')" class="mt-4" :label="t('landing.continue_praying')" trailing-icon="i-lucide-arrow-right" />
       </section>
 
-      <section v-if="has('share')" aria-labelledby="share-title" class="space-y-3">
+      <EditorPlaceholder v-if="placeholder('today')" section="today" :title="st('landing.today.title')" />
+      <section v-if="has('share')" aria-labelledby="share-title" class="space-y-3" data-pt-section="share">
         <h2 id="share-title" class="text-2xl font-bold">{{ st('landing.share.title') }}</h2>
-        <p class="text-stone-700">{{ t('landing.share.body') }}</p>
+        <p class="text-stone-700">{{ st('landing.share.body') }}</p>
         <ShareButton />
       </section>
 
-      <section v-if="has('contact')" aria-labelledby="contact-title" class="space-y-3">
+      <section v-if="has('contact')" aria-labelledby="contact-title" class="space-y-3" data-pt-section="contact">
         <h2 id="contact-title" class="text-2xl font-bold">{{ st('landing.contact.title') }}</h2>
-        <p class="text-stone-700">{{ t('landing.contact.body') }}</p>
+        <p class="text-stone-700">{{ st('landing.contact.body') }}</p>
         <UButton :to="link('contact')" variant="outline" :label="t('contact.button')" />
       </section>
 
-      <section v-if="has('app')" aria-labelledby="app-title" class="space-y-3">
-        <h2 id="app-title" class="text-2xl font-bold">{{ t('landing.app.title') }}</h2>
+      <EditorPlaceholder v-if="placeholder('app')" section="app" :title="st('landing.app.title')" />
+      <section v-if="has('app')" aria-labelledby="app-title" class="space-y-3" data-pt-section="app">
+        <h2 id="app-title" class="text-2xl font-bold">{{ st('landing.app.title') }}</h2>
         <AppLinks />
       </section>
     </div>

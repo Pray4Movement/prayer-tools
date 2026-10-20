@@ -131,16 +131,8 @@ async function saveLook() {
 }
 
 // Wording
+// Landing page headings and text are edited on the Landing page.
 const EDITABLE: { key: string, label: string, multiline?: boolean }[] = [
-  { key: 'landing.why.title', label: '“Why” section heading' },
-  { key: 'landing.how.title', label: '“How it works” heading' },
-  { key: 'landing.how.body', label: '“How it works” text', multiline: true },
-  { key: 'landing.signup.title', label: 'Signup heading' },
-  { key: 'landing.signup.intro', label: 'Signup introduction', multiline: true },
-  { key: 'landing.today.title', label: 'Today\'s prayer heading' },
-  { key: 'landing.stories.title', label: 'Stories heading' },
-  { key: 'landing.share.title', label: 'Share heading' },
-  { key: 'landing.contact.title', label: 'Contact heading' },
   { key: 'share.default_message', label: 'Default share message', multiline: true },
   { key: 'signup.success', label: 'Message after signing up', multiline: true },
   { key: 'between.notify_intro', label: 'Between campaigns: “notify me” text', multiline: true }
@@ -642,6 +634,13 @@ watch(tab, (t) => {
         </div>
       </template>
       <div class="space-y-4">
+        <p class="text-sm text-(--ui-text-muted)">
+          Headings and text on the landing page are edited on the
+          <ULink
+            :to="`/@${site.org.slug}/site/landing`"
+            class="text-(--ui-primary)"
+          >Landing page</ULink>.
+        </p>
         <div
           v-for="e in EDITABLE"
           :key="e.key"

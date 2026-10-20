@@ -74,3 +74,17 @@ export function prayUrl(siteUrl: string, campaignSlug: string | null, day: numbe
   const fragment = orgId && subscriptionId ? `#p=${personalToken(orgId, subscriptionId)}` : ''
   return `${siteUrl}${prefix}${path}${fragment}`
 }
+
+// The admin landing-page editor frames the site with this token, which lets
+// it render unsaved changes (and draft sites) for one site for a few hours.
+export const EDITOR_TOKEN_HOURS = 8
+
+export function editorToken(orgId: string): string {
+  return signJson({ t: 'e', o: orgId, x: Math.floor(Date.now() / 1000) + EDITOR_TOKEN_HOURS * 3600 }, secret())
+}
+
+export function editorTokenOrg(token: string | null | undefined): string | null {
+  const p = verifySignedJson<{ t: string, o: string, x: number }>(token, secret())
+  if (!p || p.t !== 'e' || typeof p.o !== 'string' || typeof p.x !== 'number' || p.x < Date.now() / 1000) return null
+  return p.o
+}

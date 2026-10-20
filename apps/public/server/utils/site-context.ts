@@ -11,6 +11,8 @@ export interface SiteContext extends ResolvedSite {
   origin: string
   canonicalOrigin: string
   preview: boolean
+  // Framed by the admin landing-page editor (a valid editor token).
+  editor: boolean
 }
 
 const TTL_MS = 15_000
@@ -32,7 +34,8 @@ export function buildSiteContext(event: H3Event, host: string, kind: 'site' | 'c
     hostKind: kind,
     origin: `${requestScheme(event)}://${host}`,
     canonicalOrigin: site.activeDomain ? `https://${site.activeDomain}` : subdomainUrl(site.slug),
-    preview: false
+    preview: false,
+    editor: false
   }
 }
 

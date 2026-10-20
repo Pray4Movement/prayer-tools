@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Onboarding, continued on the draft site: template and campaign setup,
-// address and languages, content, landing page, look and publish. The
-// current step is saved on the site, so setup can be resumed.
+// address and languages, content, look, landing page (after the look, which
+// shapes how it appears) and publish. The current step is saved on the site,
+// so setup can be resumed.
 import { suggestedStartDate } from '@prayertools/shared/setup'
 import { addDays, todayIn } from '@prayertools/shared/dates'
 import type { SetupState } from '../../components/PtSetupForm.vue'
@@ -9,7 +10,7 @@ import type { PtChecklist } from '../../components/PtLaunchChecklist.vue'
 
 definePageMeta({ middleware: 'auth' })
 
-const STEPS = ['setup', 'address', 'content', 'landing', 'publish'] as const
+const STEPS = ['setup', 'address', 'content', 'look', 'landing', 'publish'] as const
 type Step = typeof STEPS[number]
 
 const { data: site, refresh: refreshSite, can } = usePtSite()
@@ -160,31 +161,6 @@ async function createOwn() {
   }
 }
 
-// ── Step: landing ────────────────────────────────────────────────────────
-const why = ref<Record<string, any> | null>(null)
-const hidden = ref<string[]>([])
-const showStories = ref(true)
-watch(site, (s) => {
-  if (!s) return
-  why.value = s.site.landing?.why?.[s.site.default_language] ?? null
-  hidden.value = [...(s.site.landing?.hidden ?? [])]
-  showStories.value = s.site.landing?.stories !== false
-}, { immediate: true })
-const savingLanding = ref(false)
-async function saveLanding() {
-  savingLanding.value = true
-  try {
-    const landing = { ...(site.value?.site.landing ?? {}), why: { ...(site.value?.site.landing?.why ?? {}), [site.value!.site.default_language]: why.value }, hidden: hidden.value, stories: showStories.value }
-    await $fetch('/api/pt/site', { method: 'PATCH', body: { landing } })
-    await refreshSite()
-    await go('publish')
-  } catch (err) {
-    toast.fail(err)
-  } finally {
-    savingLanding.value = false
-  }
-}
-
 // ── Step: look and publish ──────────────────────────────────────────────
 const color = ref('#2f6f5e')
 const image = ref<{ url: string, alt: string, credit: string | null } | null>(null)
@@ -207,7 +183,7 @@ watch(site, (s) => {
 }, { immediate: true })
 const preview = ref<string | null>(null)
 const savingLook = ref(false)
-async function saveLook() {
+async function saveLook(): Promise<boolean> {
   savingLook.value = true
   try {
     const lang = site.value!.site.default_language
@@ -220,8 +196,10 @@ async function saveLook() {
     })
     await refreshSite()
     toast.ok('Saved')
+    return true
   } catch (err) {
     toast.fail(err)
+    return false
   } finally {
     savingLook.value = false
   }
@@ -237,12 +215,14 @@ async function makePreview() {
 watch(step, (s) => {
   if (s === 'publish' && !preview.value) makePreview()
 }, { immediate: true })
+async function saveLookAndContinue() {
+  if (await saveLook()) await go('landing')
+}
 const checklist = ref<{ refresh: () => Promise<void>, data: PtChecklist | null } | null>(null)
 const publishing = ref(false)
 async function publish() {
   publishing.value = true
   try {
-    await saveLook()
     await $fetch('/api/pt/site/status', { method: 'POST', body: { action: 'publish' } })
     toast.ok('Your site is live', site.value?.url)
     await navigateTo(`/@${slug.value}/site/landing/share`)
@@ -256,7 +236,10 @@ async function publish() {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto space-y-6">
+  <div
+    class="mx-auto space-y-6"
+    :class="step === 'landing' ? 'max-w-[96rem]' : 'max-w-3xl'"
+  >
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-semibold">
         Set up {{ site?.org.name }}
@@ -273,8 +256,9 @@ async function publish() {
         { label: 'Campaign', value: 'setup', icon: 'i-lucide-calendar-range' },
         { label: 'Address & languages', value: 'address', icon: 'i-lucide-globe' },
         { label: 'Content', value: 'content', icon: 'i-lucide-book-open', disabled: !existingCampaign },
+        { label: 'Look', value: 'look', icon: 'i-lucide-palette' },
         { label: 'Landing page', value: 'landing', icon: 'i-lucide-panels-top-left' },
-        { label: 'Look & publish', value: 'publish', icon: 'i-lucide-rocket' }
+        { label: 'Publish', value: 'publish', icon: 'i-lucide-rocket' }
       ]"
       :content="false"
       class="w-full"
@@ -453,157 +437,125 @@ async function publish() {
         <div class="flex justify-end">
           <UButton
             label="Continue"
-            @click="go('landing')"
+            @click="go('look')"
           />
         </div>
       </template>
     </UCard>
 
-    <UCard v-else-if="step === 'landing'">
+    <UCard v-else-if="step === 'look'">
       <template #header>
+        <h2 class="font-semibold">
+          Look and emails
+        </h2>
+      </template>
+      <div class="space-y-6">
+        <PtColorField v-model="color" />
+        <div class="grid sm:grid-cols-2 gap-6">
+          <UFormField
+            label="Top image"
+            description="A wide photo shown at the top of your page."
+          >
+            <div class="space-y-2">
+              <img
+                v-if="image"
+                :src="image.url"
+                :alt="image.alt"
+                class="rounded-md max-h-32 object-cover"
+              >
+              <UButton
+                :label="image ? 'Change image' : 'Choose image'"
+                icon="i-lucide-image"
+                variant="soft"
+                @click="openPicker('image')"
+              />
+            </div>
+          </UFormField>
+          <UFormField
+            label="Logo (optional)"
+            description="Shown in emails and the site header."
+          >
+            <div class="space-y-2">
+              <img
+                v-if="logo"
+                :src="logo.url"
+                alt=""
+                class="rounded-md max-h-20 object-contain"
+              >
+              <div class="flex flex-wrap gap-2">
+                <UButton
+                  :label="logo ? 'Change logo' : 'Choose logo'"
+                  icon="i-lucide-image"
+                  variant="soft"
+                  @click="openPicker('logo')"
+                />
+                <UButton
+                  v-if="logo"
+                  label="Remove"
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  @click="logo = null"
+                />
+              </div>
+            </div>
+          </UFormField>
+        </div>
+        <div
+          v-if="can('pt.site.manage')"
+          class="grid sm:grid-cols-2 gap-4"
+        >
+          <UFormField
+            label="Emails come from"
+            :help="`Shown as the sender name. Default: ${site?.org.name}`"
+          >
+            <UInput
+              v-model="fromName"
+              :placeholder="site?.org.name"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField
+            label="Replies go to"
+            :help="site?.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}), or give your own address.` : 'Your email address, for people who reply to reminders.'"
+          >
+            <UInput
+              v-model="replyTo"
+              type="email"
+              :placeholder="site?.inboxAddress ?? undefined"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+        <div class="flex justify-end">
+          <UButton
+            label="Save and continue"
+            :loading="savingLook"
+            @click="saveLookAndContinue"
+          />
+        </div>
+      </div>
+    </UCard>
+
+    <PtLandingEditor
+      v-else-if="step === 'landing'"
+      save-label="Save and continue"
+      @saved="go('publish')"
+    >
+      <template #heading>
         <h2 class="font-semibold">
           Landing page
         </h2>
         <p class="text-sm text-(--ui-text-muted)">
-          The page has fixed sections. Tell people why this campaign matters; hide what you don't need.
-          More options are on the Landing page screen.
+          Write the parts that are yours and hide what you don't need. The preview shows your page with its look as you edit.
         </p>
       </template>
-      <div class="space-y-5">
-        <UFormField label="Why this campaign">
-          <PtRichEditor
-            v-model="why"
-            placeholder="Why should people pray? Who are you praying for?"
-          />
-        </UFormField>
-        <UFormField label="Sections to show">
-          <div class="grid sm:grid-cols-2 gap-2">
-            <UCheckbox
-              v-for="s in meta?.landing.hideable ?? []"
-              :key="s"
-              :model-value="!hidden.includes(s)"
-              :label="PT_LABELS.landingSection[s]"
-              @update:model-value="(v) => { hidden = v ? hidden.filter(x => x !== s) : [...hidden, s] }"
-            />
-          </div>
-        </UFormField>
-        <USwitch
-          v-model="showStories"
-          label="Show stories you choose to publish"
-          description="Stories are optional; they come from people who pray and only appear when you add them."
-        />
-      </div>
-      <template #footer>
-        <div class="flex justify-end">
-          <UButton
-            label="Save and continue"
-            :loading="savingLanding"
-            @click="saveLanding"
-          />
-        </div>
-      </template>
-    </UCard>
+    </PtLandingEditor>
 
     <div
       v-else-if="step === 'publish'"
       class="space-y-6"
     >
-      <UCard>
-        <template #header>
-          <h2 class="font-semibold">
-            Look and emails
-          </h2>
-        </template>
-        <div class="space-y-6">
-          <PtColorField v-model="color" />
-          <div class="grid sm:grid-cols-2 gap-6">
-            <UFormField
-              label="Top image"
-              description="A wide photo shown at the top of your page."
-            >
-              <div class="space-y-2">
-                <img
-                  v-if="image"
-                  :src="image.url"
-                  :alt="image.alt"
-                  class="rounded-md max-h-32 object-cover"
-                >
-                <UButton
-                  :label="image ? 'Change image' : 'Choose image'"
-                  icon="i-lucide-image"
-                  variant="soft"
-                  @click="openPicker('image')"
-                />
-              </div>
-            </UFormField>
-            <UFormField
-              label="Logo (optional)"
-              description="Shown in emails and the site header."
-            >
-              <div class="space-y-2">
-                <img
-                  v-if="logo"
-                  :src="logo.url"
-                  alt=""
-                  class="rounded-md max-h-20 object-contain"
-                >
-                <div class="flex flex-wrap gap-2">
-                  <UButton
-                    :label="logo ? 'Change logo' : 'Choose logo'"
-                    icon="i-lucide-image"
-                    variant="soft"
-                    @click="openPicker('logo')"
-                  />
-                  <UButton
-                    v-if="logo"
-                    label="Remove"
-                    icon="i-lucide-x"
-                    color="neutral"
-                    variant="ghost"
-                    @click="logo = null"
-                  />
-                </div>
-              </div>
-            </UFormField>
-          </div>
-          <div
-            v-if="can('pt.site.manage')"
-            class="grid sm:grid-cols-2 gap-4"
-          >
-            <UFormField
-              label="Emails come from"
-              :help="`Shown as the sender name. Default: ${site?.org.name}`"
-            >
-              <UInput
-                v-model="fromName"
-                :placeholder="site?.org.name"
-                class="w-full"
-              />
-            </UFormField>
-            <UFormField
-              label="Replies go to"
-              :help="site?.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}), or give your own address.` : 'Your email address, for people who reply to reminders.'"
-            >
-              <UInput
-                v-model="replyTo"
-                type="email"
-                :placeholder="site?.inboxAddress ?? undefined"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-          <div class="flex justify-end">
-            <UButton
-              label="Save look and emails"
-              color="neutral"
-              variant="outline"
-              :loading="savingLook"
-              @click="saveLook().then(() => checklist?.refresh())"
-            />
-          </div>
-        </div>
-      </UCard>
-
       <PtLaunchChecklist ref="checklist" />
 
       <UCard v-if="preview">

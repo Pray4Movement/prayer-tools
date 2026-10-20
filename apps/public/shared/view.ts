@@ -42,6 +42,8 @@ export interface SiteView {
   description: string
   status: 'draft' | 'published' | 'archived'
   preview: boolean
+  // Set inside the admin landing-page editor's preview frame.
+  editor: { adminOrigin: string, defaults: Record<string, string> } | null
   campaign: CampaignView | null
   // Campaign segment in links, null for the current campaign.
   campaignSegment: string | null
@@ -174,7 +176,7 @@ export interface MyView {
 }
 
 export type PageView =
-  | { kind: 'landing', sections: string[], progress: GoalProgressView | null, why: string, today: { day: number, html: string, title: string } | null, stories: StoryView[], custom: CustomSectionView[], prayingNow: number, form: SignupFormView }
+  | { kind: 'landing', sections: string[], progress: GoalProgressView | null, why: string, today: { day: number, html: string, title: string } | null, stories: StoryView[], custom: CustomSectionView[], prayingNow: number, form: SignupFormView, placeholders: string[] }
   | { kind: 'between', stats: StatsView | null, endMessage: string, cta: { label: string, url: string } | null }
   | { kind: 'archived' }
   | { kind: 'pray', day: number, dateLabel: string | null, blocks: ContentBlockView[], prev: number | null, next: number | null, length: number | null }

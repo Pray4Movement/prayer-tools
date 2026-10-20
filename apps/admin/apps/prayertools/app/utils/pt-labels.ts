@@ -31,9 +31,10 @@ export const PT_LABELS = {
   purpose: { place: 'A place', people_group: 'A people group', event: 'An event', other: 'Something else' } as Record<string, string>,
   purposeDescription: { place: 'A city, region or country', people_group: 'People sharing a language or culture', event: 'A season, crisis or gathering' } as Record<string, string>,
   license: { own: 'Our own content', permission: 'Used with permission', cc_by: 'CC BY', cc_by_sa: 'CC BY-SA', other: 'Other (described)' } as Record<string, string>,
+  // The English headings the public page shows (apps/public i18n `landing.*.title`).
   landingSection: {
-    top: 'Top', why: 'Why this campaign', custom: 'Your sections', stories: 'Stories', how: 'How it works', signup: 'Signup',
-    today: 'Today\'s prayer preview', share: 'Share', contact: 'Contact', app: 'Mobile app'
+    top: 'Top of the page', why: 'Why we pray', custom: 'Custom sections', stories: 'Stories', how: 'How it works', signup: 'Sign up to pray',
+    today: 'Today\'s prayer', share: 'Invite others to pray', contact: 'Contact us', app: 'Pray with the app'
   } as Record<string, string>,
   role: { 'admin': 'Owner', 'pt-editor': 'Editor', 'pt-translator': 'Translator', 'pt-viewer': 'Viewer', 'member': 'Member' } as Record<string, string>,
   roleDescription: {

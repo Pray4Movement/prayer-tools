@@ -13,13 +13,13 @@ const nav = computed(() => {
   return site.value.status === 'archived' ? [] : items
 })
 
-const showFeedback = computed(() => !!site.value.feedback && props.page !== 'embed')
+const showFeedback = computed(() => !!site.value.feedback && props.page !== 'embed' && !site.value.editor)
 </script>
 
 <template>
   <div class="min-h-dvh flex flex-col">
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:start-2 focus:z-50 focus:bg-white focus:px-3 focus:py-2 focus:rounded">{{ t('a11y.skip') }}</a>
-    <div v-if="site.preview" class="bg-amber-100 text-amber-900 text-sm text-center px-4 py-2" role="status">
+    <div v-if="site.preview && !site.editor" class="bg-amber-100 text-amber-900 text-sm text-center px-4 py-2" role="status">
       {{ t('preview.banner') }}
     </div>
     <header class="brand-bg">

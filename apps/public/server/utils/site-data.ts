@@ -14,6 +14,7 @@ import { goOrigin, platformConfig, platformOrigin } from '@prayertools/shared/co
 import { EDITABLE_SITE_STRINGS } from '@prayertools/shared/site-strings'
 import type { CampaignState, CampaignView, SiteView } from '../../shared/view'
 import type { SiteContext } from './site-context'
+import { editorDefaults } from './editor'
 
 export type SiteRow = Selectable<PtSiteTable>
 
@@ -119,6 +120,7 @@ export async function buildSiteView(tx: Tx, ctx: SiteContext, data: SiteData, la
     description: textIn(site.description as TranslatableText | null, lang, def),
     status: site.status,
     preview: ctx.preview,
+    editor: ctx.editor ? { adminOrigin: new URL(cfg.adminUrl).origin, defaults: editorDefaults(uiLanguage(lang)) } : null,
     campaign: cv,
     campaignSegment: cv && !cv.isCurrent ? cv.slug : null,
     pastCampaigns: data.campaigns

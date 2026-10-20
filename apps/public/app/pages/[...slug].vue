@@ -17,6 +17,7 @@ await setLocale(uiLang.value as 'en')
 
 const site = computed(() => (view.value!.host === 'site' ? view.value!.site : null) as SiteView)
 provide(SITE_KEY, site)
+useEditorBridge(view)
 
 useHead(() => {
   const v = view.value!

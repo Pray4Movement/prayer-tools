@@ -10,6 +10,7 @@ import { NOT_FOUND_CACHE, PRIVATE_CACHE, limit, requestHost, setCache } from '..
 import { buildSiteContext, resolveSiteCached } from '../utils/site-context'
 import { previewCookieMatches } from '../utils/cookies'
 import { checkinAnswer, exchangeManageLink, legacyFuel, legacyManage, previewLink, unsubscribePost, verifyLink } from '../utils/actions'
+import { editorAccess, editorFrameAncestors } from '../utils/editor'
 import { exchangeMyToken } from '../utils/my-auth'
 
 const ASSET_PREFIXES = ['/_nuxt/', '/__nuxt', '/@', '/node_modules/', '/_fonts/', '/__vite', '/api/_nuxt_icon/', '/_i18n/']
@@ -89,7 +90,13 @@ export default defineEventHandler(async (event) => {
 
   const segs = pathname.split('/').filter(Boolean).map(s => decodeURIComponent(s))
 
-  if (resolved.status === 'draft') {
+  ctx.editor = editorAccess(event, ctx.orgId)
+  if (ctx.editor) {
+    ctx.preview = true
+    setResponseHeader(event, 'x-robots-tag', 'noindex')
+  }
+
+  if (resolved.status === 'draft' && !ctx.editor) {
     if (segs[0] === 'preview' && segs[1] && isGet) {
       if (await previewLink(event, ctx, segs[1])) return
       return notFound(event, false)
@@ -101,7 +108,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const embed = segs[segs.length - 1] === 'embed' || pathname === '/embed.js'
-  if (!embed) {
+  if (ctx.editor) {
+    setResponseHeader(event, 'content-security-policy', editorFrameAncestors())
+  } else if (!embed) {
     setResponseHeader(event, 'x-frame-options', 'SAMEORIGIN')
     setResponseHeader(event, 'content-security-policy', "frame-ancestors 'self'")
   }
