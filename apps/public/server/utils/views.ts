@@ -160,7 +160,7 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
     .limit(6)
     .execute()
   let today: { day: number, html: string, title: string } | null = null
-  if (campaign) {
+  if (campaign && stateOf(data, campaign) !== 'upcoming') {
     const cv = campaignView(data, campaign)
     const blocks = await contentBlocks(tx, data, ctx.name, campaign, cv.todayEntry, lang, 3)
     if (blocks[0]) today = { day: cv.todayEntry, html: blocks[0].html, title: blocks[0].title }
@@ -204,6 +204,7 @@ async function betweenPage(tx: Parameters<typeof loadSiteData>[0], data: SiteDat
 async function prayPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteContext, data: SiteData, campaign: CampaignRow | null, lang: string, rest: string[]): Promise<PageView> {
   if (!campaign || rest.length > 1) return { kind: 'not_found' }
   const cv = campaignView(data, campaign)
+  if (cv.state === 'upcoming' && campaign.start_date && !ctx.preview) return { kind: 'not_started', startDate: campaign.start_date }
   const last = await lastEntry(tx, campaign, cv.length)
   let day = cv.todayEntry
   if (rest[0] !== undefined) {

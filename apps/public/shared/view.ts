@@ -179,6 +179,7 @@ export type PageView =
   | { kind: 'landing', sections: string[], progress: GoalProgressView | null, why: string, today: { day: number, html: string, title: string } | null, stories: StoryView[], custom: CustomSectionView[], prayingNow: number, form: SignupFormView, placeholders: string[] }
   | { kind: 'between', stats: StatsView | null, endMessage: string, cta: { label: string, url: string } | null }
   | { kind: 'archived' }
+  | { kind: 'not_started', startDate: string }
   | { kind: 'pray', day: number, dateLabel: string | null, blocks: ContentBlockView[], prev: number | null, next: number | null, length: number | null }
   | { kind: 'signup', form: SignupFormView }
   | { kind: 'stats', stats: StatsView }
