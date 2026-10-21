@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// Onboarding, first part: what a site and a campaign are, then about the
-// site. Creating it here makes a draft; the rest of setup continues on the
-// site (and can be resumed later from Your sites).
-import type { PtLocation } from '../../../apps/prayertools/app/components/PtLocationSearch.vue'
+// Onboarding, first part: what a site and a campaign are, then the site's name
+// and address. Creating it here makes a draft; the rest of setup continues on
+// the site (and can be resumed later from Your sites).
+import { slugError as localSlugError, slugify } from '@prayertools/shared/config'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -12,16 +12,44 @@ const toast = usePtToast()
 
 const form = reactive({
   name: '',
-  description: '',
-  purpose: 'place',
-  people_group: '',
+  slug: '',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
   turnstile: ''
 })
 const errors = ref<Record<string, string>>({})
 const saving = ref(false)
-const location = ref<PtLocation | null>(null)
 const turnstile = ref<{ reset: () => void } | null>(null)
+
+// The address follows the name until the user edits it.
+watch(() => form.name, (next, prev) => {
+  if (form.slug === '' || form.slug === slugify(prev ?? '')) form.slug = slugify(next)
+})
+const slugState = ref<{ slug: string, available: boolean, reason?: string, suggestion?: string } | null>(null)
+let slugTimer: ReturnType<typeof setTimeout> | undefined
+watch(() => form.slug, (value) => {
+  clearTimeout(slugTimer)
+  slugState.value = null
+  delete errors.value.slug
+  if (!value || localSlugError(value)) return
+  slugTimer = setTimeout(async () => {
+    const res = await $fetch<{ slug: string, available: boolean, reason?: string, suggestion?: string }>('/api/pt/sites/slug-check', { query: { slug: value } }).catch(() => null)
+    if (res && res.slug === form.slug) slugState.value = res
+  }, 400)
+})
+const slugMessage = computed(() => {
+  if (errors.value.slug) return errors.value.slug
+  if (!form.slug) return undefined
+  const local = localSlugError(form.slug)
+  if (local === 'reserved') return 'This address is reserved.'
+  if (local) return 'Use 3–40 lowercase letters, digits and single hyphens.'
+  const s = slugState.value
+  if (!s || s.available) return undefined
+  if (s.reason === 'taken') return `Taken${s.suggestion ? ` — try ${s.suggestion}` : ''}`
+  if (s.reason === 'reserved') return 'This address is reserved.'
+  if (s.reason === 'blocked') return 'Please choose another address.'
+  return 'Use 3–40 lowercase letters, digits and single hyphens.'
+})
+const slugOk = computed(() => !!slugState.value?.available && slugState.value.slug === form.slug && !errors.value.slug)
 
 const introCards = computed(() => [
   { icon: 'i-lucide-globe', title: 'Its own website', text: `At your-site.${meta.value?.siteBaseHost ?? 'prayer.tools'} (or your own domain), in the languages you choose.` },
@@ -29,7 +57,6 @@ const introCards = computed(() => [
   { icon: 'i-lucide-book-open', title: 'Daily prayer content', text: 'Guided prayers from our libraries, which you can use as they are or adapt, or your own.' },
   { icon: 'i-lucide-chart-line', title: 'You see it grow', text: 'People signed up, prayer time and coverage, and stories from those praying.' }
 ])
-const purposeItems = Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label, description: PT_LABELS.purposeDescription[value] }))
 
 async function create() {
   errors.value = {}
@@ -39,10 +66,6 @@ async function create() {
       method: 'POST',
       body: {
         ...form,
-        people_group: form.purpose === 'people_group' ? form.people_group : '',
-        place_name: location.value?.name ?? null,
-        latitude: location.value?.latitude ?? null,
-        longitude: location.value?.longitude ?? null,
         languages: ['en'],
         default_language: 'en',
         template_key: 'generic'
@@ -71,13 +94,6 @@ async function create() {
         label="Your sites"
       />
     </div>
-    <UStepper
-      :model-value="step === 'intro' ? 0 : 1"
-      :items="[{ title: 'Sites and campaigns' }, { title: 'About the site' }, { title: 'Campaign setup' }, { title: 'Address and languages' }, { title: 'Content' }, { title: 'Landing page' }, { title: 'Look and publish' }]"
-      size="xs"
-      disabled
-      class="w-full"
-    />
 
     <div
       v-if="step === 'intro'"
@@ -129,10 +145,10 @@ async function create() {
     >
       <div>
         <h1 class="text-3xl font-bold">
-          About the site
+          Name your site
         </h1>
         <p class="text-(--ui-text-muted) mt-1">
-          You can change all of this later.
+          You'll describe it and set up its first campaign next.
         </p>
       </div>
       <UFormField
@@ -149,51 +165,20 @@ async function create() {
         />
       </UFormField>
       <UFormField
-        label="Short description"
-        description="A sentence or two for the top of your landing page."
-      >
-        <UTextarea
-          v-model="form.description"
-          :rows="2"
-          autoresize
-          class="w-full"
-        />
-      </UFormField>
-      <UFormField label="What are you praying for?">
-        <URadioGroup
-          v-model="form.purpose"
-          :items="purposeItems"
-          variant="card"
-          orientation="horizontal"
-          class="w-full"
-          :ui="{ fieldset: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }"
-        />
-      </UFormField>
-      <UFormField
-        v-if="form.purpose === 'people_group'"
-        label="Which people group?"
+        label="Address"
+        help="Changing it later breaks links people already have."
+        :error="slugMessage"
+        required
       >
         <UInput
-          v-model="form.people_group"
-          placeholder="e.g. the Kurds of eastern Turkey"
+          v-model="form.slug"
+          size="lg"
           class="w-full"
-        />
-      </UFormField>
-      <UFormField
-        label="Location"
-        description="Where the people you pray for are. It places your site on the Prayer.Tools map."
-      >
-        <PtLocationSearch v-model="location" />
-      </UFormField>
-      <UFormField
-        label="Timezone"
-        description="Campaign days begin at midnight in this timezone."
-      >
-        <USelectMenu
-          v-model="form.timezone"
-          :items="ptTimezones()"
-          class="w-full sm:w-80"
-        />
+        >
+          <template #trailing>
+            <span class="text-xs text-(--ui-text-muted)">.{{ meta?.siteBaseHost }}</span>
+          </template>
+        </UInput>
       </UFormField>
       <PtTurnstile
         ref="turnstile"
@@ -207,7 +192,7 @@ async function create() {
           label="Create site"
           trailing-icon="i-lucide-arrow-right"
           :loading="saving"
-          :disabled="form.name.trim().length < 2 || (!!meta?.turnstileSiteKey && !form.turnstile)"
+          :disabled="form.name.trim().length < 2 || !slugOk || (!!meta?.turnstileSiteKey && !form.turnstile)"
         />
         <UButton
           label="Back"

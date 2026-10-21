@@ -1,6 +1,6 @@
 import type { Transaction } from 'kysely'
 import type { Database } from '#core/server/database/schema'
-import type { SiteLanding, SiteShare, TranslatableText } from '@prayertools/shared/db/schema'
+import type { SiteLanding, TranslatableText } from '@prayertools/shared/db/schema'
 import { pickCurrentCampaign } from '@prayertools/shared/setup'
 import { LANGUAGES } from '@prayertools/shared/languages'
 
@@ -27,7 +27,6 @@ export async function ptLaunchChecklist(tx: Transaction<Database>): Promise<PtCh
   const missing = [...new Set(libraries.flatMap(l => l.missingLanguages))]
   const landing = (site.landing ?? {}) as SiteLanding
   const branding = (site.branding ?? {}) as { image_url?: string }
-  const identity = (site.email_identity ?? {}) as { from_name?: string, reply_to?: string }
   const datesDone = !!campaign && (campaign.start_mode === 'join' || (!!campaign.start_date && (campaign.end_mode !== 'date' || !!campaign.end_date)))
 
   return [
@@ -74,20 +73,6 @@ export async function ptLaunchChecklist(tx: Transaction<Database>): Promise<PtCh
       done: !!branding.image_url,
       required: false,
       to: '/site/settings'
-    },
-    {
-      key: 'email',
-      label: 'Email sender name and reply-to',
-      done: !!(identity.from_name || identity.reply_to),
-      required: false,
-      to: '/site/settings'
-    },
-    {
-      key: 'share',
-      label: 'Share message written',
-      done: hasText((site.share as SiteShare | null)?.messages),
-      required: false,
-      to: '/site/landing/share'
     }
   ]
 }

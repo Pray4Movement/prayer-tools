@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Site settings: general (details, languages, behaviour), look and email,
+// Site settings: general (details, languages, behaviour), look, email,
 // wording, and status (publishing, directory, exports, deleting).
 // Only values that differ from the code defaults are stored.
 import type { TranslatableText } from '@prayertools/shared/db/schema'
@@ -16,12 +16,13 @@ const router = useRouter()
 
 const tabs = computed(() => [
   { label: 'General', value: 'details', icon: 'i-lucide-info' },
-  { label: 'Look and email', value: 'look', icon: 'i-lucide-palette' },
+  { label: 'Look', value: 'look', icon: 'i-lucide-palette' },
+  ...(can('pt.site.manage') ? [{ label: 'Email', value: 'email', icon: 'i-lucide-mail' }] : []),
   { label: 'Wording', value: 'wording', icon: 'i-lucide-type' },
   ...(can('pt.site.manage') ? [{ label: 'Status', value: 'status', icon: 'i-lucide-power' }] : [])
 ])
 // Section names accepted in ?tab=, opening the tab that holds that section.
-const TAB_ALIASES: Record<string, string> = { languages: 'details', behaviour: 'details', sending: 'look' }
+const TAB_ALIASES: Record<string, string> = { languages: 'details', behaviour: 'details', sending: 'email' }
 // The signup form has its own page under Landing.
 if (route.query.tab === 'signup') await navigateTo('/site/landing/signup-form', { replace: true })
 const tab = computed({
@@ -33,7 +34,8 @@ const tab = computed({
 })
 const TAB_INTRO: Record<string, string> = {
   details: 'What your site is about, its languages and how it behaves.',
-  look: 'Your site’s colors and images, and how your emails look in people’s inboxes.',
+  look: 'Your site’s colors and images.',
+  email: 'How reminders and site emails appear in people’s inboxes, and where replies go.',
   wording: 'Change the standard wording on your site. Leave a field empty to use the standard wording.',
   status: 'Publish or archive the site, list it in the Prayer.Tools directory, or delete it.'
 }
@@ -73,6 +75,10 @@ function resetLook() {
   const s = site.value
   if (!s) return
   branding.value = { ...s.site.branding }
+}
+function resetEmail() {
+  const s = site.value
+  if (!s) return
   identity.value = { ...s.site.email_identity }
   signature.value = s.site.email_identity?.signature ?? null
 }
@@ -84,6 +90,7 @@ watch(site, (s) => {
   defaultLanguage.value = s.site.default_language
   timezone.value = s.site.timezone
   resetLook()
+  resetEmail()
   settings.value = { ...s.site.settings }
 }, { immediate: true })
 
@@ -106,7 +113,7 @@ watch([settings, meta], () => {
   numberDraft.value = Object.fromEntries(numberSettings.value.map(k => [k, settingValue(k) as number]))
 }, { immediate: true })
 
-// Look and email
+// Look
 const brandColor = computed({
   get: () => branding.value.color ?? DEFAULT_BRAND_COLOR,
   // The default color is not stored, so choosing it clears the override.
@@ -120,13 +127,20 @@ function comparable(o: Record<string, unknown> | null | undefined) {
   return JSON.stringify(Object.keys(o ?? {}).sort().filter(k => o![k] !== undefined && o![k] !== null && o![k] !== '').map(k => [k, o![k]]))
 }
 const brandingDirty = computed(() => comparable(branding.value) !== comparable(site.value?.site.branding))
-const identityDirty = computed(() => can('pt.site.manage') && comparable({ ...identity.value, signature: signature.value }) !== comparable(site.value?.site.email_identity))
-const lookDirty = computed(() => brandingDirty.value || identityDirty.value)
 const savingLook = ref(false)
 async function saveLook() {
   savingLook.value = true
-  await patchSite({ branding: branding.value, ...(can('pt.site.manage') ? { email_identity: { ...identity.value, signature: signature.value } } : {}) })
+  await patchSite({ branding: branding.value })
   savingLook.value = false
+}
+
+// Email
+const emailDirty = computed(() => comparable({ ...identity.value, signature: signature.value }) !== comparable(site.value?.site.email_identity))
+const savingEmail = ref(false)
+async function saveEmail() {
+  savingEmail.value = true
+  await patchSite({ email_identity: { ...identity.value, signature: signature.value } })
+  savingEmail.value = false
 }
 
 // Wording
@@ -512,7 +526,29 @@ watch(tab, (t) => {
         </fieldset>
       </UCard>
 
-      <UCard v-if="can('pt.site.manage')">
+      <div
+        v-if="can('pt.site.write')"
+        class="flex items-center gap-3"
+      >
+        <UButton
+          icon="i-lucide-save"
+          label="Save look"
+          :loading="savingLook"
+          :disabled="!brandingDirty"
+          @click="saveLook"
+        />
+        <UButton
+          v-if="brandingDirty"
+          variant="ghost"
+          color="neutral"
+          label="Discard changes"
+          @click="resetLook"
+        />
+      </div>
+    </template>
+
+    <template v-else-if="tab === 'email' && can('pt.site.manage')">
+      <UCard>
         <template #header>
           <h2 class="font-semibold">
             Email identity
@@ -584,23 +620,20 @@ watch(tab, (t) => {
         </div>
       </UCard>
 
-      <div
-        v-if="can('pt.site.write')"
-        class="flex items-center gap-3"
-      >
+      <div class="flex items-center gap-3">
         <UButton
           icon="i-lucide-save"
-          :label="can('pt.site.manage') ? 'Save look and email' : 'Save look'"
-          :loading="savingLook"
-          :disabled="!lookDirty"
-          @click="saveLook"
+          label="Save email"
+          :loading="savingEmail"
+          :disabled="!emailDirty"
+          @click="saveEmail"
         />
         <UButton
-          v-if="lookDirty"
+          v-if="emailDirty"
           variant="ghost"
           color="neutral"
           label="Discard changes"
-          @click="resetLook"
+          @click="resetEmail"
         />
       </div>
     </template>

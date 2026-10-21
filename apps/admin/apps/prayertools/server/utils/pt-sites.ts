@@ -92,7 +92,7 @@ export async function ptCreateSite(userId: string, input: CreateSiteInput): Prom
         timezone: input.timezone ?? 'UTC',
         template_key: template.key,
         landing: jsonb(template.hiddenSections.length ? { hidden: template.hiddenSections } : {}),
-        onboarding: jsonb({ step: 'setup' })
+        onboarding: jsonb({ step: 'about' })
       } as never).execute()
     })
   } catch (err: unknown) {

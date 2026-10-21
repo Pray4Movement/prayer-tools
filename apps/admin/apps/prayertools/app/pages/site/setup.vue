@@ -1,16 +1,17 @@
 <script setup lang="ts">
-// Onboarding, continued on the draft site: template and campaign setup,
-// address and languages, content, look, landing page (after the look, which
-// shapes how it appears) and publish. The current step is saved on the site,
-// so setup can be resumed.
+// Onboarding, continued on the draft site: about the site, template and
+// campaign setup, languages, content, look, landing page (after the look,
+// which shapes how it appears) and publish. The current step is saved on the
+// site, so setup can be resumed.
 import { suggestedStartDate } from '@prayertools/shared/setup'
 import { addDays, todayIn } from '@prayertools/shared/dates'
 import type { SetupState } from '../../components/PtSetupForm.vue'
 import type { PtChecklist } from '../../components/PtLaunchChecklist.vue'
+import type { PtLocation } from '../../components/PtLocationSearch.vue'
 
 definePageMeta({ middleware: 'auth' })
 
-const STEPS = ['setup', 'address', 'content', 'look', 'landing', 'publish'] as const
+const STEPS = ['about', 'setup', 'languages', 'content', 'look', 'landing', 'publish'] as const
 type Step = typeof STEPS[number]
 
 const { data: site, refresh: refreshSite, can } = usePtSite()
@@ -19,15 +20,48 @@ const toast = usePtToast()
 const route = useRoute()
 const slug = computed(() => String(route.params.orgSlug))
 
-const step = ref<Step>('setup')
+const step = ref<Step>('about')
 watch(site, (s) => {
   const saved = s?.site.onboarding?.step as Step | undefined
-  if (saved && STEPS.includes(saved) && step.value === 'setup') step.value = saved
+  if (saved && STEPS.includes(saved) && step.value === 'about') step.value = saved
 }, { immediate: true })
 
 async function go(next: Step) {
   step.value = next
   await $fetch('/api/pt/site', { method: 'PATCH', body: { onboarding: { step: next } } }).catch(() => {})
+}
+
+// ── Step: about the site ─────────────────────────────────────────────────
+const about = reactive({ purpose: 'place', people_group: '', timezone: 'UTC' })
+const location = ref<PtLocation | null>(null)
+watch(site, (s) => {
+  if (!s) return
+  Object.assign(about, { purpose: s.site.purpose ?? 'place', people_group: s.site.people_group ?? '', timezone: s.site.timezone })
+  location.value = s.site.place_name ? { name: s.site.place_name, latitude: s.site.latitude, longitude: s.site.longitude } : null
+}, { immediate: true })
+const purposeItems = Object.entries(PT_LABELS.purpose).map(([value, label]) => ({ value, label, description: PT_LABELS.purposeDescription[value] }))
+const savingAbout = ref(false)
+async function saveAbout() {
+  savingAbout.value = true
+  try {
+    await $fetch('/api/pt/site', {
+      method: 'PATCH',
+      body: {
+        purpose: about.purpose,
+        people_group: about.purpose === 'people_group' ? about.people_group : null,
+        place_name: location.value?.name ?? null,
+        latitude: location.value?.latitude ?? null,
+        longitude: location.value?.longitude ?? null,
+        timezone: about.timezone
+      }
+    })
+    await refreshSite()
+    await go('setup')
+  } catch (err) {
+    toast.fail(err)
+  } finally {
+    savingAbout.value = false
+  }
 }
 
 // ── Step: template + campaign setup ─────────────────────────────────────
@@ -76,7 +110,7 @@ async function saveSetup() {
     if (existingCampaign.value) await $fetch(`/api/pt/campaigns/${existingCampaign.value.id}`, { method: 'PATCH', body })
     else await $fetch('/api/pt/campaigns', { method: 'POST', body })
     await refreshSite()
-    await go('address')
+    await go('languages')
   } catch (err) {
     toast.fail(err)
   } finally {
@@ -84,51 +118,26 @@ async function saveSetup() {
   }
 }
 
-// ── Step: address + languages ────────────────────────────────────────────
-const newSlug = ref('')
+// ── Step: languages ─────────────────────────────────────────────────────
 const languages = ref<string[]>(['en'])
 const defaultLanguage = ref('en')
 watch(site, (s) => {
   if (!s) return
-  newSlug.value = s.org.slug
   languages.value = [...s.site.languages]
   defaultLanguage.value = s.site.default_language
 }, { immediate: true })
-const slugState = ref<{ available: boolean, reason?: string, suggestion?: string } | null>(null)
-let slugTimer: ReturnType<typeof setTimeout> | undefined
-watch(newSlug, (value) => {
-  clearTimeout(slugTimer)
-  slugState.value = null
-  if (!value || value === slug.value) return
-  slugTimer = setTimeout(async () => {
-    slugState.value = await $fetch('/api/pt/sites/slug-check', { query: { slug: value } })
-  }, 400)
-})
-const slugError = computed(() => {
-  const s = slugState.value
-  if (!s || s.available) return undefined
-  if (s.reason === 'taken') return `Taken${s.suggestion ? ` — try ${s.suggestion}` : ''}`
-  if (s.reason === 'reserved') return 'This address is reserved.'
-  return 'Use 3–40 lowercase letters, digits and single hyphens.'
-})
-const savingAddress = ref(false)
-async function saveAddress() {
-  savingAddress.value = true
+const savingLanguages = ref(false)
+async function saveLanguages() {
+  savingLanguages.value = true
   try {
     if (!languages.value.includes(defaultLanguage.value)) defaultLanguage.value = languages.value[0] ?? 'en'
     await $fetch('/api/pt/site', { method: 'PATCH', body: { languages: languages.value, default_language: defaultLanguage.value } })
-    if (newSlug.value !== slug.value) {
-      const res = await $fetch<{ slug: string }>('/api/pt/site/slug', { method: 'PUT', body: { slug: newSlug.value } })
-      await $fetch('/api/pt/site', { method: 'PATCH', headers: { 'x-active-org': res.slug }, body: { onboarding: { step: 'content' } } })
-      await navigateTo(`/@${res.slug}/site/setup`, { replace: true })
-      return
-    }
     await refreshSite()
     await go('content')
   } catch (err) {
     toast.fail(err)
   } finally {
-    savingAddress.value = false
+    savingLanguages.value = false
   }
 }
 
@@ -164,8 +173,6 @@ async function createOwn() {
 const color = ref('#2f6f5e')
 const image = ref<{ url: string, alt: string, credit: string | null } | null>(null)
 const logo = ref<{ url: string, assetId: string | null } | null>(null)
-const fromName = ref('')
-const replyTo = ref('')
 const pickerOpen = ref(false)
 const pickerFor = ref<'image' | 'logo'>('image')
 function openPicker(target: 'image' | 'logo') {
@@ -177,8 +184,6 @@ watch(site, (s) => {
   color.value = s.site.branding?.color ?? s.brand.color
   image.value = s.site.branding?.image_url ? { url: s.site.branding.image_url, alt: s.site.branding.image_alt?.values?.[s.site.default_language] ?? '', credit: s.site.branding.image_credit ?? null } : null
   logo.value = s.site.branding?.logo_url ? { url: s.site.branding.logo_url, assetId: s.site.branding.logo_asset_id ?? null } : null
-  fromName.value = s.site.email_identity?.from_name ?? ''
-  replyTo.value = s.site.email_identity?.reply_to ?? ''
 }, { immediate: true })
 const preview = ref<string | null>(null)
 const savingLook = ref(false)
@@ -189,8 +194,7 @@ async function saveLook(): Promise<boolean> {
     await $fetch('/api/pt/site', {
       method: 'PATCH',
       body: {
-        branding: { ...(site.value?.site.branding ?? {}), color: color.value, image_url: image.value?.url, image_alt: image.value ? { source: lang, values: { [lang]: image.value.alt } } : undefined, image_credit: image.value?.credit ?? undefined, logo_url: logo.value?.url, logo_asset_id: logo.value?.assetId ?? undefined },
-        ...(can('pt.site.manage') ? { email_identity: { ...(site.value?.site.email_identity ?? {}), from_name: fromName.value || undefined, reply_to: replyTo.value || undefined } } : {})
+        branding: { ...(site.value?.site.branding ?? {}), color: color.value, image_url: image.value?.url, image_alt: image.value ? { source: lang, values: { [lang]: image.value.alt } } : undefined, image_credit: image.value?.credit ?? undefined, logo_url: logo.value?.url, logo_asset_id: logo.value?.assetId ?? undefined }
       }
     })
     await refreshSite()
@@ -252,8 +256,9 @@ async function publish() {
     <UTabs
       :model-value="step"
       :items="[
+        { label: 'About', value: 'about', icon: 'i-lucide-info' },
         { label: 'Campaign', value: 'setup', icon: 'i-lucide-calendar-range' },
-        { label: 'Address & languages', value: 'address', icon: 'i-lucide-globe' },
+        { label: 'Languages', value: 'languages', icon: 'i-lucide-languages' },
         { label: 'Content', value: 'content', icon: 'i-lucide-book-open', disabled: !existingCampaign },
         { label: 'Look', value: 'look', icon: 'i-lucide-palette' },
         { label: 'Landing page', value: 'landing', icon: 'i-lucide-panels-top-left' },
@@ -264,7 +269,65 @@ async function publish() {
       @update:model-value="(v) => go(v as Step)"
     />
 
-    <UCard v-if="step === 'setup'">
+    <UCard v-if="step === 'about'">
+      <template #header>
+        <h2 class="font-semibold">
+          About the site
+        </h2>
+        <p class="text-sm text-(--ui-text-muted)">
+          You can change all of this later.
+        </p>
+      </template>
+      <div class="space-y-6">
+        <UFormField label="What are you praying for?">
+          <URadioGroup
+            v-model="about.purpose"
+            :items="purposeItems"
+            variant="card"
+            orientation="horizontal"
+            class="w-full"
+            :ui="{ fieldset: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }"
+          />
+        </UFormField>
+        <UFormField
+          v-if="about.purpose === 'people_group'"
+          label="Which people group?"
+        >
+          <UInput
+            v-model="about.people_group"
+            placeholder="e.g. the Kurds of eastern Turkey"
+            class="w-full"
+          />
+        </UFormField>
+        <UFormField
+          label="Location"
+          description="Where the people you pray for are. It places your site on the Prayer.Tools map."
+        >
+          <PtLocationSearch v-model="location" />
+        </UFormField>
+        <UFormField
+          label="Timezone"
+          description="Campaign days begin at midnight in this timezone."
+        >
+          <USelectMenu
+            v-model="about.timezone"
+            :items="ptTimezones()"
+            class="w-full sm:w-80"
+          />
+        </UFormField>
+      </div>
+      <template #footer>
+        <div class="flex justify-end">
+          <UButton
+            label="Save and continue"
+            :loading="savingAbout"
+            @click="saveAbout"
+          />
+        </div>
+      </template>
+    </UCard>
+
+    <UCard v-else-if="step === 'setup'">
       <template #header>
         <h2 class="font-semibold">
           Choose a template
@@ -318,30 +381,16 @@ async function publish() {
       </template>
     </UCard>
 
-    <UCard v-else-if="step === 'address'">
+    <UCard v-else-if="step === 'languages'">
       <template #header>
         <h2 class="font-semibold">
-          Address and languages
+          Languages
         </h2>
       </template>
       <div class="space-y-5">
         <UFormField
-          label="Address"
-          help="Changing it later breaks links people already have."
-          :error="slugError"
-        >
-          <UInput
-            v-model="newSlug"
-            class="w-full"
-          >
-            <template #trailing>
-              <span class="text-xs text-(--ui-text-muted)">.{{ meta?.siteBaseHost }}</span>
-            </template>
-          </UInput>
-        </UFormField>
-        <UFormField
           label="Languages the site runs in"
-          description="Visitors can switch between these; content should exist in each."
+          help="Visitors can switch between these; content should exist in each."
         >
           <PtLanguagePicker
             v-model="languages"
@@ -353,9 +402,9 @@ async function publish() {
         <div class="flex justify-end">
           <UButton
             label="Save and continue"
-            :loading="savingAddress"
-            :disabled="!languages.length || !newSlug || (newSlug !== slug && !slugState?.available)"
-            @click="saveAddress"
+            :loading="savingLanguages"
+            :disabled="!languages.length"
+            @click="saveLanguages"
           />
         </div>
       </template>
@@ -432,7 +481,7 @@ async function publish() {
     <UCard v-else-if="step === 'look'">
       <template #header>
         <h2 class="font-semibold">
-          Look and emails
+          Look
         </h2>
       </template>
       <div class="space-y-6">
@@ -485,32 +534,6 @@ async function publish() {
                 />
               </div>
             </div>
-          </UFormField>
-        </div>
-        <div
-          v-if="can('pt.site.manage')"
-          class="grid sm:grid-cols-2 gap-4"
-        >
-          <UFormField
-            label="Emails come from"
-            :help="`Shown as the sender name. Default: ${site?.org.name}`"
-          >
-            <UInput
-              v-model="fromName"
-              :placeholder="site?.org.name"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField
-            label="Replies go to"
-            :help="site?.inboxAddress ? `Leave empty to get replies in this site's inbox (${site.inboxAddress}), or give your own address.` : 'Your email address, for people who reply to reminders.'"
-          >
-            <UInput
-              v-model="replyTo"
-              type="email"
-              :placeholder="site?.inboxAddress ?? undefined"
-              class="w-full"
-            />
           </UFormField>
         </div>
         <div class="flex justify-end">
