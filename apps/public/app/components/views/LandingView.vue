@@ -51,6 +51,10 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
       <section v-for="c in has('custom') ? page.custom : []" :key="c.id" :aria-labelledby="`custom-${c.id}`" :data-pt-custom="c.id" class="space-y-4">
         <h2 :id="`custom-${c.id}`" class="text-2xl font-bold">{{ c.heading }}</h2>
         <img v-if="c.imageUrl" :src="c.imageUrl" :alt="c.imageAlt" class="w-full rounded-xl" loading="lazy">
+        <video v-if="c.video?.kind === 'file'" :src="c.video.src" controls playsinline preload="metadata" class="w-full rounded-xl bg-black aspect-video" />
+        <div v-else-if="c.video" class="relative w-full aspect-video overflow-hidden rounded-xl bg-black">
+          <iframe :src="c.video.src" :title="c.heading" loading="lazy" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" class="absolute inset-0 size-full border-0" />
+        </div>
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div class="pt-content" v-html="c.html" />
         <UButton v-if="c.buttonUrl && c.buttonLabel" :to="c.buttonUrl" target="_blank" :label="c.buttonLabel" trailing-icon="i-lucide-external-link" />

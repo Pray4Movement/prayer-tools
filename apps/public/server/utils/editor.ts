@@ -6,6 +6,7 @@ import type { LandingCustomSection, SiteLanding, TiptapDoc, TranslatableText } f
 import { editorTokenOrg } from '@prayertools/shared/links'
 import { platformConfig } from '@prayertools/shared/config'
 import { parseText } from '@prayertools/shared/translatable'
+import { videoEmbed } from '@prayertools/shared/video'
 import { EDITABLE_SITE_STRINGS } from '@prayertools/shared/site-strings'
 import ar from '../../i18n/locales/ar.json'
 import en from '../../i18n/locales/en.json'
@@ -80,6 +81,7 @@ export function parseLandingDraft(input: unknown): LandingDraft {
       body: docs(raw.body),
       image_url: url(raw.image_url),
       image_alt: parseText(raw.image_alt) ?? undefined,
+      video_url: videoEmbed(url(raw.video_url)) ? url(raw.video_url) : undefined,
       button_label: parseText(raw.button_label) ?? undefined,
       button_url: url(raw.button_url)
     })

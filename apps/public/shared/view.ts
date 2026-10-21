@@ -2,6 +2,7 @@
 // page renders it; SSR reads it from the request context and client-side
 // navigation fetches it from `/api/view`.
 import type { CheckinResponse, Goal, Cadence, StartMode, SignupFieldKind, SubscriptionStatus } from '@prayertools/shared/db/schema'
+import type { VideoEmbed } from '@prayertools/shared/video'
 
 export type CampaignState = 'upcoming' | 'active' | 'between' | 'ended'
 
@@ -97,6 +98,7 @@ export interface CustomSectionView {
   html: string
   imageUrl: string | null
   imageAlt: string
+  video: VideoEmbed | null
   buttonLabel: string | null
   buttonUrl: string | null
 }

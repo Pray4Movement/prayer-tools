@@ -5,7 +5,7 @@ const props = defineProps<{ section: string, title: string }>()
 
 const HINTS: Record<string, string> = {
   why: 'Nothing written yet. Write why people should pray, or hide this section.',
-  custom: 'No custom sections yet. Add a section with a heading, text, image and button, or hide this.',
+  custom: 'No custom sections yet. Add a section with a heading, text, image or video and button, or hide this.',
   stories: 'No published stories yet. Once you publish stories from the Stories page they show like the examples below.',
   today: 'Today\'s prayer shows here once the campaign has prayer content for today.',
   app: 'Links to the Prayer.Tools app show here once the app is available.'

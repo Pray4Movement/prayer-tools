@@ -2,6 +2,7 @@ import type { TranslatableText, LandingCustomSection, SiteBranding, SiteEmailIde
 import { parseText } from '@prayertools/shared/translatable'
 import { parseHex } from '@prayertools/shared/colors'
 import { HIDEABLE_SECTIONS } from '@prayertools/shared/landing'
+import { videoEmbed } from '@prayertools/shared/video'
 
 const MAX_DOC_BYTES = 200_000
 
@@ -86,6 +87,7 @@ export function ptLanding(input: unknown): SiteLanding {
       body,
       image_url: url(raw.image_url),
       image_alt: parseText(raw.image_alt) ?? undefined,
+      video_url: videoEmbed(url(raw.video_url)) ? url(raw.video_url) : undefined,
       button_label: parseText(raw.button_label) ?? undefined,
       button_url: url(raw.button_url)
     }) as LandingCustomSection)
