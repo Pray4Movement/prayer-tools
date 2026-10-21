@@ -23,6 +23,9 @@ const { data: meta } = usePtMeta()
 
 const q = ref('')
 const cadence = ref<string | undefined>(props.cadence)
+watch(() => props.cadence, (v) => {
+  cadence.value = v
+})
 const seeMore = ref(false)
 const { data, status } = useFetch<{ libraries: Library[] }>('/api/pt/libraries', {
   query: computed(() => ({ template: props.template ?? undefined, cadence: cadence.value, q: q.value || undefined })),

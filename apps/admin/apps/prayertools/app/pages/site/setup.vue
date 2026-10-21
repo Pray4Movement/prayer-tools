@@ -157,6 +157,25 @@ async function useLibrary(libraryId: string) {
     toast.fail(err)
   }
 }
+const cadenceOpen = computed(() => {
+  if (!meta.value) return false
+  const t = meta.value.templates.find(x => x.key === templateKey.value)
+  return !t || t.open.includes('cadence')
+})
+const savingCadence = ref(false)
+async function saveCadence(cadence: SetupState['cadence']) {
+  if (!existingCampaign.value) return
+  setup.value.cadence = cadence
+  savingCadence.value = true
+  try {
+    await $fetch(`/api/pt/campaigns/${existingCampaign.value.id}`, { method: 'PATCH', body: { cadence } })
+    await refreshSite()
+  } catch (err) {
+    toast.fail(err)
+  } finally {
+    savingCadence.value = false
+  }
+}
 const ownTitle = ref('')
 async function createOwn() {
   try {
@@ -281,36 +300,45 @@ async function publish() {
           You can change all of this later.
         </p>
       </template>
-      <div class="space-y-6">
-        <UFormField label="What are you praying for?">
-          <URadioGroup
-            v-model="about.purpose"
-            :items="purposeItems"
-            variant="card"
-            orientation="horizontal"
-            class="w-full"
-            :ui="{ fieldset: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }"
-          />
-        </UFormField>
-        <UFormField
-          v-if="about.purpose === 'people_group'"
-          label="Which people group?"
-        >
-          <UInput
-            v-model="about.people_group"
-            placeholder="e.g. the Kurds of eastern Turkey"
-            class="w-full"
-          />
-        </UFormField>
+      <div class="divide-y divide-(--ui-border-accented)">
+        <section class="space-y-4 py-6 first:pt-0 last:pb-0">
+          <UFormField
+            label="What are you praying for?"
+            :ui="{ label: 'text-base font-semibold' }"
+          >
+            <URadioGroup
+              v-model="about.purpose"
+              :items="purposeItems"
+              variant="card"
+              orientation="horizontal"
+              class="w-full"
+              :ui="{ fieldset: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }"
+            />
+          </UFormField>
+          <UFormField
+            v-if="about.purpose === 'people_group'"
+            label="Which people group?"
+          >
+            <UInput
+              v-model="about.people_group"
+              placeholder="e.g. the Kurds of eastern Turkey"
+              class="w-full"
+            />
+          </UFormField>
+        </section>
         <UFormField
           label="Location"
           description="Where the people you pray for are. It places your site on the Prayer.Tools map."
+          :ui="{ label: 'text-base font-semibold' }"
+          class="py-6 first:pt-0 last:pb-0"
         >
           <PtLocationSearch v-model="location" />
         </UFormField>
         <UFormField
           label="Timezone"
           description="Campaign days begin at midnight in this timezone."
+          :ui="{ label: 'text-base font-semibold' }"
+          class="py-6 first:pt-0 last:pb-0"
         >
           <USelectMenu
             v-model="about.timezone"
@@ -339,8 +367,8 @@ async function publish() {
           A template fills in sensible answers. You can change them later.
         </p>
       </template>
-      <div class="space-y-6">
-        <div class="grid sm:grid-cols-2 gap-3">
+      <div class="divide-y divide-(--ui-border-accented)">
+        <div class="grid sm:grid-cols-2 gap-3 pb-6">
           <button
             v-for="t in meta?.templates ?? []"
             :key="t.key"
@@ -362,6 +390,8 @@ async function publish() {
         <UFormField
           label="Campaign name"
           help="People see this, e.g. “Ramadan 2027”."
+          :ui="{ label: 'text-base font-semibold' }"
+          class="py-6"
         >
           <UInput
             v-model="campaignName"
@@ -371,6 +401,8 @@ async function publish() {
         <PtSetupForm
           v-model="setup"
           :template-key="templateKey"
+          :with-cadence="false"
+          class="pt-6"
         />
       </div>
       <template #footer>
@@ -393,7 +425,8 @@ async function publish() {
       <div class="space-y-5">
         <UFormField
           label="Languages the site runs in"
-          help="Visitors can switch between these; content should exist in each."
+          description="Visitors can switch between these; content should exist in each."
+          :ui="{ label: 'text-base font-semibold' }"
         >
           <PtLanguagePicker
             v-model="languages"
@@ -423,12 +456,27 @@ async function publish() {
           your site, or write your own.
         </p>
       </template>
-      <div class="space-y-6">
-        <div
-          v-if="content?.libraries.length"
-          class="space-y-2"
+      <div class="divide-y divide-(--ui-border-accented)">
+        <UFormField
+          label="How often is there new prayer content?"
+          :help="!cadenceOpen ? 'Set by the template.' : undefined"
+          :ui="{ label: 'text-base font-semibold' }"
+          class="py-6 first:pt-0 last:pb-0"
         >
-          <h3 class="text-sm font-medium">
+          <URadioGroup
+            :model-value="setup.cadence"
+            :items="PT_CADENCE_ITEMS"
+            orientation="horizontal"
+            variant="card"
+            :disabled="!cadenceOpen || savingCadence || !existingCampaign"
+            @update:model-value="(v) => saveCadence(v as SetupState['cadence'])"
+          />
+        </UFormField>
+        <section
+          v-if="content?.libraries.length"
+          class="space-y-2 py-6 first:pt-0 last:pb-0"
+        >
+          <h3 class="text-base font-semibold">
             In your campaign
           </h3>
           <div
@@ -444,32 +492,37 @@ async function publish() {
               :label="`Missing: ${l.missingLanguages.map(x => languageName(meta, x)).join(', ')}`"
             />
           </div>
-        </div>
-        <PtLibraryCatalog
-          :template="templateKey"
-          :cadence="existingCampaign?.cadence"
-          :site-languages="site?.site.languages ?? []"
-          :used-ids="(content?.libraries ?? []).map(l => l.libraryId).filter(Boolean) as string[]"
-          @use="useLibrary"
-        />
-        <USeparator label="or" />
-        <div class="flex flex-wrap items-end gap-2">
-          <UFormField
-            label="Write your own content"
-            class="flex-1"
-          >
-            <UInput
-              v-model="ownTitle"
-              placeholder="Our prayer guide"
-              class="w-full"
-            />
-          </UFormField>
-          <UButton
-            label="Create"
-            variant="soft"
-            @click="createOwn"
+        </section>
+        <section class="space-y-4 py-6 first:pt-0 last:pb-0">
+          <h3 class="text-base font-semibold">
+            Add prayer content
+          </h3>
+          <PtLibraryCatalog
+            :template="templateKey"
+            :cadence="existingCampaign?.cadence"
+            :site-languages="site?.site.languages ?? []"
+            :used-ids="(content?.libraries ?? []).map(l => l.libraryId).filter(Boolean) as string[]"
+            @use="useLibrary"
           />
-        </div>
+          <USeparator label="or" />
+          <div class="flex flex-wrap items-end gap-2">
+            <UFormField
+              label="Write your own content"
+              class="flex-1"
+            >
+              <UInput
+                v-model="ownTitle"
+                placeholder="Our prayer guide"
+                class="w-full"
+              />
+            </UFormField>
+            <UButton
+              label="Create"
+              variant="soft"
+              @click="createOwn"
+            />
+          </div>
+        </section>
       </div>
       <template #footer>
         <div class="flex justify-end">
@@ -488,56 +541,64 @@ async function publish() {
         </h2>
       </template>
       <div class="space-y-6">
-        <PtColorField v-model="color" />
-        <div class="grid sm:grid-cols-2 gap-6">
-          <UFormField
-            label="Top image"
-            description="A wide photo shown at the top of your page."
-          >
-            <div class="space-y-2">
-              <img
-                v-if="image"
-                :src="image.url"
-                :alt="image.alt"
-                class="rounded-md max-h-32 object-cover"
-              >
-              <UButton
-                :label="image ? 'Change image' : 'Choose image'"
-                icon="i-lucide-image"
-                variant="soft"
-                @click="openPicker('image')"
-              />
-            </div>
-          </UFormField>
-          <UFormField
-            label="Logo (optional)"
-            description="Shown in emails and the site header."
-          >
-            <div class="space-y-2">
-              <img
-                v-if="logo"
-                :src="logo.url"
-                alt=""
-                class="rounded-md max-h-20 object-contain"
-              >
-              <div class="flex flex-wrap gap-2">
+        <div class="divide-y divide-(--ui-border-accented)">
+          <PtColorField
+            v-model="color"
+            :ui="{ label: 'text-base font-semibold' }"
+            class="py-6 first:pt-0 last:pb-0"
+          />
+          <div class="grid sm:grid-cols-2 gap-6 py-6 first:pt-0 last:pb-0">
+            <UFormField
+              label="Top image"
+              description="A wide photo shown at the top of your page."
+              :ui="{ label: 'text-base font-semibold' }"
+            >
+              <div class="space-y-2">
+                <img
+                  v-if="image"
+                  :src="image.url"
+                  :alt="image.alt"
+                  class="rounded-md max-h-32 object-cover"
+                >
                 <UButton
-                  :label="logo ? 'Change logo' : 'Choose logo'"
+                  :label="image ? 'Change image' : 'Choose image'"
                   icon="i-lucide-image"
                   variant="soft"
-                  @click="openPicker('logo')"
-                />
-                <UButton
-                  v-if="logo"
-                  label="Remove"
-                  icon="i-lucide-x"
-                  color="neutral"
-                  variant="ghost"
-                  @click="logo = null"
+                  @click="openPicker('image')"
                 />
               </div>
-            </div>
-          </UFormField>
+            </UFormField>
+            <UFormField
+              label="Logo (optional)"
+              description="Shown in emails and the site header."
+              :ui="{ label: 'text-base font-semibold' }"
+            >
+              <div class="space-y-2">
+                <img
+                  v-if="logo"
+                  :src="logo.url"
+                  alt=""
+                  class="rounded-md max-h-20 object-contain"
+                >
+                <div class="flex flex-wrap gap-2">
+                  <UButton
+                    :label="logo ? 'Change logo' : 'Choose logo'"
+                    icon="i-lucide-image"
+                    variant="soft"
+                    @click="openPicker('logo')"
+                  />
+                  <UButton
+                    v-if="logo"
+                    label="Remove"
+                    icon="i-lucide-x"
+                    color="neutral"
+                    variant="ghost"
+                    @click="logo = null"
+                  />
+                </div>
+              </div>
+            </UFormField>
+          </div>
         </div>
         <div class="flex justify-end">
           <UButton

@@ -4,6 +4,11 @@ import type { SetupState } from '../components/PtSetupForm.vue'
 
 export type PtCampaignSummary = Pick<SetupState, 'start_mode' | 'start_date' | 'end_mode' | 'end_date' | 'length_days' | 'goal' | 'cadence'>
 
+export const PT_CADENCE_ITEMS = [
+  { value: 'daily', label: 'Daily', description: 'A new prayer entry every day.' },
+  { value: 'weekly', label: 'Weekly', description: 'A new prayer entry every week.' }
+]
+
 export interface PtGoalProgress {
   goal: string
   people: number
