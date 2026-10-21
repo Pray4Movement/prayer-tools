@@ -148,6 +148,22 @@ describe('reminder sweep', () => {
     expect((await commitmentRow(orgId, endedC)).next_reminder_utc).toBeNull()
   })
 
+  it('stops personal-start reminders after the person\'s last entry', async () => {
+    const { orgId } = await createSite(env)
+    const campaignId = await createCampaign(env, orgId, { startMode: 'join', endMode: 'days', lengthDays: 3 })
+    const lastDay = await createSubscriber(env, orgId, campaignId)
+    const onLast = await addCommitment(env, orgId, lastDay.subscriptionId, campaignId, { startsOn: '2026-03-18', next: new Date('2026-03-20T11:00:00Z') })
+    const past = await createSubscriber(env, orgId, campaignId)
+    const pastEnd = await addCommitment(env, orgId, past.subscriptionId, campaignId, { startsOn: '2026-03-17', next: new Date('2026-03-20T11:00:00Z') })
+    const ctx = testCtx(env)
+    ctx.setNow(new Date('2026-03-20T11:00:30Z'))
+    await runReminderSweep(ctx, ctx.log)
+    expect(mailsTo(ctx.mails, lastDay.email)).toHaveLength(1)
+    expect(mailsTo(ctx.mails, past.email)).toHaveLength(0)
+    expect((await commitmentRow(orgId, onLast)).next_reminder_utc).toBeNull()
+    expect((await commitmentRow(orgId, pastEnd)).next_reminder_utc).toBeNull()
+  })
+
   it('skips an occurrence more than 6 hours late and moves to the next one', async () => {
     const { orgId } = await createSite(env)
     const campaignId = await createCampaign(env, orgId, { startDate: '2026-03-01', endDate: '2026-03-20' })

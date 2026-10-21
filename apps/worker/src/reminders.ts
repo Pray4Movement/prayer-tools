@@ -4,7 +4,7 @@ import { sql } from 'kysely'
 import { withOrg, type Tx } from '@prayertools/shared/db/scope'
 import { localDateOf } from '@prayertools/shared/dates'
 import { entryNumber, nextReminderUtc } from '@prayertools/shared/schedule'
-import { ruleOf } from '@prayertools/shared/subscriptions'
+import { personalEndOn, ruleOf } from '@prayertools/shared/subscriptions'
 import { primaryEmailOf } from '@prayertools/shared/crm'
 import { isSuppressed } from '@prayertools/shared/email/suppression'
 import { loadSiteMailContext, reminderEmail, type SiteMailContext } from '@prayertools/shared/email/templates'
@@ -127,6 +127,11 @@ async function prepare(tx: Tx, claimed: Claimed, now: Date, mailCtx: Map<string,
     return { outcome: 'ineligible' }
   }
   const rule = ruleOf(c)
+  rule.ends_on ??= await personalEndOn(tx, campaign, rule.starts_on)
+  if (rule.ends_on && localDateOf(occurrence, c.timezone) > rule.ends_on) {
+    await advance(tx, c.id, occurrence, null)
+    return { outcome: 'ineligible' }
+  }
   const lateFloor = new Date(now.getTime() - MAX_LATE_MS)
   const next = nextReminderUtc(rule, occurrence > lateFloor ? occurrence : lateFloor)
   if (occurrence < lateFloor) {

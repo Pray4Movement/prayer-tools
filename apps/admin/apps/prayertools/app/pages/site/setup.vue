@@ -179,6 +179,19 @@ async function saveCadence(cadence: SetupState['cadence']) {
     savingCadence.value = false
   }
 }
+// Personal-start campaigns without a length go through all of their content.
+const contentEntries = computed(() => Math.max(0, ...(content.value?.libraries ?? []).map(l => l.entryCount)))
+const lengthOpen = computed(() => existingCampaign.value?.start_mode === 'join' && existingCampaign.value.end_mode === 'days')
+async function saveLength(length: number | null | undefined) {
+  if (!existingCampaign.value) return
+  setup.value.length_days = length ?? null
+  try {
+    await $fetch(`/api/pt/campaigns/${existingCampaign.value.id}`, { method: 'PATCH', body: { length_days: length ?? null } })
+    await refreshSite()
+  } catch (err) {
+    toast.fail(err)
+  }
+}
 const ownTitle = ref('')
 async function createOwn() {
   try {
@@ -487,6 +500,21 @@ async function publish() {
             variant="card"
             :disabled="!cadenceOpen || savingCadence || !existingCampaign"
             @update:model-value="(v) => saveCadence(v as SetupState['cadence'])"
+          />
+        </UFormField>
+        <UFormField
+          v-if="lengthOpen"
+          :label="`How many ${ptUnit(setup.cadence)}s does each person go through? (optional)`"
+          :help="contentEntries ? `Leave empty to go through all ${contentEntries} entries.` : 'Leave empty to go through all of the prayer content.'"
+          :ui="{ label: 'text-base font-semibold' }"
+          class="py-6 first:pt-0 last:pb-0"
+        >
+          <UInputNumber
+            :model-value="setup.length_days"
+            :min="1"
+            :max="contentEntries || 3650"
+            placeholder="All"
+            @update:model-value="saveLength"
           />
         </UFormField>
         <section

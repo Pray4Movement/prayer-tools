@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { withOrg } from '@prayertools/shared/db/scope'
 import { addDays, todayIn } from '@prayertools/shared/dates'
+import { jsonb } from '@prayertools/shared/db/json'
 import { suppress } from '@prayertools/shared/email/suppression'
 import { emailHash } from '@prayertools/shared/tokens'
 import { makeText } from '@prayertools/shared/translatable'
@@ -125,9 +126,9 @@ describe('personal-start completion', () => {
     const today = todayIn(TZ)
     const campaignId = await createCampaign(env, orgId, { name: 'Seven days', startMode: 'join', endMode: 'days', lengthDays: 7 })
     const done = await createSubscriber(env, orgId, campaignId)
-    const cid = await addCommitment(env, orgId, done.subscriptionId, campaignId, { startsOn: addDays(today, -8), endsOn: addDays(today, -2), next: new Date(Date.now() + 3600_000) })
+    const cid = await addCommitment(env, orgId, done.subscriptionId, campaignId, { startsOn: addDays(today, -8), next: new Date(Date.now() + 3600_000) })
     const midway = await createSubscriber(env, orgId, campaignId)
-    await addCommitment(env, orgId, midway.subscriptionId, campaignId, { startsOn: addDays(today, -3), endsOn: addDays(today, 3) })
+    await addCommitment(env, orgId, midway.subscriptionId, campaignId, { startsOn: addDays(today, -3) })
     const ctx = testCtx(env)
     const res = await completePersonalStart(ctx, ctx.log)
     expect(res.completed).toBeGreaterThanOrEqual(1)
@@ -144,5 +145,31 @@ describe('personal-start completion', () => {
     expect(mails).toHaveLength(1)
     expect(mails[0]!.text).toContain('You have reached the end of Seven days')
     expect(mailsTo(ctx.mails, midway.email)).toHaveLength(0)
+  })
+
+  it('without a length, runs for as many entries as the content has', async () => {
+    const { orgId } = await createSite(env)
+    const today = todayIn(TZ)
+    const campaignId = await createCampaign(env, orgId, { startMode: 'join', endMode: 'days', lengthDays: null })
+    const done = await createSubscriber(env, orgId, campaignId)
+    await addCommitment(env, orgId, done.subscriptionId, campaignId, { startsOn: addDays(today, -6) })
+    const midway = await createSubscriber(env, orgId, campaignId)
+    await addCommitment(env, orgId, midway.subscriptionId, campaignId, { startsOn: addDays(today, -4) })
+    const ctx = testCtx(env)
+    const statusOf = async (id: string) => (await withOrg(env.admin, orgId, tx => tx.selectFrom('pt_subscription').select('status').where('id', '=', id).executeTakeFirstOrThrow())).status
+
+    await completePersonalStart(ctx, ctx.log)
+    expect(await statusOf(done.subscriptionId)).toBe('active')
+
+    await withOrg(env.admin, orgId, async (tx) => {
+      const lib = await tx.insertInto('pt_site_library').values({ title: 'Five days', cadence: 'daily' }).returning('id').executeTakeFirstOrThrow()
+      await tx.insertInto('pt_campaign_library').values({ campaign_id: campaignId, site_library_id: lib.id }).execute()
+      for (let day = 1; day <= 5; day++) {
+        await tx.insertInto('pt_site_entry').values({ site_library_id: lib.id, day, language: 'en', content: jsonb({ type: 'doc', content: [] }) }).execute()
+      }
+    })
+    await completePersonalStart(ctx, ctx.log)
+    expect(await statusOf(done.subscriptionId)).toBe('completed')
+    expect(await statusOf(midway.subscriptionId)).toBe('active')
   })
 })

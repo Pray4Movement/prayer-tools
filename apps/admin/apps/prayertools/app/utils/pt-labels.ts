@@ -5,7 +5,7 @@ export const PT_LABELS = {
   campaignState: { upcoming: 'Starting soon', active: 'Running', between: 'Between campaigns' } as Record<string, string>,
   subscriptionStatus: { active: 'Active', inactive: 'Inactive', completed: 'Completed', unsubscribed: 'Unsubscribed' } as Record<string, string>,
   startMode: { date: 'On a date', join: 'When each person joins' } as Record<string, string>,
-  endMode: { date: 'On a date', none: 'No end', days: 'After a number of days' } as Record<string, string>,
+  endMode: { date: 'On a date', none: 'No end', days: 'After the last entry' } as Record<string, string>,
   goal: { people: 'People mobilized', prayer_time: 'Prayer time', coverage: '24/7 coverage' } as Record<string, string>,
   cadence: { daily: 'Daily', weekly: 'Weekly' } as Record<string, string>,
   length: { fixed: 'Fixed', ongoing: 'Ongoing' } as Record<string, string>,
@@ -14,14 +14,14 @@ export const PT_LABELS = {
     ramadan: 'Ramadan',
     disaster_4: 'Natural disaster — 4 days',
     disaster_12: 'Natural disaster — 12 days',
-    demo: 'Prayer.Tools demo'
+    anytime: 'Start anytime'
   } as Record<string, string>,
   templateDescription: {
     generic: 'You choose the dates, goal and rhythm.',
     ramadan: 'About 30 days of daily prayer through the month of Ramadan.',
     disaster_4: 'A short, urgent campaign after a disaster. Can hand people on to a 12-day campaign.',
     disaster_12: 'Twelve days of daily prayer after a disaster.',
-    demo: 'Each person starts on the day they join and goes through a short daily sequence.'
+    anytime: 'No start date. Each person begins at day 1 when they sign up.'
   } as Record<string, string>,
   goalDescription: {
     people: 'Count how many people commit to pray. Recommended for most campaigns.',
@@ -61,7 +61,7 @@ export const PT_TEMPLATE_ICONS: Record<string, string> = {
   ramadan: 'i-lucide-moon-star',
   disaster_4: 'i-lucide-siren',
   disaster_12: 'i-lucide-life-buoy',
-  demo: 'i-lucide-presentation'
+  anytime: 'i-lucide-play'
 }
 
 export function ptStatusColor(status: string): 'success' | 'warning' | 'neutral' | 'info' | 'error' {

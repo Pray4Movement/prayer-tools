@@ -1,6 +1,6 @@
-import { campaignStatus, displayLength, campaignLength } from '@prayertools/shared/setup'
+import { campaignStatus, displayLength } from '@prayertools/shared/setup'
 import { goalProgress } from '@prayertools/shared/stats'
-import { campaignLibraries, contentLength } from '@prayertools/shared/content'
+import { campaignEntries, campaignLibraries, contentLength } from '@prayertools/shared/content'
 
 export default definePtHandler('pt.site.read', async (event, tx) => {
   const id = getRouterParam(event, 'id')!
@@ -14,7 +14,7 @@ export default definePtHandler('pt.site.read', async (event, tx) => {
       ...c,
       status: campaignStatus(c),
       length: displayLength(c),
-      entries: campaignLength(c),
+      entries: await campaignEntries(ptTx(tx), c),
       commitments: Number(commitments?.n ?? 0),
       contentEntries: await contentLength(ptTx(tx), c.id),
       progress: await goalProgress(ptTx(tx), c, site.settings_merged.default_duration_min)

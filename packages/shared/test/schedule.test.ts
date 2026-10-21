@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { entryDate, entryNumber, nextOccurrence, nextReminderUtc, occurrences, validateRule, type CommitmentRule } from '../src/schedule'
+import { entryDate, entryNumber, lastDayOf, nextOccurrence, nextReminderUtc, occurrences, validateRule, type CommitmentRule } from '../src/schedule'
 import { zonedInstant } from '../src/dates'
 
 function rule(r: Partial<CommitmentRule>): CommitmentRule {
@@ -115,6 +115,8 @@ describe('entries', () => {
     expect(entryNumber('2026-03-01', 'weekly', '2026-03-08')).toBe(2)
     expect(entryDate('2026-03-01', 'weekly', 3)).toBe('2026-03-15')
     expect(entryDate('2026-03-01', 'daily', 31)).toBe('2026-03-31')
+    expect(lastDayOf('2026-03-01', 'daily', 7)).toBe('2026-03-07')
+    expect(lastDayOf('2026-03-01', 'weekly', 2)).toBe('2026-03-14')
   })
 
   it('validates rules', () => {

@@ -4,8 +4,9 @@
 import { sql, type Selectable } from 'kysely'
 import type { Tx } from './db/scope'
 import type { PtCampaignTable, PtCommitmentTable, PtSubscriptionTable } from './db/schema'
-import { addDays, todayIn, toIsoDate } from './dates'
-import { nextReminderUtc, validateRule, type CommitmentRule } from './schedule'
+import { todayIn, toIsoDate } from './dates'
+import { lastDayOf, nextReminderUtc, validateRule, type CommitmentRule } from './schedule'
+import { campaignEntries } from './content'
 import { hashToken, randomToken, shortCode } from './tokens'
 import { consentHistory, consentState, markChannelVerified, primaryEmailOf, setConsent, upsertContact, type ConsentCapture } from './crm'
 import { bumpStat } from './stats'
@@ -48,7 +49,8 @@ export interface RuleInput {
 
 // A commitment's date window: shared-calendar campaigns run from the later of
 // the campaign start and the join date to the campaign end; personal-start
-// campaigns run from the person's own start for the campaign's length.
+// commitments run from the person's own start and store no end, because the
+// campaign's length can follow its content (see `personalEndOn`).
 export async function commitmentWindow(tx: Tx, campaign: CampaignRow, subscriptionId: string | null, tz: string): Promise<{ starts_on: string, ends_on: string | null }> {
   const c = normalizeCampaign(campaign)
   const today = todayIn(tz)
@@ -64,10 +66,19 @@ export async function commitmentWindow(tx: Tx, campaign: CampaignRow, subscripti
       const f = toIsoDate(first?.first as string | null | undefined)
       if (f) anchor = f
     }
-    return { starts_on: anchor, ends_on: c.length_days ? addDays(anchor, c.length_days - 1) : null }
+    return { starts_on: anchor, ends_on: null }
   }
   const start = c.start_date && c.start_date > today ? c.start_date : today
   return { starts_on: start, ends_on: c.end_mode === 'date' ? c.end_date : null }
+}
+
+// The last day of a personal-start commitment, from the person's start and
+// the campaign's current length. Null for other campaigns or when unbounded.
+export async function personalEndOn(tx: Tx, campaign: CampaignRow, startsOn: string): Promise<string | null> {
+  const c = normalizeCampaign(campaign)
+  if (c.start_mode !== 'join') return null
+  const entries = await campaignEntries(tx, c)
+  return entries ? lastDayOf(startsOn, c.cadence, entries) : null
 }
 
 export function validateRuleForCampaign(input: RuleInput, campaign: CampaignRow): string[] {
@@ -105,7 +116,8 @@ export async function insertCommitment(tx: Tx, sub: SubscriptionRow, campaign: C
     starts_on: window.starts_on,
     ends_on: window.ends_on
   }
-  const next = remindersOn(sub) ? nextReminderUtc({ ...values, paused: false } as CommitmentRule) : null
+  const endsOn = window.ends_on ?? await personalEndOn(tx, campaign, window.starts_on)
+  const next = remindersOn(sub) ? nextReminderUtc({ ...values, ends_on: endsOn, paused: false } as CommitmentRule) : null
   return await tx
     .insertInto('pt_commitment')
     .values({ ...values, days_of_week: sql`${`{${values.days_of_week.join(',')}}`}::smallint[]`, dates: sql`${`{${values.dates.map(d => `"${d.toISOString()}"`).join(',')}}`}::timestamptz[]`, next_reminder_utc: next })

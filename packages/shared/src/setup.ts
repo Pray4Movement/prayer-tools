@@ -48,7 +48,7 @@ export interface CampaignTemplate {
   // Landing sections shown by default (the rest start hidden).
   hiddenSections: string[]
   // Default end-of-campaign call to action kind.
-  cta: 'none' | 'start_campaign' | 'next_campaign'
+  cta: 'none' | 'next_campaign'
 }
 
 export const TEMPLATES: readonly CampaignTemplate[] = [
@@ -85,12 +85,12 @@ export const TEMPLATES: readonly CampaignTemplate[] = [
     cta: 'none'
   },
   {
-    key: 'demo',
-    setup: { start_mode: 'join', end_mode: 'days', length_days: 7, goal: 'people', cadence: 'daily' },
-    open: ['length_days', 'goal', 'track_time'],
-    topics: ['demo'],
-    hiddenSections: ['stories'],
-    cta: 'start_campaign'
+    key: 'anytime',
+    setup: { start_mode: 'join', end_mode: 'days', length_days: null, goal: 'people', cadence: 'daily' },
+    open: ['cadence', 'goal', 'track_time'],
+    topics: [],
+    hiddenSections: [],
+    cta: 'none'
   }
 ]
 
@@ -141,7 +141,7 @@ export function validateSetup(a: SetupAnswers): string[] {
     if (!isIsoDate(a.end_date)) errors.push('end_date')
     else if (a.start_date && a.end_date < a.start_date) errors.push('end_date')
   }
-  if (a.end_mode === 'days' && !(Number.isInteger(a.length_days) && (a.length_days ?? 0) >= 1 && (a.length_days ?? 0) <= 3650)) {
+  if (a.end_mode === 'days' && a.length_days !== null && !(Number.isInteger(a.length_days) && a.length_days >= 1 && a.length_days <= 3650)) {
     errors.push('length_days')
   }
   return errors
@@ -179,7 +179,9 @@ export function campaignStatus(c: CampaignDates, now: Date = new Date()): Campai
   return 'active'
 }
 
-// Number of entries in the campaign's content sequence, when bounded.
+// Number of entries in the campaign's content sequence, when bounded. A
+// personal-start campaign without a length follows its content (see
+// `campaignEntries` in content.ts).
 export function campaignLength(c: CampaignDates): number | null {
   if (c.end_mode === 'days') return c.length_days
   if (c.end_mode === 'date' && c.start_date && c.end_date) {

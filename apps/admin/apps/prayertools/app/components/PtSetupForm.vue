@@ -27,7 +27,7 @@ const startItems = [
 ]
 const endItems = computed(() => state.value.start_mode === 'join'
   ? [
-      { value: 'days', label: 'After a number of days', description: 'Each person goes through the same number of days.' },
+      { value: 'days', label: PT_LABELS.endMode.days, description: 'Each person goes through the prayer content once, from the first entry.' },
       { value: 'none', label: PT_LABELS.endMode.none, description: 'People keep praying until they stop.' }
     ]
   : [
@@ -108,15 +108,16 @@ const lengthLabel = computed(() => {
         />
       </UFormField>
       <UFormField
-        v-if="state.end_mode === 'days'"
-        label="How many days does each person go through?"
-        required
+        v-if="state.end_mode === 'days' && open('length_days')"
+        :label="`How many ${ptUnit(state.cadence)}s does each person go through? (optional)`"
+        help="Leave empty to go through all of the prayer content."
       >
         <UInputNumber
-          v-model="state.length_days"
+          :model-value="state.length_days"
           :min="1"
           :max="3650"
-          :disabled="!open('length_days')"
+          placeholder="All"
+          @update:model-value="(v) => { state.length_days = v ?? null }"
         />
       </UFormField>
     </section>

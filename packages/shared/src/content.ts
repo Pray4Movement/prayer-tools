@@ -3,8 +3,10 @@
 // (entries render from its latest published version, so fixes and new
 // translations arrive automatically) or is the site's own copy (frozen on
 // first edit, or content written from scratch).
+import { sql, type RawBuilder } from 'kysely'
 import type { Tx } from './db/scope'
 import type { Cadence, TiptapDoc } from './db/schema'
+import { campaignLength, type CampaignDates } from './setup'
 import { placeText, type SitePlaceWording } from './place'
 
 export interface ContentBlock {
@@ -102,6 +104,28 @@ export async function dayContent(tx: Tx, campaignId: string, day: number, langua
 export async function contentLength(tx: Tx, campaignId: string): Promise<number> {
   const libs = await campaignLibraries(tx, campaignId)
   return libs.reduce((max, l) => Math.max(max, l.entryCount), 0)
+}
+
+// `contentLength` as a SQL expression for set-based queries; `campaignId` is
+// a column reference such as `sql.ref('k.id')`.
+export function contentLengthSql(campaignId: RawBuilder<unknown>): RawBuilder<number> {
+  return sql<number>`coalesce((
+    SELECT max(CASE WHEN sl.library_id IS NOT NULL AND sl.frozen_version IS NULL THEN l.entry_count
+                    ELSE (SELECT max(e.day) FROM pt_site_entry e WHERE e.site_library_id = sl.id) END)
+    FROM pt_campaign_library cl
+    JOIN pt_site_library sl ON sl.id = cl.site_library_id
+    LEFT JOIN pt_library l ON l.id = sl.library_id
+    WHERE cl.campaign_id = ${campaignId}
+  ), 0)`
+}
+
+// The number of entries a campaign runs for: its own length, or for a
+// personal-start campaign without one, its content's length. Null when
+// unbounded.
+export async function campaignEntries(tx: Tx, c: CampaignDates & { id: string }): Promise<number | null> {
+  const n = campaignLength(c)
+  if (n !== null || c.end_mode !== 'days') return n
+  return await contentLength(tx, c.id)
 }
 
 // Placeholder values filled into library text so one library reads naturally

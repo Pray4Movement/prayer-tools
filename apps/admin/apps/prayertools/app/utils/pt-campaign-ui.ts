@@ -40,7 +40,7 @@ export function ptCampaignDates(c: PtCampaignSummary): string {
 export function ptAnswersLine(c: PtCampaignSummary): string {
   return [
     c.start_mode === 'join' ? 'Starts when each person joins' : 'Starts on a date',
-    c.end_mode === 'days' ? `${c.length_days} days each` : c.end_mode === 'none' ? 'No end' : 'Ends on a date',
+    c.end_mode === 'days' ? (c.length_days ? `${ptPlural(c.length_days, ptUnit(c.cadence), `${ptUnit(c.cadence)}s`)} each` : 'All the content') : c.end_mode === 'none' ? 'No end' : 'Ends on a date',
     PT_LABELS.goal[c.goal],
     PT_LABELS.cadence[c.cadence]
   ].filter(Boolean).join(' · ')
@@ -53,3 +53,5 @@ export function ptGoalText(p: PtGoalProgress): string | null {
 }
 
 export const ptPlural = (n: number, one: string, many: string) => `${n.toLocaleString()} ${n === 1 ? one : many}`
+
+export const ptUnit = (cadence: string) => cadence === 'weekly' ? 'week' : 'day'

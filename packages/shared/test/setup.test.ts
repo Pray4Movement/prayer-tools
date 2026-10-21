@@ -66,9 +66,9 @@ describe('applyTemplate', () => {
     expect(applyTemplate('disaster_4', { start_date: '2026-09-28' }).end_date).toBe('2026-10-01')
   })
 
-  it('demo: personal start for a number of days', () => {
-    expect(applyTemplate('demo', { length_days: 10 })).toEqual({
-      start_mode: 'join', start_date: null, end_mode: 'days', end_date: null, length_days: 10, goal: 'people', cadence: 'daily', track_time: false
+  it('start anytime: personal start that follows the content, daily or weekly', () => {
+    expect(applyTemplate('anytime', { length_days: 10, cadence: 'weekly' })).toEqual({
+      start_mode: 'join', start_date: null, end_mode: 'days', end_date: null, length_days: null, goal: 'people', cadence: 'weekly', track_time: false
     })
   })
 
@@ -81,7 +81,8 @@ describe('applyTemplate', () => {
   it('validates the result', () => {
     expect(validateSetup(applyTemplate('ramadan', { start_date: '2027-02-08' }))).toEqual([])
     expect(validateSetup(applyTemplate('generic', { start_mode: 'date', start_date: '2026-10-01', end_date: '2026-09-01' }))).toEqual(['end_date'])
-    expect(validateSetup(applyTemplate('demo', { length_days: 0 }))).toEqual(['length_days'])
+    expect(validateSetup(applyTemplate('anytime', {}))).toEqual([])
+    expect(validateSetup(applyTemplate('generic', { start_mode: 'join', end_mode: 'days', length_days: 0 }))).toEqual(['length_days'])
   })
 })
 
@@ -90,6 +91,7 @@ describe('derived answers', () => {
     expect(campaignLength(c({ start_date: '2026-03-01', end_date: '2026-03-30' }))).toBe(30)
     expect(campaignLength(c({ start_date: '2026-03-01', end_date: '2026-03-30', cadence: 'weekly' }))).toBe(5)
     expect(campaignLength(c({ start_mode: 'join', end_mode: 'days', length_days: 7 }))).toBe(7)
+    expect(campaignLength(c({ start_mode: 'join', end_mode: 'days', length_days: null }))).toBeNull()
     expect(campaignLength(c({ end_mode: 'none', end_date: null }))).toBeNull()
   })
 

@@ -52,7 +52,7 @@ Every campaign shows the number of people signed up, whatever its goal.
 
 - **Shared calendar:** when the campaign ends, everyone gets the end-of-campaign thank-you with the champion's optional message and call to action (see [admin-app.md](admin-app.md)).
 - **Personal start:** when a person reaches the last day, their subscription becomes `completed` and reminders stop; it never loops back to day 1. They get the same thank-you and call to action.
-- The call to action is where a campaign hands people on, e.g. the demo's "Start your own campaign" or a 4-day crisis campaign's "Join the 12-day campaign".
+- The call to action is where a campaign hands people on, e.g. a 4-day crisis campaign's "Join the 12-day campaign".
 
 ## Templates
 
@@ -64,12 +64,12 @@ A template is a preset of the setup answers, an end-of-campaign call to action a
 | Ramadan | on a date | ~30 days | daily |
 | Natural disaster — 4 day | on a date | 4 days | daily |
 | Natural disaster — 12 day | on a date | 12 days | daily |
-| Prayer.Tools demo (evergreen) | when each person joins | the demo's length | daily |
+| Start anytime | when each person joins | the content's length (or a length the champion sets) | champion chooses |
 
 All templates preselect the people-mobilized goal.
 
 - **4-day → 12-day:** two separate sites. The 4-day campaign's end-of-campaign call to action links to the 12-day one; joining is one step (the person is known, their reminder time carries over, consent boxes are asked again), and the 12-day site records that they joined from the 4-day one.
-- The demo ends with a call to action to start a campaign.
+- **Start anytime:** people sign up and start praying right away from the first entry, not the current day's. Without a set length, each person goes through every entry of the campaign's content (the longest library); adding entries lengthens it, also for people already praying.
 
 ## Content
 
