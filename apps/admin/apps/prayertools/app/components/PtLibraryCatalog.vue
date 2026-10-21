@@ -57,6 +57,12 @@ function openPreview(lib: Library) {
   loadPreview()
 }
 
+const previewUnit = computed(() => preview.lib?.cadence === 'weekly' ? 'week' : 'day')
+function previewDay(delta: number) {
+  preview.day += delta
+  loadPreview()
+}
+
 function missing(lib: Library): string[] {
   return props.siteLanguages.filter(l => !lib.languages.includes(l))
 }
@@ -221,12 +227,24 @@ function coverage(lib: Library): string {
       <template #body>
         <div class="space-y-3">
           <div class="flex gap-2 items-center">
-            <UInputNumber
-              v-model="preview.day"
-              :min="1"
-              :max="preview.lib?.entry_count || 1"
-              class="w-28"
-              @update:model-value="loadPreview"
+            <UButton
+              icon="i-lucide-chevron-left"
+              color="neutral"
+              variant="outline"
+              :aria-label="`Previous ${previewUnit}`"
+              :disabled="preview.day <= 1"
+              @click="previewDay(-1)"
+            />
+            <span class="text-sm font-medium tabular-nums whitespace-nowrap">
+              {{ previewUnit === 'week' ? 'Week' : 'Day' }} {{ preview.day }} of {{ preview.lib?.entry_count || 1 }}
+            </span>
+            <UButton
+              icon="i-lucide-chevron-right"
+              color="neutral"
+              variant="outline"
+              :aria-label="`Next ${previewUnit}`"
+              :disabled="preview.day >= (preview.lib?.entry_count || 1)"
+              @click="previewDay(1)"
             />
             <USelect
               v-model="preview.lang"

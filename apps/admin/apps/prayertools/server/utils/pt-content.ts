@@ -40,7 +40,8 @@ export async function ptLibraryReadable(tx: Tx, libraryId: string, userId: strin
   return lib
 }
 
-// A campaign's stacked libraries with entry counts and language coverage.
+// A campaign's stacked libraries with entry counts, language coverage, and
+// the days each language has an entry (and is out of date) for.
 export async function ptCampaignLibraries(tx: Tx, campaignId: string, languages: string[]) {
   const rows = await tx
     .selectFrom('pt_campaign_library as cl')
@@ -56,21 +57,18 @@ export async function ptCampaignLibraries(tx: Tx, campaignId: string, languages:
   const libraries = []
   for (const r of rows) {
     const follows = !!r.library_id && r.frozen_version === null
-    let coverage: Record<string, number> = {}
-    let entryCount = Number(r.entry_count ?? 0)
-    let staleCount = 0
-    if (follows) {
-      const counts = await tx.selectFrom('pt_library_entry').select(['language', eb => eb.fn.countAll<string>().as('n')])
-        .where('library_id', '=', r.library_id!).where('published', 'is not', null).groupBy('language').execute()
-      coverage = Object.fromEntries(counts.map(c => [c.language, Number(c.n)]))
-    } else {
-      const counts = await tx.selectFrom('pt_site_entry').select(['language', eb => eb.fn.countAll<string>().as('n'), eb => eb.fn.max('day').as('max')])
-        .where('site_library_id', '=', r.id).groupBy('language').execute()
-      coverage = Object.fromEntries(counts.map(c => [c.language, Number(c.n)]))
-      entryCount = Math.max(0, ...counts.map(c => Number(c.max ?? 0)))
-      const stale = await tx.selectFrom('pt_site_entry').select(eb => eb.fn.countAll<string>().as('n')).where('site_library_id', '=', r.id).where('stale', '=', true).executeTakeFirst()
-      staleCount = Number(stale?.n ?? 0)
+    const entries = follows
+      ? (await tx.selectFrom('pt_library_entry').select(['day', 'language'])
+          .where('library_id', '=', r.library_id!).where('published', 'is not', null).execute()).map(e => ({ ...e, stale: false }))
+      : await tx.selectFrom('pt_site_entry').select(['day', 'language', 'stale']).where('site_library_id', '=', r.id).execute()
+    const entryDays: Record<string, number[]> = {}
+    const staleDays: Record<string, number[]> = {}
+    for (const e of entries) {
+      ;(entryDays[e.language] ??= []).push(e.day)
+      if (e.stale) (staleDays[e.language] ??= []).push(e.day)
     }
+    const coverage = Object.fromEntries(Object.entries(entryDays).map(([lang, days]) => [lang, days.length]))
+    const entryCount = follows ? Number(r.entry_count ?? 0) : Math.max(0, ...entries.map(e => e.day))
     libraries.push({
       siteLibraryId: r.id,
       title: r.title,
@@ -84,8 +82,10 @@ export async function ptCampaignLibraries(tx: Tx, campaignId: string, languages:
       license: r.license,
       entryCount,
       coverage,
+      entryDays,
+      staleDays,
       missingLanguages: languages.filter(l => (coverage[l] ?? 0) < entryCount),
-      staleCount
+      staleCount: entries.filter(e => e.stale).length
     })
   }
   return libraries

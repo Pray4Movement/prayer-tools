@@ -98,7 +98,12 @@
     "confirmed_body": "Vos rappels de prière sont activés. Merci de prier avec nous !",
     "check_email_body_not_started": "Nous vous avons envoyé un e-mail avec un lien. Cliquez dessus pour confirmer votre adresse — vos rappels commenceront ensuite.",
     "not_started_title": "La prière commence le {date}",
-    "not_started_body": "Le guide de prière ouvre le premier jour de la campagne. Revenez à ce moment-là pour prier avec nous."
+    "not_started_body": "Le guide de prière ouvre le premier jour de la campagne. Revenez à ce moment-là pour prier avec nous.",
+    "verify_prompt_title": "Consultez vos e-mails pour terminer votre inscription",
+    "verify_prompt_body": "Nous vous avons envoyé un lien de confirmation. Cliquez dessus pour confirmer votre adresse — vos rappels de prière ne commenceront qu'après.",
+    "verify_prompt_body_email": "Nous avons envoyé un lien de confirmation à {email}. Cliquez dessus pour confirmer votre adresse — vos rappels de prière ne commenceront qu'après.",
+    "verify_prompt_spam": "Vous ne le trouvez pas ? Il peut mettre quelques minutes à arriver. Vérifiez aussi votre dossier de courrier indésirable ou Promotions.",
+    "verify_prompt_ok": "D'accord, je consulte mes e-mails"
   },
   "license": {
     "permission": "Utilisé avec autorisation",
