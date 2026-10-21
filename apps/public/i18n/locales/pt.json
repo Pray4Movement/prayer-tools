@@ -95,7 +95,12 @@
     "check_email_title": "Confirme seu e-mail",
     "check_email_body": "Enviamos um e-mail com um link para você. Clique nele para confirmar seu endereço — seus lembretes começam assim que você fizer isso. Enquanto isso, aqui está a oração de hoje.",
     "confirmed_title": "Seu e-mail foi confirmado",
-    "confirmed_body": "Seus lembretes de oração estão ativados. Obrigado por orar conosco!"
+    "confirmed_body": "Seus lembretes de oração estão ativados. Obrigado por orar conosco!",
+    "verify_prompt_title": "Verifique seu e-mail para concluir a inscrição",
+    "verify_prompt_body": "Enviamos um link de confirmação para você. Clique nele para confirmar seu endereço — seus lembretes de oração só começam depois disso.",
+    "verify_prompt_body_email": "Enviamos um link de confirmação para {email}. Clique nele para confirmar seu endereço — seus lembretes de oração só começam depois disso.",
+    "verify_prompt_spam": "Não encontrou? Pode levar alguns minutos para chegar. Verifique também a pasta de spam ou de promoções.",
+    "verify_prompt_ok": "Ok, vou verificar meu e-mail"
   },
   "license": {
     "permission": "Usado com permissão",

@@ -95,7 +95,12 @@
     "check_email_title": "Confirma tu correo electrónico",
     "check_email_body": "Te enviamos un correo con un enlace. Haz clic en él para confirmar tu dirección; tus recordatorios comenzarán en cuanto lo hagas. Mientras tanto, aquí tienes la oración de hoy.",
     "confirmed_title": "Tu correo está confirmado",
-    "confirmed_body": "Tus recordatorios de oración están activados. ¡Gracias por orar con nosotros!"
+    "confirmed_body": "Tus recordatorios de oración están activados. ¡Gracias por orar con nosotros!",
+    "verify_prompt_title": "Revisa tu correo para terminar tu inscripción",
+    "verify_prompt_body": "Te enviamos un enlace de confirmación. Haz clic en él para confirmar tu dirección; tus recordatorios de oración solo comenzarán cuando lo hagas.",
+    "verify_prompt_body_email": "Enviamos un enlace de confirmación a {email}. Haz clic en él para confirmar tu dirección; tus recordatorios de oración solo comenzarán cuando lo hagas.",
+    "verify_prompt_spam": "¿No lo encuentras? Puede tardar unos minutos en llegar. Revisa también tu carpeta de spam o de promociones.",
+    "verify_prompt_ok": "De acuerdo, revisaré mi correo"
   },
   "license": {
     "permission": "Usado con permiso",

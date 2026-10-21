@@ -27,6 +27,7 @@ const state = reactive({
 const sending = ref(false)
 const error = ref<string | null>(null)
 const turnstile = ref<{ reset: () => void } | null>(null)
+const signupEmail = useState<string | null>('pt-signup-email', () => null)
 
 onMounted(() => {
   state.timezone = browserTimezone()
@@ -88,6 +89,7 @@ async function submit() {
       }
     })
     if (res.referral_code) rememberReferral(site.value.orgId, res.referral_code)
+    signupEmail.value = state.idToken?.email ?? state.email
     await navigateTo(`${link('pray', [], { lang: state.language })}?joined=1${res.verify ? '&verify=1' : ''}`)
   } catch (err) {
     const msg = (err as { data?: { statusMessage?: string } }).data?.statusMessage ?? 'generic'
