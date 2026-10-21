@@ -19,6 +19,7 @@ const signupEmail = useState<string | null>('pt-signup-email', () => null)
 onMounted(() => {
   if (joined.value && needsVerify.value) verifyPrompt.value = true
   else if ((joined.value || confirmed.value) && site.value.settings.sharePrompts) setTimeout(() => (sharePrompt.value = true), 1200)
+  dropQueryParams('confirmed', 'joined', 'verify')
 })
 </script>
 

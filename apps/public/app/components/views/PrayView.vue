@@ -70,6 +70,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', onVisible)
   if (joined.value && needsVerify.value) verifyPrompt.value = true
   else if ((joined.value || confirmed.value) && site.value.settings.sharePrompts) setTimeout(() => (sharePrompt.value = true), 1200)
+  dropQueryParams('confirmed', 'joined', 'verify')
 })
 
 onBeforeUnmount(() => {
