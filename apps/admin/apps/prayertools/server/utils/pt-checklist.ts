@@ -3,6 +3,7 @@ import type { Database } from '#core/server/database/schema'
 import type { SiteLanding, TranslatableText } from '@prayertools/shared/db/schema'
 import { pickCurrentCampaign } from '@prayertools/shared/setup'
 import { LANGUAGES } from '@prayertools/shared/languages'
+import { landingWhyDoc } from '@prayertools/shared/i18n/landing'
 
 export interface PtChecklistItem {
   key: string
@@ -55,8 +56,8 @@ export async function ptLaunchChecklist(tx: Transaction<Database>): Promise<PtCh
     },
     {
       key: 'why',
-      label: '"Why this campaign" written',
-      done: Object.values(landing.why ?? {}).some(doc => JSON.stringify(doc ?? {}).includes('"text"')),
+      label: '"Why we pray" written',
+      done: !!landingWhyDoc(landing.why, site.template_key, site.default_language, site.default_language),
       required: false,
       to: '/site/landing'
     },
