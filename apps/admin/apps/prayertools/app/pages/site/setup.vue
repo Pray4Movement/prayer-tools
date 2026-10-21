@@ -228,6 +228,7 @@ async function publish() {
   try {
     await $fetch('/api/pt/site/status', { method: 'POST', body: { action: 'publish' } })
     toast.ok('Your site is live', site.value?.url)
+    await refreshSite()
     await navigateTo(`/@${slug.value}/site/landing/share`)
   } catch (err) {
     toast.fail(err, 'Could not publish')
@@ -243,31 +244,33 @@ async function publish() {
     class="mx-auto space-y-6"
     :class="step === 'landing' ? 'max-w-[96rem]' : 'max-w-3xl'"
   >
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">
-        Set up {{ site?.org.name }}
-      </h1>
-      <UBadge
-        :label="PT_LABELS.siteStatus[site?.site.status ?? 'draft']"
-        :color="ptStatusColor(site?.site.status ?? 'draft')"
-        variant="subtle"
+    <div class="max-w-3xl mx-auto space-y-6">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold">
+          Set up {{ site?.org.name }}
+        </h1>
+        <UBadge
+          :label="PT_LABELS.siteStatus[site?.site.status ?? 'draft']"
+          :color="ptStatusColor(site?.site.status ?? 'draft')"
+          variant="subtle"
+        />
+      </div>
+      <UTabs
+        :model-value="step"
+        :items="[
+          { label: 'About', value: 'about', icon: 'i-lucide-info' },
+          { label: 'Campaign', value: 'setup', icon: 'i-lucide-calendar-range' },
+          { label: 'Languages', value: 'languages', icon: 'i-lucide-languages' },
+          { label: 'Content', value: 'content', icon: 'i-lucide-book-open', disabled: !existingCampaign },
+          { label: 'Look', value: 'look', icon: 'i-lucide-palette' },
+          { label: 'Landing page', value: 'landing', icon: 'i-lucide-panels-top-left' },
+          { label: 'Publish', value: 'publish', icon: 'i-lucide-rocket' }
+        ]"
+        :content="false"
+        class="w-full"
+        @update:model-value="(v) => go(v as Step)"
       />
     </div>
-    <UTabs
-      :model-value="step"
-      :items="[
-        { label: 'About', value: 'about', icon: 'i-lucide-info' },
-        { label: 'Campaign', value: 'setup', icon: 'i-lucide-calendar-range' },
-        { label: 'Languages', value: 'languages', icon: 'i-lucide-languages' },
-        { label: 'Content', value: 'content', icon: 'i-lucide-book-open', disabled: !existingCampaign },
-        { label: 'Look', value: 'look', icon: 'i-lucide-palette' },
-        { label: 'Landing page', value: 'landing', icon: 'i-lucide-panels-top-left' },
-        { label: 'Publish', value: 'publish', icon: 'i-lucide-rocket' }
-      ]"
-      :content="false"
-      class="w-full"
-      @update:model-value="(v) => go(v as Step)"
-    />
 
     <UCard v-if="step === 'about'">
       <template #header>

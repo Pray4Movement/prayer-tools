@@ -119,6 +119,14 @@ const quickLinks = computed(() => [
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <UButton
+            v-if="can('pt.site.write')"
+            to="/site/setup"
+            variant="outline"
+            color="neutral"
+            icon="i-lucide-wand-sparkles"
+            label="Setup wizard"
+          />
+          <UButton
             v-if="status === 'published'"
             :to="site.url"
             target="_blank"
