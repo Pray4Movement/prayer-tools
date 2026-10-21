@@ -1,4 +1,4 @@
-import type { Transaction } from 'kysely'
+import { sql, type Transaction } from 'kysely'
 import type { Database } from '#core/server/database/schema'
 import { jsonb } from '@prayertools/shared/db/json'
 
@@ -38,6 +38,26 @@ export async function ptLibraryReadable(tx: Tx, libraryId: string, userId: strin
   if (!lib) ptNotFound('Library not found.')
   if (lib.visibility !== 'published' && lib.owner_user_id !== userId) ptNotFound('Library not found.')
   return lib
+}
+
+// Whether a campaign's content says {in_place} or {of_place} anywhere.
+export async function ptCampaignUsesPlacePhrases(tx: Tx, campaignId: string): Promise<boolean> {
+  const pattern = '\\{(in|of)_place\\}'
+  const libs = await tx.selectFrom('pt_campaign_library as cl').innerJoin('pt_site_library as sl', 'sl.id', 'cl.site_library_id')
+    .select(['sl.id', 'sl.library_id', 'sl.frozen_version']).where('cl.campaign_id', '=', campaignId).execute()
+  const followed = libs.filter(l => l.library_id && l.frozen_version === null).map(l => l.library_id!)
+  const own = libs.filter(l => !l.library_id || l.frozen_version !== null).map(l => l.id)
+  if (followed.length) {
+    const hit = await tx.selectFrom('pt_library_entry').select('id').where('library_id', 'in', followed)
+      .where(sql<boolean>`published::text ~ ${pattern}`).limit(1).executeTakeFirst()
+    if (hit) return true
+  }
+  if (own.length) {
+    const hit = await tx.selectFrom('pt_site_entry').select('id').where('site_library_id', 'in', own)
+      .where(sql<boolean>`content::text ~ ${pattern}`).limit(1).executeTakeFirst()
+    if (hit) return true
+  }
+  return false
 }
 
 // A campaign's stacked libraries with entry counts, language coverage, and

@@ -11,11 +11,13 @@
     "apps/admin": {
       "name": "@prayertools/admin",
       "dependencies": {
+        "@bradenmacdonald/s3-lite-client": "^1.0.0",
         "@iconify-json/lucide": "^1.2.104",
         "@iconify-json/simple-icons": "^1.2.80",
         "@nuxt/kit": "^4.0.0",
         "@nuxt/ui": "^4.7.0",
         "@prayertools/shared": "workspace:*",
+        "fflate": "0.8.2",
         "h3": "^1.0.0",
         "kysely": "^0.28.0",
         "kysely-postgres-js": "^2.0.0",
@@ -116,7 +118,7 @@
     },
     "apps/admin/_layers/inbox": {
       "name": "@nuxtinator/inbox",
-      "version": "0.5.4",
+      "version": "0.6.0",
       "dependencies": {
         "croner": "^10.0.1",
         "dompurify": "^3.4.13",
@@ -1480,6 +1482,8 @@
     "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 
     "fetchdts": ["fetchdts@0.2.0", "", {}, "sha512-PJb4ZTGT2/wK78RmVrxZITStWabhZlKBsL52VOgq+c7clEkdHdEB+0rtzrXCbZJqeYJj+IwNWYqB5/G6vouA6A=="],
+
+    "fflate": ["fflate@0.8.2", "", {}, "sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A=="],
 
     "file-entry-cache": ["file-entry-cache@11.1.5", "", { "dependencies": { "flat-cache": "^6.1.23" } }, "sha512-+PFTHITI08JIGhnNpGNI8T8inUpgZfk3GNEqfT9R2zZV2iFXg3CvqzSl/uEhs7TSGujYRELEANyDvS8Fj7+S7Q=="],
 

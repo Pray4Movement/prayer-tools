@@ -16,6 +16,15 @@ export async function ptUser(event: H3Event): Promise<{ userId: string, isAdmin:
   return { userId: auth.userId, isAdmin: !!row?.is_admin }
 }
 
+// How many sites follow a library (render its published entries) and how many
+// have edited their own copy, across every site.
+export async function ptLibraryUsage(libraryId: string): Promise<{ following: number, copies: number }> {
+  const rows = await ptAdminDb().selectFrom('pt_site_library').select(sql<boolean>`frozen_version IS NULL`.as('follows'))
+    .where('library_id', '=', libraryId).execute()
+  const following = rows.filter(r => r.follows).length
+  return { following, copies: rows.length - following }
+}
+
 export async function ptEditableLibrary(event: H3Event, id: string) {
   const user = await ptUser(event)
   const lib = await db.selectFrom('pt_library').selectAll().where('id', '=', id).executeTakeFirst()

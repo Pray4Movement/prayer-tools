@@ -5,6 +5,7 @@
 // first edit, or content written from scratch).
 import type { Tx } from './db/scope'
 import type { Cadence, TiptapDoc } from './db/schema'
+import { placeText, type SitePlaceWording } from './place'
 
 export interface ContentBlock {
   siteLibraryId: string
@@ -104,13 +105,16 @@ export async function contentLength(tx: Tx, campaignId: string): Promise<number>
 }
 
 // Placeholder values filled into library text so one library reads naturally
-// on many sites.
-export function placeholderVars(input: { siteName: string, campaignName: string, place?: string | null, peopleGroup?: string | null, startDate?: string | null, endDate?: string | null }): Record<string, string> {
+// on many sites, in the language being shown.
+export function placeholderVars(input: { siteName: string, campaignName: string, lang: string, place?: string | null, placeWording?: SitePlaceWording | null, peopleGroup?: string | null, startDate?: string | null, endDate?: string | null }): Record<string, string> {
+  const place = placeText(input.place || input.siteName, input.placeWording, input.lang)
   return {
     site_name: input.siteName,
     campaign_name: input.campaignName,
-    place: input.place || input.siteName,
-    people_group: input.peopleGroup || input.place || input.siteName,
+    place: place.place,
+    in_place: place.inPlace,
+    of_place: place.ofPlace,
+    people_group: input.peopleGroup || place.place,
     start_date: input.startDate ?? '',
     end_date: input.endDate ?? ''
   }

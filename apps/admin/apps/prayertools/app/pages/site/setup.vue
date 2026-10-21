@@ -5,6 +5,7 @@
 // site, so setup can be resumed.
 import { suggestedStartDate } from '@prayertools/shared/setup'
 import { addDays, todayIn } from '@prayertools/shared/dates'
+import type { SitePlaceWording } from '@prayertools/shared/place'
 import type { SetupState } from '../../components/PtSetupForm.vue'
 import type { PtChecklist } from '../../components/PtLaunchChecklist.vue'
 import type { PtLocation } from '../../components/PtLocationSearch.vue'
@@ -121,17 +122,19 @@ async function saveSetup() {
 // ── Step: languages ─────────────────────────────────────────────────────
 const languages = ref<string[]>(['en'])
 const defaultLanguage = ref('en')
+const placeWording = ref<SitePlaceWording>({})
 watch(site, (s) => {
   if (!s) return
   languages.value = [...s.site.languages]
   defaultLanguage.value = s.site.default_language
+  placeWording.value = { ...s.site.place_wording }
 }, { immediate: true })
 const savingLanguages = ref(false)
 async function saveLanguages() {
   savingLanguages.value = true
   try {
     if (!languages.value.includes(defaultLanguage.value)) defaultLanguage.value = languages.value[0] ?? 'en'
-    await $fetch('/api/pt/site', { method: 'PATCH', body: { languages: languages.value, default_language: defaultLanguage.value } })
+    await $fetch('/api/pt/site', { method: 'PATCH', body: { languages: languages.value, default_language: defaultLanguage.value, place_wording: placeWording.value } })
     await refreshSite()
     await go('content')
   } catch (err) {
@@ -422,15 +425,29 @@ async function publish() {
           Languages
         </h2>
       </template>
-      <div class="space-y-5">
+      <div class="divide-y divide-(--ui-border-accented)">
         <UFormField
           label="Languages the site runs in"
           description="Visitors can switch between these; content should exist in each."
           :ui="{ label: 'text-base font-semibold' }"
+          class="py-6 first:pt-0 last:pb-0"
         >
           <PtLanguagePicker
             v-model="languages"
             v-model:default="defaultLanguage"
+          />
+        </UFormField>
+        <UFormField
+          v-if="site?.site.place_name"
+          label="How your place is written"
+          description="Its name in each language, and how to say “in” and “of” it. Prayer guides use these to name your place."
+          :ui="{ label: 'text-base font-semibold' }"
+          class="py-6 first:pt-0 last:pb-0"
+        >
+          <PtPlaceWording
+            v-model="placeWording"
+            :place-name="site.site.place_name"
+            :languages="languages"
           />
         </UFormField>
       </div>

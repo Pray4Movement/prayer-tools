@@ -19,7 +19,9 @@ export function contentVars(data: SiteData, siteName: string, c: CampaignRow, la
   return placeholderVars({
     siteName,
     campaignName: c.name,
+    lang,
     place: data.site.place_name,
+    placeWording: data.site.place_wording,
     peopleGroup: data.site.people_group,
     startDate: formatDate(c.start_date, lang),
     endDate: formatDate(c.end_date, lang)

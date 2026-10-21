@@ -3,6 +3,7 @@
 // worker read and write. The admin app gets the layer tables from the layers
 // themselves and merges only `PtTables` into its schema.
 import type { ColumnType, Generated } from 'kysely'
+import type { SitePlaceWording } from '../place'
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>
 type NullableTimestamp = ColumnType<Date | null, Date | string | null | undefined, Date | string | null>
@@ -290,6 +291,7 @@ export interface PtSiteTable {
   description: Json<TranslatableText | null> | null
   purpose: string | null
   place_name: string | null
+  place_wording: JsonDefault<SitePlaceWording>
   people_group: string | null
   latitude: number | null
   longitude: number | null

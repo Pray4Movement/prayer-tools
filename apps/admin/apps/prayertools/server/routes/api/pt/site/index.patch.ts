@@ -2,6 +2,7 @@
 // else pt.site.write. Settings keep only values that differ from the code
 // defaults.
 import { isLanguage } from '@prayertools/shared/languages'
+import { parsePlaceWording } from '@prayertools/shared/place'
 import { isValidTimezone } from '@prayertools/shared/dates'
 import { containsBlockedWord } from '@prayertools/shared/moderation'
 import { parseText } from '@prayertools/shared/translatable'
@@ -25,6 +26,7 @@ export default definePtHandler('pt.site.write', async (event, tx, ctx) => {
   for (const k of ['purpose', 'place_name', 'people_group'] as const) {
     if (k in b) patch[k] = typeof b[k] === 'string' && (b[k] as string).trim() ? (b[k] as string).trim().slice(0, 200) : null
   }
+  if ('place_wording' in b) patch.place_wording = jsonb(parsePlaceWording(b.place_wording))
   for (const k of ['latitude', 'longitude'] as const) {
     if (k in b) {
       const v = b[k]

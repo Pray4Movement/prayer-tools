@@ -4,6 +4,7 @@
 // Only values that differ from the code defaults are stored.
 import type { TranslatableText } from '@prayertools/shared/db/schema'
 import { DEFAULT_BRAND_COLOR } from '@prayertools/shared/colors'
+import type { SitePlaceWording } from '@prayertools/shared/place'
 import type { PtLocation } from '../../../components/PtLocationSearch.vue'
 
 definePageMeta({ middleware: 'auth' })
@@ -53,7 +54,7 @@ async function patchSite(body: Record<string, unknown>, message = 'Saved') {
 }
 
 // Details
-const details = reactive({ name: '', purpose: 'place', place_name: '', people_group: '', latitude: null as number | null, longitude: null as number | null })
+const details = reactive({ name: '', purpose: 'place', place_name: '', place_wording: {} as SitePlaceWording, people_group: '', latitude: null as number | null, longitude: null as number | null })
 const location = computed<PtLocation | null>({
   get: () => details.place_name ? { name: details.place_name, latitude: details.latitude, longitude: details.longitude } : null,
   set: (v) => { Object.assign(details, { place_name: v?.name ?? '', latitude: v?.latitude ?? null, longitude: v?.longitude ?? null }) }
@@ -85,7 +86,7 @@ function resetEmail() {
 
 watch(site, (s) => {
   if (!s) return
-  Object.assign(details, { name: s.org.name, purpose: s.site.purpose ?? 'place', place_name: s.site.place_name ?? '', people_group: s.site.people_group ?? '', latitude: s.site.latitude, longitude: s.site.longitude })
+  Object.assign(details, { name: s.org.name, purpose: s.site.purpose ?? 'place', place_name: s.site.place_name ?? '', place_wording: { ...s.site.place_wording }, people_group: s.site.people_group ?? '', latitude: s.site.latitude, longitude: s.site.longitude })
   languages.value = [...s.site.languages]
   defaultLanguage.value = s.site.default_language
   timezone.value = s.site.timezone
@@ -294,6 +295,18 @@ watch(tab, (t) => {
               description="Where the people you pray for are. Its name fills content placeholders like {place}."
             >
               <PtLocationSearch v-model="location" />
+            </UFormField>
+            <UFormField
+              v-if="details.place_name"
+              label="How your place is written"
+              description="Its name in each language, and how to say “in” and “of” it."
+            >
+              <PtPlaceWording
+                v-model="details.place_wording"
+                :place-name="details.place_name"
+                :languages="site.site.languages"
+                :disabled="!can('pt.site.write')"
+              />
             </UFormField>
             <UFormField label="People group">
               <UInput

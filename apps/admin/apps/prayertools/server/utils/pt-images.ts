@@ -1,10 +1,11 @@
 // Image uploads for the champion's personal library: resized for slow
 // connections (a large and a small WebP), stored in object storage, or on
 // local disk under `.data/uploads` when S3 isn't configured (development).
-import { mkdir, writeFile, readFile } from 'node:fs/promises'
+import { access, mkdir, writeFile, readFile } from 'node:fs/promises'
 import { join, normalize } from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import sharp from 'sharp'
+import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { uploadToS3 } from '#core/server/utils/storage'
 
 const LOCAL_DIR = join(process.cwd(), '.data', 'uploads')
@@ -23,6 +24,32 @@ async function store(buf: Buffer, name: string, contentType: string): Promise<{ 
   await writeFile(join(LOCAL_DIR, key), buf)
   const base = (process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:2380').replace(/\/$/, '')
   return { key: `local/${key}`, url: `${base}/uploads/${key}` }
+}
+
+// Library images are named by a hash of the source image, so importing the
+// same image again reuses the stored file instead of adding a copy.
+const LIBRARY_IMAGE_VERSION = 'w1600-q78'
+let libraryClient: S3Client | null = null
+
+// An image inside a library entry: one WebP of up to 1600 px; returns its URL.
+export async function ptStoreLibraryImage(input: Buffer): Promise<string> {
+  const name = `${createHash('sha256').update(LIBRARY_IMAGE_VERSION).update(input).digest('hex').slice(0, 32)}.webp`
+  const resize = () => sharp(input, { failOn: 'error' }).rotate()
+    .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 78 }).toBuffer()
+  const env = process.env
+  if (s3Configured()) {
+    libraryClient ??= new S3Client({ endPoint: env.S3_ENDPOINT!, region: env.S3_REGION || 'us-west-004', bucket: env.S3_BUCKET_NAME!, accessKey: env.S3_ACCESS_KEY_ID, secretKey: env.S3_SECRET_ACCESS_KEY, pathStyle: true })
+    const key = `pt-images/${name}`
+    const bucketName = env.S3_PUBLIC_BUCKET_NAME || env.S3_BUCKET_NAME
+    if (!await libraryClient.exists(key, { bucketName })) {
+      await libraryClient.putObject(key, await resize(), { metadata: { 'Content-Type': 'image/webp' }, bucketName })
+    }
+    return `${env.S3_PUBLIC_BASE_URL!.replace(/\/$/, '')}/${key}`
+  }
+  await mkdir(LOCAL_DIR, { recursive: true })
+  const path = join(LOCAL_DIR, name)
+  if (!await access(path).then(() => true, () => false)) await writeFile(path, await resize())
+  return `${(env.NUXT_PUBLIC_SITE_URL || 'http://localhost:2380').replace(/\/$/, '')}/uploads/${name}`
 }
 
 export async function ptReadLocalUpload(key: string): Promise<Buffer | null> {

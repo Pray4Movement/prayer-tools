@@ -8,7 +8,7 @@ const route = useRoute()
 const id = computed(() => String(route.params.id))
 const { data: meta } = usePtMeta()
 const toast = usePtToast()
-const { data, refresh } = useFetch<{ library: Record<string, any>, entries: { day: number, language: string, unpublished: boolean }[], canEdit: boolean }>(() => `/api/pt/libraries/${id.value}`, { key: computed(() => `pt-library-${id.value}`) })
+const { data, refresh } = useFetch<{ library: Record<string, any>, entries: { day: number, language: string, unpublished: boolean }[], canEdit: boolean, usage: { following: number, copies: number } | null }>(() => `/api/pt/libraries/${id.value}`, { key: computed(() => `pt-library-${id.value}`) })
 
 const lib = computed(() => data.value?.library)
 const form = ref<Record<string, any>>({})
@@ -79,6 +79,26 @@ async function requestShare() {
     toast.fail(err)
   }
 }
+const deleteOpen = ref(false)
+const deleting = ref(false)
+const deleteBlocked = computed(() => {
+  if (lib.value?.visibility === 'published' && lib.value?.owner_user_id) return 'Shared libraries can\'t be deleted; ask Prayer.Tools to withdraw it.'
+  const n = data.value?.usage?.following ?? 0
+  return n ? `${n} ${n === 1 ? 'site follows' : 'sites follow'} this library, so their prayer content would disappear. Remove it from those campaigns first.` : ''
+})
+async function deleteLibrary() {
+  deleting.value = true
+  try {
+    const platform = !lib.value?.owner_user_id
+    await $fetch(`/api/pt/libraries/${id.value}`, { method: 'DELETE' })
+    toast.ok(`Deleted “${lib.value?.title}”`)
+    await navigateTo(platform ? '/admin/pt/libraries' : '/libraries')
+  } catch (err) {
+    toast.fail(err, 'Could not delete')
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -119,6 +139,13 @@ async function requestShare() {
           :label="unpublishedCount ? `Publish ${unpublishedCount} change${unpublishedCount === 1 ? '' : 's'}` : 'Published'"
           :disabled="!unpublishedCount"
           @click="publish"
+        />
+        <UButton
+          icon="i-lucide-trash-2"
+          color="error"
+          variant="ghost"
+          aria-label="Delete library"
+          @click="deleteOpen = true"
         />
       </div>
     </div>
@@ -310,6 +337,49 @@ async function requestShare() {
       </template>
     </UModal>
 
+    <UModal
+      v-model:open="deleteOpen"
+      :title="`Delete “${lib.title}”?`"
+    >
+      <template #body>
+        <UAlert
+          v-if="deleteBlocked"
+          color="warning"
+          variant="subtle"
+          icon="i-lucide-triangle-alert"
+          :title="deleteBlocked"
+        />
+        <div
+          v-else
+          class="space-y-2 text-sm"
+        >
+          <p>The library and all its entries are deleted for good.</p>
+          <p
+            v-if="data.usage?.copies"
+            class="text-(--ui-text-muted)"
+          >
+            {{ data.usage.copies }} {{ data.usage.copies === 1 ? 'site has' : 'sites have' }} edited their own copy; they keep it as their own content.
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2 w-full">
+          <UButton
+            label="Cancel"
+            color="neutral"
+            variant="ghost"
+            @click="deleteOpen = false"
+          />
+          <UButton
+            label="Delete library"
+            color="error"
+            :loading="deleting"
+            :disabled="!!deleteBlocked"
+            @click="deleteLibrary"
+          />
+        </div>
+      </template>
+    </UModal>
     <UModal
       v-model:open="shareOpen"
       title="Share with everyone"

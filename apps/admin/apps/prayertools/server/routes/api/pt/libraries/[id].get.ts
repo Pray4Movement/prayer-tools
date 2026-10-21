@@ -1,5 +1,5 @@
 // A library with its entry grid (day × language): whether each draft differs
-// from the published text. Readable by its owner, operators, and everyone once
+// from the published text, and for its editors, how many sites use it. Readable by its owner, operators, and everyone once
 // published.
 import { db } from '#core/server/utils/database'
 import { sql } from 'kysely'
@@ -15,5 +15,6 @@ export default defineEventHandler(async (event) => {
     .select(['day', 'language', 'published_version', sql<boolean>`published IS NULL OR draft <> published`.as('unpublished')])
     .where('library_id', '=', id).orderBy('day').orderBy('language').execute()
   const owner = lib.owner_user_id ? await db.selectFrom('users').select(['display_name']).where('id', '=', lib.owner_user_id).executeTakeFirst() : null
-  return { library: { ...lib, owner_name: owner?.display_name ?? 'Prayer.Tools' }, entries, canEdit: own }
+  const usage = own ? await ptLibraryUsage(id) : null
+  return { library: { ...lib, owner_name: owner?.display_name ?? 'Prayer.Tools' }, entries, canEdit: own, usage }
 })

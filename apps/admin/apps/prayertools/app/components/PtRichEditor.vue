@@ -27,6 +27,8 @@ const PLACEHOLDERS = [
   { label: 'Site name', value: '{site_name}' },
   { label: 'Campaign name', value: '{campaign_name}' },
   { label: 'Place', value: '{place}' },
+  { label: 'In the place (e.g. “in Morocco”)', value: '{in_place}' },
+  { label: 'Of the place (e.g. “of Morocco”)', value: '{of_place}' },
   { label: 'People group', value: '{people_group}' },
   { label: 'Start date', value: '{start_date}' },
   { label: 'End date', value: '{end_date}' }

@@ -14,11 +14,13 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@bradenmacdonald/s3-lite-client": "^1.0.0",
     "@iconify-json/lucide": "^1.2.104",
     "@iconify-json/simple-icons": "^1.2.80",
     "@nuxt/kit": "^4.0.0",
     "@nuxt/ui": "^4.7.0",
     "@prayertools/shared": "workspace:*",
+    "fflate": "0.8.2",
     "h3": "^1.0.0",
     "kysely": "^0.28.0",
     "kysely-postgres-js": "^2.0.0",

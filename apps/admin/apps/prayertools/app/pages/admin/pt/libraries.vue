@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Operators curate platform libraries, review share requests and import
-// content packs (JSON) as platform libraries.
+// content packs (pack.json, or a zip with images) into platform libraries:
+// choose a file and a target, check the summary, then import.
 definePageMeta({ layout: 'admin', middleware: ['auth', 'admin'] })
 
 const { data, refresh } = useFetch<{ requests: Record<string, any>[], platform: Record<string, any>[] }>('/api/pt/admin/libraries', { key: 'pt-admin-libraries' })
@@ -23,17 +24,75 @@ async function createPlatform() {
     toast.fail(err)
   }
 }
+interface PackSummary {
+  title: string
+  target: { id: string, title: string } | null
+  titleMatch: string | null
+  days: number
+  languages: string[]
+  images: number
+  added: number
+  changed: number
+  removed: number
+  unchanged: number
+  skipped: string[]
+}
+const { data: meta } = usePtMeta()
 const importFile = ref<File | null>(null)
-async function importPack() {
+const importTarget = ref('auto')
+const publishNow = ref(true)
+const summary = ref<PackSummary | null>(null)
+const checking = ref(false)
+const importing = ref(false)
+const targetItems = computed(() => [
+  { value: 'new', label: 'A new library' },
+  ...(data.value?.platform ?? []).map(l => ({ value: String(l.id), label: `Update “${l.title}”` }))
+])
+
+function packForm(confirm: boolean): FormData {
+  const form = new FormData()
+  form.append('file', importFile.value!)
+  form.append('target', importTarget.value)
+  if (confirm) {
+    form.append('confirm', '1')
+    if (publishNow.value) form.append('publish', '1')
+  }
+  return form
+}
+async function checkPack() {
+  summary.value = null
   if (!importFile.value) return
+  checking.value = true
   try {
-    const pack = JSON.parse(await importFile.value.text())
-    const res = await $fetch<{ id: string, imported: number }>('/api/pt/admin/libraries/import', { method: 'POST', body: pack })
-    toast.ok(`Imported ${res.imported} entries`)
+    const res = await $fetch<{ summary: PackSummary }>('/api/pt/admin/libraries/import', { method: 'POST', body: packForm(false) })
+    summary.value = res.summary
+    if (importTarget.value === 'auto') importTarget.value = res.summary.target?.id ?? 'new'
+  } catch (err) {
+    toast.fail(err, 'Can\'t read this pack')
+  } finally {
+    checking.value = false
+  }
+}
+watch(importFile, () => {
+  importTarget.value = 'auto'
+  checkPack()
+})
+watch(importTarget, (t, prev) => {
+  if (prev !== 'auto' && t !== 'auto') checkPack()
+})
+async function importPack() {
+  if (!importFile.value || !summary.value) return
+  importing.value = true
+  try {
+    const res = await $fetch<{ id: string, version: number | null, summary: PackSummary }>('/api/pt/admin/libraries/import', { method: 'POST', body: packForm(true) })
+    toast.ok(`${res.summary.target ? 'Updated' : 'Created'} “${res.summary.title}”`, res.version ? `Published as version ${res.version}.` : 'Saved as a draft; publish it from the library page.')
     importFile.value = null
+    summary.value = null
     await refresh()
   } catch (err) {
     toast.fail(err, 'Import failed')
+  } finally {
+    importing.value = false
   }
 }
 </script>
@@ -121,22 +180,104 @@ async function importPack() {
           Import a content pack
         </h2>
         <p class="text-sm text-(--ui-text-muted)">
-          JSON with title, cadence, source_language, license, credit and entries [{ day, language, html | text | doc }]. HTML from
-          WordPress prayer fuel exports becomes headings and paragraphs.
+          A pack.json, or a zip of pack.json and an images/ folder. The pack's details and entries replace the library's;
+          entries not in the pack are removed.
         </p>
       </template>
-      <div class="flex items-end gap-2">
-        <UFileUpload
-          v-model="importFile"
-          accept="application/json"
-          variant="button"
-          label="Choose file"
-        />
-        <UButton
-          label="Import"
-          :disabled="!importFile"
-          @click="importPack"
-        />
+      <div class="space-y-4">
+        <div class="flex flex-wrap items-end gap-3">
+          <UFileUpload
+            v-model="importFile"
+            accept=".zip,.json,application/zip,application/json"
+            variant="button"
+            label="Choose pack"
+          />
+          <span
+            v-if="importFile"
+            class="text-sm self-center"
+          >{{ importFile.name }}</span>
+          <UFormField
+            v-if="importFile"
+            label="Import into"
+          >
+            <USelect
+              v-model="importTarget"
+              :items="targetItems"
+              :placeholder="checking ? 'Checking…' : 'Choose'"
+              :disabled="checking"
+              class="w-72"
+            />
+          </UFormField>
+        </div>
+        <div
+          v-if="summary"
+          class="rounded-md border border-(--ui-border) p-4 space-y-3 text-sm"
+        >
+          <p class="font-medium">
+            <template v-if="summary.target">
+              Updates “{{ summary.target.title }}”<span v-if="summary.target.title !== summary.title"> and renames it “{{ summary.title }}”</span>
+            </template>
+            <template v-else>
+              Creates “{{ summary.title }}”
+            </template>
+          </p>
+          <p class="text-(--ui-text-muted)">
+            {{ summary.days }} days · {{ summary.languages.map(l => languageName(meta, l)).join(', ') }}<span v-if="summary.images"> · {{ summary.images }} images</span>
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <UBadge
+              :label="`${summary.added} new`"
+              color="success"
+              variant="subtle"
+            />
+            <UBadge
+              v-if="summary.target"
+              :label="`${summary.changed} changed`"
+              color="info"
+              variant="subtle"
+            />
+            <UBadge
+              v-if="summary.target"
+              :label="`${summary.removed} removed`"
+              :color="summary.removed ? 'warning' : 'neutral'"
+              variant="subtle"
+            />
+            <UBadge
+              v-if="summary.target"
+              :label="`${summary.unchanged} unchanged`"
+              color="neutral"
+              variant="subtle"
+            />
+          </div>
+          <UAlert
+            v-if="summary.skipped.length"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-triangle-alert"
+            :title="`${summary.skipped.length} entries will be skipped`"
+            :description="summary.skipped.slice(0, 5).join('; ') + (summary.skipped.length > 5 ? '; …' : '')"
+          />
+          <UAlert
+            v-if="summary.titleMatch && summary.titleMatch !== summary.target?.id"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-triangle-alert"
+            title="Another platform library already has this pack's title."
+          />
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <UCheckbox
+              v-model="publishNow"
+              label="Publish now"
+              :description="publishNow ? 'Sites using this library get the new version.' : 'Saved as a draft; publish it from the library page.'"
+            />
+            <UButton
+              :label="summary.target ? 'Update library' : 'Create library'"
+              icon="i-lucide-upload"
+              :loading="importing"
+              @click="importPack"
+            />
+          </div>
+        </div>
       </div>
     </UCard>
     <UModal

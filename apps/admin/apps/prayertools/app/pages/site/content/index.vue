@@ -138,7 +138,9 @@ const vars = computed(() => {
   return placeholderVars({
     siteName: site.value?.org.name ?? '',
     campaignName: campaign.value?.name ?? '',
+    lang: lang.value,
     place: site.value?.site.place_name,
+    placeWording: site.value?.site.place_wording,
     peopleGroup: site.value?.site.people_group,
     startDate: date(campaign.value?.start_date ?? null),
     endDate: date(campaign.value?.end_date ?? null)
