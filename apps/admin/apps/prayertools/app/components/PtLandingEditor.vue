@@ -7,6 +7,7 @@
 import type { TiptapDoc, TranslatableText } from '@prayertools/shared/db/schema'
 import { isEmptyDoc } from '@prayertools/shared/tiptap'
 import { isTemplateWhy, templateWhyDoc } from '@prayertools/shared/i18n/landing'
+import { videoEmbed } from '@prayertools/shared/video'
 
 const props = withDefaults(defineProps<{ saveLabel?: string }>(), { saveLabel: 'Save landing page' })
 const emit = defineEmits<{ saved: [] }>()
@@ -17,6 +18,7 @@ interface CustomSection {
   body: Record<string, Record<string, any>>
   image_url?: string
   image_alt?: TranslatableText
+  video_url?: string
   button_label?: TranslatableText
   button_url?: string
 }
@@ -175,6 +177,39 @@ function clearImage(s: CustomSection) {
 }
 
 const imagePickerFor = ref<string | null>(null)
+
+const videoInput = ref<HTMLInputElement>()
+const videoFor = ref<string | null>(null)
+const uploadingVideo = ref<string | null>(null)
+function videoError(s: CustomSection) {
+  return s.video_url?.trim() && !videoEmbed(s.video_url) ? 'Use a YouTube or Vimeo link, or a link to an MP4, WebM or MOV file.' : undefined
+}
+function clearVideo(s: CustomSection) {
+  s.video_url = undefined
+}
+function pickVideo(id: string) {
+  videoFor.value = id
+  videoInput.value?.click()
+}
+async function uploadVideo(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  const id = videoFor.value
+  input.value = ''
+  if (!file || !id) return
+  uploadingVideo.value = id
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await $fetch<{ url: string }>('/api/pt/videos', { method: 'POST', body: form })
+    const s = custom.value.find(x => x.id === id)
+    if (s) s.video_url = res.url
+  } catch (err) {
+    toast.fail(err, 'Upload failed')
+  } finally {
+    uploadingVideo.value = null
+  }
+}
 
 const draft = computed(() => ({ landing: { why: why.value, hidden: hidden.value, stories: stories.value, custom: custom.value }, description: description.value, strings: wording.value[lang.value] ?? {} }))
 const preview = ref<{ focus: (section: string, id?: string) => void }>()
@@ -493,6 +528,50 @@ async function translateWhy() {
                       </template>
                     </div>
                   </UFormField>
+                  <UFormField
+                    label="Video"
+                    description="Optional. A YouTube or Vimeo link, or a video file you upload."
+                    :error="videoError(c)"
+                  >
+                    <div class="space-y-2">
+                      <UInput
+                        v-model="c.video_url"
+                        type="url"
+                        placeholder="YouTube or Vimeo link"
+                        class="w-full"
+                        :disabled="!canWrite"
+                      />
+                      <div
+                        v-if="canWrite"
+                        class="flex flex-wrap gap-2"
+                      >
+                        <UButton
+                          size="sm"
+                          variant="soft"
+                          icon="i-lucide-upload"
+                          label="Upload a video"
+                          :loading="uploadingVideo === c.id"
+                          :disabled="!!uploadingVideo"
+                          @click="pickVideo(c.id)"
+                        />
+                        <UButton
+                          v-if="c.video_url"
+                          size="sm"
+                          variant="ghost"
+                          color="neutral"
+                          icon="i-lucide-x"
+                          label="Remove"
+                          @click="clearVideo(c)"
+                        />
+                      </div>
+                      <p
+                        v-if="canWrite"
+                        class="text-xs text-(--ui-text-muted)"
+                      >
+                        MP4, WebM or MOV up to 100 MB.
+                      </p>
+                    </div>
+                  </UFormField>
                   <PtTranslatableInput
                     v-model="c.button_label"
                     :languages="site.site.languages"
@@ -618,6 +697,14 @@ async function translateWhy() {
         </div>
       </template>
     </UModal>
+
+    <input
+      ref="videoInput"
+      type="file"
+      accept="video/mp4,video/webm,video/quicktime"
+      class="hidden"
+      @change="uploadVideo"
+    >
 
     <PtImagePicker
       :open="!!imagePickerFor"

@@ -265,6 +265,7 @@ export interface LandingCustomSection {
   body: Record<string, TiptapDoc>
   image_url?: string
   image_alt?: TranslatableText
+  video_url?: string
   button_label?: TranslatableText
   button_url?: string
 }

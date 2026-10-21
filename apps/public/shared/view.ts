@@ -2,6 +2,7 @@
 // page renders it; SSR reads it from the request context and client-side
 // navigation fetches it from `/api/view`.
 import type { CheckinResponse, Goal, Cadence, StartMode, SignupFieldKind, SubscriptionStatus } from '@prayertools/shared/db/schema'
+import type { VideoEmbed } from '@prayertools/shared/video'
 
 export type CampaignState = 'upcoming' | 'active' | 'between' | 'ended'
 
@@ -97,6 +98,7 @@ export interface CustomSectionView {
   html: string
   imageUrl: string | null
   imageAlt: string
+  video: VideoEmbed | null
   buttonLabel: string | null
   buttonUrl: string | null
 }
@@ -179,6 +181,7 @@ export type PageView =
   | { kind: 'landing', sections: string[], progress: GoalProgressView | null, why: string, today: { day: number, html: string, title: string } | null, stories: StoryView[], custom: CustomSectionView[], prayingNow: number, form: SignupFormView, placeholders: string[] }
   | { kind: 'between', stats: StatsView | null, endMessage: string, cta: { label: string, url: string } | null }
   | { kind: 'archived' }
+  | { kind: 'not_started', startDate: string }
   | { kind: 'pray', day: number, dateLabel: string | null, blocks: ContentBlockView[], prev: number | null, next: number | null, length: number | null }
   | { kind: 'signup', form: SignupFormView }
   | { kind: 'stats', stats: StatsView }

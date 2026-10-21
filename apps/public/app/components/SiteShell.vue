@@ -4,10 +4,8 @@ const { site, link, st, campaignLink } = useSite()
 const { t } = useI18n()
 
 const nav = computed(() => {
-  const items = [
-    { label: t('nav.pray'), to: link('pray') },
-    { label: t('nav.stats'), to: link('stats') }
-  ]
+  const items = site.value.campaign?.state === 'upcoming' ? [] : [{ label: t('nav.pray'), to: link('pray') }]
+  items.push({ label: t('nav.stats'), to: link('stats') })
   if (site.value.campaign?.goal === 'coverage') items.push({ label: t('nav.coverage'), to: link('coverage') })
   items.push({ label: t('nav.contact'), to: link('contact') })
   return site.value.status === 'archived' ? [] : items

@@ -9,6 +9,7 @@ import { prayingNow } from '@prayertools/shared/stats'
 import { entryDate } from '@prayertools/shared/schedule'
 import { parseLink } from '@prayertools/shared/links'
 import { textIn } from '@prayertools/shared/translatable'
+import { videoEmbed } from '@prayertools/shared/video'
 import { DURATION_OPTIONS } from '@prayertools/shared/setup'
 import type { TranslatableText, CampaignCta, SignupFieldKind } from '@prayertools/shared/db/schema'
 import type { CampaignRow } from '@prayertools/shared/subscriptions'
@@ -148,9 +149,10 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
     html: docHtml(s.body, lang, def, vars),
     imageUrl: s.image_url ?? null,
     imageAlt: textIn(s.image_alt, lang, def),
+    video: videoEmbed(s.video_url),
     buttonLabel: s.button_url ? textIn(s.button_label, lang, def) || null : null,
     buttonUrl: s.button_url ?? null
-  })).filter(s => s.heading || s.html)
+  })).filter(s => s.heading || s.html || s.video)
   const stories = await tx
     .selectFrom('pt_story')
     .select(['id', 'body', 'name', 'use_name'])
@@ -160,7 +162,7 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
     .limit(6)
     .execute()
   let today: { day: number, html: string, title: string } | null = null
-  if (campaign) {
+  if (campaign && stateOf(data, campaign) !== 'upcoming') {
     const cv = campaignView(data, campaign)
     const blocks = await contentBlocks(tx, data, ctx.name, campaign, cv.todayEntry, lang, 3)
     if (blocks[0]) today = { day: cv.todayEntry, html: blocks[0].html, title: blocks[0].title }
@@ -204,6 +206,7 @@ async function betweenPage(tx: Parameters<typeof loadSiteData>[0], data: SiteDat
 async function prayPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteContext, data: SiteData, campaign: CampaignRow | null, lang: string, rest: string[]): Promise<PageView> {
   if (!campaign || rest.length > 1) return { kind: 'not_found' }
   const cv = campaignView(data, campaign)
+  if (cv.state === 'upcoming' && campaign.start_date && !ctx.preview) return { kind: 'not_started', startDate: campaign.start_date }
   const last = await lastEntry(tx, campaign, cv.length)
   let day = cv.todayEntry
   if (rest[0] !== undefined) {
