@@ -4,7 +4,7 @@ One app where an intercessor follows campaigns on several sites, each with one o
 
 ## Starting point
 
-Copy the Doxa prayer app (`/Users/jd/code/doxa/doxa-prayer-mobile-app`, Flutter, open source, copying permitted) to get started; it becomes its own codebase from then on.
+Copy the Doxa prayer app (`doxa-prayer-mobile-app`, Flutter, open source, copying permitted) to get started; it becomes its own codebase from then on.
 
 ## Kept from Doxa
 

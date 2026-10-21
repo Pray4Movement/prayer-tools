@@ -1,6 +1,6 @@
 # Migration from WordPress
 
-Source: the WordPress multisite at `/Users/jd/code/sites/campaigns/app/public/` (Disciple.Tools theme + `disciple-tools-prayer-campaigns` plugin, one subsite per champion, production on `*.prayer.tools`).
+Source: the WordPress multisite (Disciple.Tools theme + `disciple-tools-prayer-campaigns` plugin, one subsite per champion, production on `*.prayer.tools`).
 
 ## Strategy
 

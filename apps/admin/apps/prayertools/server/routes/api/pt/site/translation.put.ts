@@ -4,6 +4,7 @@
 import type { SiteLanding, SiteShare, TranslatableText, TiptapDoc } from '@prayertools/shared/db/schema'
 import { setText } from '@prayertools/shared/translatable'
 import { jsonb } from '@prayertools/shared/db/json'
+import { isTemplateWhy } from '@prayertools/shared/i18n/landing'
 
 export default definePtHandler('pt.content.translate', async (event, tx, ctx) => {
   const b = await ptBody<{ field?: string, lang?: string, value?: unknown, sectionId?: string, part?: string }>(event)
@@ -26,7 +27,9 @@ export default definePtHandler('pt.content.translate', async (event, tx, ctx) =>
   } else if (b.field === 'why') {
     if (!canWriteSource && lang === site.default_language) throw createError({ statusCode: 403, statusMessage: 'Translators edit other languages only.' })
     const doc = ptDoc(b.value)
-    await tx.updateTable('pt_site').set({ landing: jsonb({ ...landing, why: { ...(landing.why ?? {}), [lang]: doc ?? { type: 'doc', content: [] } } }) }).where('org_id', '=', ctx.orgId).execute()
+    const { [lang]: _previous, ...others } = landing.why ?? {}
+    const why = isTemplateWhy(doc, site.template_key, lang) ? others : { ...others, [lang]: doc ?? { type: 'doc', content: [] } }
+    await tx.updateTable('pt_site').set({ landing: jsonb({ ...landing, why }) }).where('org_id', '=', ctx.orgId).execute()
   } else if (b.field === 'custom') {
     const custom = (landing.custom ?? []).map((s) => {
       if (s.id !== b.sectionId) return s

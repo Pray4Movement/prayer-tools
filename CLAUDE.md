@@ -30,14 +30,14 @@ Single tests:
 
 Worker and marketing tests use the database named by `PT_TEST_DB` in the repo-root `.env`; their global setup migrates it with `scripts/migrate.ts`. Run one scheduled worker job once: `cd apps/worker && bun src/index.ts --run <name>`.
 
-Local ports: this checkout's `.env` files use admin **3030** and public **3031** (`PT_SITE_BASE_HOST=localhost:3031`); the `.env.example` files and `docs/dev-context.md` show 2480/3480. Sites are `http://<slug>.localhost:<public>`, plus `api.localhost`, `go.localhost`, and `localhost:<public>/my`. Mail goes to Mailpit (SMTP :1025, UI :8025). `PT_SECRET` must match across admin, public and worker. Other ports on this machine belong to other sessions/worktrees; don't touch them.
+Ports come from each app's `.env`: `NUXT_PORT` for admin, `--port` for public, and `PT_SITE_BASE_HOST` / `PT_ADMIN_URL` must point at them in all three apps. Sites are `http://<slug>.localhost:<public>`, plus `api.localhost`, `go.localhost`, and `localhost:<public>/my`. Mail goes to Mailpit (SMTP :1025, UI :8025). `PT_SECRET` must match across admin, public and worker.
 
 ## Architecture
 
 Three processes on one Postgres, one Docker image (`PT_PROCESS=admin|public|worker`, see `scripts/start.sh`):
 
 - **`packages/shared`** (`@prayertools/shared`, imported as `@prayertools/shared/<file>`, e.g. `@prayertools/shared/db/scope`): all domain logic: DB types (`src/db/schema.ts`), connections and RLS scopes, campaign setup, commitment schedules and DST-exact coverage, subscriptions/signup, CRM and inbox adapters, email transport and templates with email i18n, signed links, stats. Shared functions take the shared `Tx` type; the admin app casts its transaction with `ptTx()` (`apps/admin/apps/prayertools/server/utils/pt-context.ts`).
-- **`apps/admin`**: Nuxtinator host (SPA). `layers.ts` lists the fetched Nuxtinator layers (core, tenancy, email-mailgun, ai, crm, inbox), pinned in `layers.lock.json` and fetched into `_layers/`. **Never edit `_layers/`.** `NUXTINATOR_SOURCE_DIR` (set here to `/Users/jd/code/go-saas`) loads every layer from a local Nuxtinator checkout instead; `NUXTINATOR_<ID>_PATH` overrides one layer. Some admin features need unreleased Nuxtinator changes, so develop with `NUXTINATOR_SOURCE_DIR` set. prayer.tools' own layers are globbed from `apps/admin/apps/*`:
+- **`apps/admin`**: Nuxtinator host (SPA). `layers.ts` lists the fetched Nuxtinator layers (core, tenancy, email-mailgun, ai, crm, inbox), pinned in `layers.lock.json` and fetched into `_layers/`. **Never edit `_layers/`.** `NUXTINATOR_SOURCE_DIR` loads every layer from a local Nuxtinator checkout instead; `NUXTINATOR_<ID>_PATH` overrides one layer. Some admin features need unreleased Nuxtinator changes, so develop with `NUXTINATOR_SOURCE_DIR` set. prayer.tools' own layers are globbed from `apps/admin/apps/*`:
   - `prayertools`: sites, campaigns, content, libraries, landing page, stats, domains, team, operator (`/admin/pt/*`) screens. `server/plugins/register-pt.ts` registers permissions, roles, apps, rail items and admin sections with Nuxtinator's registries.
   - `marketing`: site email, templates, multi-site sends, one-click unsubscribe. Written to move into Nuxtinator later.
   - The admin app **owns every migration** (`apps/admin/apps/*/migrations/`). Tenancy-retrofit migrations are named `*_T<NNN>_*` and run after all regular ones.
@@ -62,4 +62,4 @@ Three processes on one Postgres, one Docker image (`PT_PROCESS=admin|public|work
 - Manage and unsubscribe links are signed tokens (rotated via `manage_version`); verification, check-in and My prayer tokens are random and stored hashed.
 - The admin UI is English only; the public site is translated.
 - Nuxtinator improvements needed by prayer.tools are made in this repo (e.g. the marketing layer), not upstream.
-- Reference code you may read: `/Users/jd/code/go-saas` (Nuxtinator) and `/Users/jd/code/doxa` (Doxa campaigns-server, for patterns only). Don't read other worktrees (`.worktrees/`) or branches.
+- Don't read other worktrees (`.worktrees/`) or branches.

@@ -1,4 +1,4 @@
-# Development context (for everyone working in this worktree)
+# Development context (for everyone working in this repo)
 
 Monorepo for prayer.tools v3 (with orgs). Plans live in `plans/` — they are the spec.
 
@@ -21,7 +21,6 @@ Monorepo for prayer.tools v3 (with orgs). Plans live in `plans/` — they are th
 - Migrations run when the admin app boots; `scripts/migrate.ts` runs the same set standalone (the test suites use it), loading layer migrations from `NUXTINATOR_SOURCE_DIR` when set.
 - Mailpit: SMTP localhost:1025, UI http://localhost:8025 (`MAIL_PROVIDER=smtp`).
 - Sites in dev: `http://<slug>.localhost:3480`; platform host (My prayer) `http://localhost:3480/my`; API `http://api.localhost:3480`; go host `http://go.localhost:3480`. (`PT_SITE_BASE_HOST=localhost:3480`.)
-- Other ports on this machine (2180/3180, 2280/3280, 2380/3380) belong to other sessions: never touch those processes or other worktrees.
 
 ## RLS and scopes
 
@@ -46,5 +45,5 @@ Monorepo for prayer.tools v3 (with orgs). Plans live in `plans/` — they are th
 - Comments: very sparing; one or two lines max stating what the code does and why. Describe the code as it is, never the change that produced it.
 - Settings follow code-owned defaults: the DB stores only explicit overrides; defaults and labels live in code / i18n. Never persist a default value or a display label.
 - Nuxt UI `USelect`/`USelectMenu`: never put an item with `value: ''` in `:items` (Reka throws); use `placeholder` for the empty state.
-- Don't commit. Don't read other worktrees or branches. You may read `/Users/jd/code/go-saas` (Nuxtinator) and `/Users/jd/code/doxa` (Doxa, patterns only) for reference.
+- Don't commit. Don't read other worktrees or branches.
 - Stop any server you start before finishing.

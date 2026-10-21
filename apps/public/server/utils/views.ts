@@ -4,6 +4,7 @@ import type { H3Event } from 'h3'
 import { withOrg } from '@prayertools/shared/db/scope'
 import { parseSitePath } from '@prayertools/shared/paths'
 import { visibleSections } from '@prayertools/shared/landing'
+import { landingWhyDoc } from '@prayertools/shared/i18n/landing'
 import { prayingNow } from '@prayertools/shared/stats'
 import { entryDate } from '@prayertools/shared/schedule'
 import { parseLink } from '@prayertools/shared/links'
@@ -139,7 +140,8 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
   }
   const landing = landingOf(data.site)
   const vars = campaign ? contentVars(data, ctx.name, campaign, lang) : undefined
-  const why = docHtml(landing.why, lang, def, vars)
+  const whyDoc = landingWhyDoc(landing.why, data.site.template_key, lang, def)
+  const why = whyDoc ? docHtml({ [lang]: whyDoc }, lang, def, vars) : ''
   const custom = (landing.custom ?? []).map(s => ({
     id: s.id,
     heading: textIn(s.heading, lang, def),

@@ -4,7 +4,9 @@
 // and chooses whether published stories show. Section headings and standard
 // text can be reworded per language; the preview beside the editor shows
 // unsaved changes.
-import type { TranslatableText } from '@prayertools/shared/db/schema'
+import type { TiptapDoc, TranslatableText } from '@prayertools/shared/db/schema'
+import { isEmptyDoc } from '@prayertools/shared/tiptap'
+import { isTemplateWhy, templateWhyDoc } from '@prayertools/shared/i18n/landing'
 
 const props = withDefaults(defineProps<{ saveLabel?: string }>(), { saveLabel: 'Save landing page' })
 const emit = defineEmits<{ saved: [] }>()
@@ -41,13 +43,26 @@ const description = ref<TranslatableText | null>(null)
 const openIds = ref<string[]>([])
 watch(site, (s) => {
   if (!s) return
-  why.value = { ...(s.site.landing?.why ?? {}) }
+  why.value = withTemplateWhy((s.site.landing?.why ?? {}) as Record<string, TiptapDoc>, s.site.template_key, s.site.languages, s.site.default_language)
   hidden.value = [...(s.site.landing?.hidden ?? meta.value?.templates.find(t => t.key === s.site.template_key)?.hiddenSections ?? [])]
   stories.value = s.site.landing?.stories !== false
   custom.value = JSON.parse(JSON.stringify(s.site.landing?.custom ?? []))
   description.value = s.site.description
   openIds.value = custom.value.filter(c => !c.heading.values[s.site.default_language]).map(c => c.id)
 }, { immediate: true })
+
+// Until the site writes its own "why" text in its default language, each
+// language without its own text starts from the template's standard text.
+function withTemplateWhy(own: Record<string, TiptapDoc>, templateKey: string | null, languages: string[], defaultLanguage: string) {
+  const out = { ...own }
+  if (own[defaultLanguage] && !isEmptyDoc(own[defaultLanguage])) return out
+  for (const l of languages) {
+    const standard = templateWhyDoc(templateKey, l)
+    if (standard && (!out[l] || isEmptyDoc(out[l]))) out[l] = standard
+  }
+  return out
+}
+const whyIsStandard = computed(() => isTemplateWhy(why.value[lang.value] as TiptapDoc | null | undefined, site.value?.site.template_key, lang.value))
 
 const whyDoc = computed({
   get: () => why.value[lang.value] ?? null,
@@ -367,6 +382,12 @@ async function translateWhy() {
                 :disabled="!canEditLang"
                 placeholder="Why should people pray? Who are you praying for?"
               />
+              <p
+                v-if="whyIsStandard"
+                class="text-xs text-(--ui-text-muted)"
+              >
+                This is the {{ PT_LABELS.template[site.site.template_key ?? ''] ?? 'template' }} template's standard text. Visitors see it until you change it.
+              </p>
             </div>
 
             <div
