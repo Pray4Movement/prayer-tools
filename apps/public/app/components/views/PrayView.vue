@@ -12,6 +12,8 @@ const joined = computed(() => route.query.joined === '1')
 const needsVerify = computed(() => route.query.verify === '1')
 const confirmed = computed(() => route.query.confirmed === '1')
 const sharePrompt = ref(false)
+const verifyPrompt = ref(false)
+const signupEmail = useState<string | null>('pt-signup-email', () => null)
 const prayingNow = ref(0)
 const amened = ref(false)
 const groupOpen = ref(false)
@@ -66,7 +68,8 @@ onMounted(() => {
   void ping()
   timer = setInterval(ping, 30_000)
   document.addEventListener('visibilitychange', onVisible)
-  if (joined.value && site.value.settings.sharePrompts) setTimeout(() => (sharePrompt.value = true), 1200)
+  if (joined.value && needsVerify.value) verifyPrompt.value = true
+  else if ((joined.value || confirmed.value) && site.value.settings.sharePrompts) setTimeout(() => (sharePrompt.value = true), 1200)
 })
 
 onBeforeUnmount(() => {
@@ -160,6 +163,17 @@ async function sendGroup() {
       <p v-if="!joined" class="text-sm"><NuxtLink :to="link('signup')" class="underline">{{ t('pray.get_reminders') }}</NuxtLink></p>
     </section>
 
+    <UModal v-model:open="verifyPrompt" :title="t('pray.verify_prompt_title')" :description="signupEmail ? t('pray.verify_prompt_body_email', { email: signupEmail }) : t('pray.verify_prompt_body')">
+      <template #body>
+        <div class="flex items-start gap-4">
+          <UIcon name="i-lucide-mail-check" class="size-10 shrink-0 text-primary" />
+          <p class="text-stone-700">{{ t('pray.verify_prompt_spam') }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <UButton :label="t('pray.verify_prompt_ok')" @click="verifyPrompt = false" />
+      </template>
+    </UModal>
     <SharePrompt v-model:open="sharePrompt" :title="t('share.prompt_title')" :description="t('share.prompt_body')" />
   </article>
 </template>
