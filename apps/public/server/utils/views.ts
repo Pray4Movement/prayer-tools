@@ -9,6 +9,7 @@ import { prayingNow } from '@prayertools/shared/stats'
 import { entryDate } from '@prayertools/shared/schedule'
 import { parseLink } from '@prayertools/shared/links'
 import { textIn } from '@prayertools/shared/translatable'
+import { videoEmbed } from '@prayertools/shared/video'
 import { DURATION_OPTIONS } from '@prayertools/shared/setup'
 import type { TranslatableText, CampaignCta, SignupFieldKind } from '@prayertools/shared/db/schema'
 import type { CampaignRow } from '@prayertools/shared/subscriptions'
@@ -148,9 +149,10 @@ async function landingPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteCont
     html: docHtml(s.body, lang, def, vars),
     imageUrl: s.image_url ?? null,
     imageAlt: textIn(s.image_alt, lang, def),
+    video: videoEmbed(s.video_url),
     buttonLabel: s.button_url ? textIn(s.button_label, lang, def) || null : null,
     buttonUrl: s.button_url ?? null
-  })).filter(s => s.heading || s.html)
+  })).filter(s => s.heading || s.html || s.video)
   const stories = await tx
     .selectFrom('pt_story')
     .select(['id', 'body', 'name', 'use_name'])
