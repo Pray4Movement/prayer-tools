@@ -95,7 +95,10 @@
     "check_email_title": "Veuillez confirmer votre adresse e-mail",
     "check_email_body": "Nous vous avons envoyé un e-mail contenant un lien. Cliquez dessus pour confirmer votre adresse — vos rappels commenceront dès que ce sera fait. En attendant, voici la prière du jour.",
     "confirmed_title": "Votre adresse e-mail est confirmée",
-    "confirmed_body": "Vos rappels de prière sont activés. Merci de prier avec nous !"
+    "confirmed_body": "Vos rappels de prière sont activés. Merci de prier avec nous !",
+    "check_email_body_not_started": "Nous vous avons envoyé un e-mail avec un lien. Cliquez dessus pour confirmer votre adresse — vos rappels commenceront ensuite.",
+    "not_started_title": "La prière commence le {date}",
+    "not_started_body": "Le guide de prière ouvre le premier jour de la campagne. Revenez à ce moment-là pour prier avec nous."
   },
   "license": {
     "permission": "Utilisé avec autorisation",

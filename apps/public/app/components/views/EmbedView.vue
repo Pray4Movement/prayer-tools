@@ -23,7 +23,7 @@ onMounted(() => {
     <div class="flex flex-wrap gap-2">
       <UButton v-if="site.campaign && (site.campaign.state === 'active' || site.campaign.state === 'upcoming')" :to="site.url + link('signup')" target="_blank" :label="st('landing.signup.title')" />
       <UButton v-if="site.campaign?.goal === 'coverage'" :to="site.url + link('coverage')" target="_blank" variant="outline" :label="t('nav.coverage')" />
-      <UButton v-else :to="site.url + link('pray')" target="_blank" variant="outline" :label="t('landing.pray_today')" />
+      <UButton v-else-if="site.campaign?.state !== 'upcoming'" :to="site.url + link('pray')" target="_blank" variant="outline" :label="t('landing.pray_today')" />
     </div>
   </main>
 </template>

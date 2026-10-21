@@ -95,7 +95,10 @@
     "check_email_title": "Confirma tu correo electrónico",
     "check_email_body": "Te enviamos un correo con un enlace. Haz clic en él para confirmar tu dirección; tus recordatorios comenzarán en cuanto lo hagas. Mientras tanto, aquí tienes la oración de hoy.",
     "confirmed_title": "Tu correo está confirmado",
-    "confirmed_body": "Tus recordatorios de oración están activados. ¡Gracias por orar con nosotros!"
+    "confirmed_body": "Tus recordatorios de oración están activados. ¡Gracias por orar con nosotros!",
+    "check_email_body_not_started": "Te enviamos un correo con un enlace. Haz clic en él para confirmar tu dirección; tus recordatorios empezarán cuando lo hagas.",
+    "not_started_title": "La oración comienza el {date}",
+    "not_started_body": "La guía de oración se abre el primer día de la campaña. Vuelve ese día para orar con nosotros."
   },
   "license": {
     "permission": "Usado con permiso",

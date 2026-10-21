@@ -95,7 +95,10 @@
     "check_email_title": "Please confirm your email",
     "check_email_body": "We sent you an email with a link. Click it to confirm your address — your reminders start once you do. Meanwhile, here is today's prayer.",
     "confirmed_title": "Your email is confirmed",
-    "confirmed_body": "Your prayer reminders are on. Thank you for praying with us!"
+    "confirmed_body": "Your prayer reminders are on. Thank you for praying with us!",
+    "check_email_body_not_started": "We sent you an email with a link. Click it to confirm your address — your reminders start once you do.",
+    "not_started_title": "Prayer starts on {date}",
+    "not_started_body": "The prayer guide opens on the first day of the campaign. Come back then to pray with us."
   },
   "license": {
     "permission": "Used with permission",

@@ -56,6 +56,7 @@ useHead(() => {
         <LazyViewsBetweenView v-else-if="view.page.kind === 'between'" :page="view.page" />
         <LazyViewsArchivedView v-else-if="view.page.kind === 'archived'" />
         <LazyViewsPrayView v-else-if="view.page.kind === 'pray'" :page="view.page" />
+        <LazyViewsNotStartedView v-else-if="view.page.kind === 'not_started'" :page="view.page" />
         <LazyViewsSignupView v-else-if="view.page.kind === 'signup'" :form="view.page.form" />
         <LazyViewsStatsView v-else-if="view.page.kind === 'stats'" :stats="view.page.stats" />
         <LazyViewsCoverageView v-else-if="view.page.kind === 'coverage'" :progress="view.page.progress" />
