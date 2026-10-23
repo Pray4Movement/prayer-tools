@@ -60,6 +60,7 @@ export interface Rendered {
 
 export interface FooterLinks {
   manageUrl?: string | null
+  hideMy?: boolean
   unsubscribeUrl?: string | null
   reason?: string
 }
@@ -80,7 +81,7 @@ export function layout(ctx: SiteMailContext, lang: string, bodyHtml: string, foo
   const signature = ctx.signature[lang] || ctx.signature[ctx.defaultLanguage] || ''
   const links: string[] = []
   if (footer.manageUrl) links.push(`<a href="${escapeHtml(footer.manageUrl)}" style="color:#52525b;">${escapeHtml(emailT(lang, 'footer.manage'))}</a>`)
-  links.push(`<a href="${escapeHtml(`${platformOrigin()}/my`)}" style="color:#52525b;">${escapeHtml(emailT(lang, 'footer.my'))}</a>`)
+  if (!footer.hideMy) links.push(`<a href="${escapeHtml(`${platformOrigin()}/my`)}" style="color:#52525b;">${escapeHtml(emailT(lang, 'footer.my'))}</a>`)
   if (footer.unsubscribeUrl) links.push(`<a href="${escapeHtml(footer.unsubscribeUrl)}" style="color:#52525b;">${escapeHtml(emailT(lang, 'footer.unsubscribe'))}</a>`)
   const testBanner = opts.test
     ? `<div style="background:#fef3c7;color:#78350f;padding:10px 16px;font-size:13px;">${escapeHtml(emailT(lang, 'test.banner'))}</div>`
@@ -106,7 +107,7 @@ ${testBanner ? `<tr><td>${testBanner}</td></tr>` : ''}
 function footerText(ctx: SiteMailContext, lang: string, footer: FooterLinks): string {
   const lines = ['', '—', footer.reason ?? emailT(lang, 'footer.why', { site: ctx.siteName })]
   if (footer.manageUrl) lines.push(`${emailT(lang, 'footer.manage')}: ${footer.manageUrl}`)
-  lines.push(`${emailT(lang, 'footer.my')}: ${platformOrigin()}/my`)
+  if (!footer.hideMy) lines.push(`${emailT(lang, 'footer.my')}: ${platformOrigin()}/my`)
   if (footer.unsubscribeUrl) lines.push(`${emailT(lang, 'footer.unsubscribe')}: ${footer.unsubscribeUrl}`)
   return lines.join('\n')
 }
@@ -125,8 +126,8 @@ export function verificationEmail(ctx: SiteMailContext, lang: string, verifyUrl:
     + `<p style="margin:0;font-size:13px;color:#71717a;">${escapeHtml(emailT(lang, 'verify.ignore'))}</p>`
   return {
     subject: emailT(lang, 'verify.subject', vars),
-    html: layout(ctx, lang, body, {}, opts),
-    text: `${emailT(lang, 'verify.heading')}\n\n${emailT(lang, 'verify.body', vars)}\n\n${emailT(lang, 'verify.button')}: ${verifyUrl}\n\n${emailT(lang, 'verify.ignore')}${footerText(ctx, lang, {})}`
+    html: layout(ctx, lang, body, { hideMy: true }, opts),
+    text: `${emailT(lang, 'verify.heading')}\n\n${emailT(lang, 'verify.body', vars)}\n\n${emailT(lang, 'verify.button')}: ${verifyUrl}\n\n${emailT(lang, 'verify.ignore')}${footerText(ctx, lang, { hideMy: true })}`
   }
 }
 
