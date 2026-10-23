@@ -41,7 +41,7 @@ ADMIN_URL=http://localhost:2480 DATABASE_URL=… PUBLIC_URL=http://localhost:348
 
 ## Deployment
 
-One image per process: `apps/<app>/Dockerfile`, built with the repo root as context, and `apps/<app>/railway.json` (Dockerfile path and watch paths) for each Railway service. The public and worker images install only their own workspace's dependencies; the public image ships just the Nitro `.output` on Node. Two DB URLs everywhere (`DATABASE_URL` BYPASSRLS, `APP_DATABASE_URL` RLS); the public server only needs the RLS one. PgBouncer in transaction mode is supported (`prepare: false`, GUCs are `SET LOCAL`).
+One image per process: `apps/<app>/Dockerfile`, built with the repo root as context. The public and worker images install only their own workspace's dependencies; the public image ships just the Nitro `.output` on Node. Two DB URLs everywhere (`DATABASE_URL` BYPASSRLS, `APP_DATABASE_URL` RLS); the public server only needs the RLS one. PgBouncer in transaction mode is supported (`prepare: false`, GUCs are `SET LOCAL`).
 
 ## Where this differs from the plans, or stops short
 
