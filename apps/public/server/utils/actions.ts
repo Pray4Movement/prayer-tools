@@ -13,6 +13,9 @@ import { useDb } from './db'
 import type { SiteContext } from './site-context'
 import { setManageCookie, setPreviewCookie } from './cookies'
 import { forwardInBackground } from './analytics'
+import { deliver } from './mail'
+import { background } from './request'
+import { prepareWelcomeMail } from './welcome'
 
 // Renders another page path in place of the requested one.
 export function rewriteView(event: H3Event, path: string, status = 200): void {
@@ -40,12 +43,14 @@ export async function verifyLink(event: H3Event, ctx: SiteContext, token: string
     const email = sub.contact_id ? await primaryEmailOf(tx, sub.contact_id) : null
     const firstTime = !before.verified_at
     if (firstTime) await recordEvent(tx, { campaignId: latest?.campaign_id ?? null, type: 'campaign_signup_verified', meta: { subscription_id: sub.id } })
-    return { sub, defaultLanguage: site.default_language, campaignId: latest?.campaign_id ?? null, email: email?.email ?? null, firstTime }
+    const welcome = firstTime ? await prepareWelcomeMail(tx, ctx.orgId, sub) : null
+    return { sub, defaultLanguage: site.default_language, campaignId: latest?.campaign_id ?? null, email: email?.email ?? null, firstTime, welcome }
   })
   if (!result) return
   const { sub } = result
   setManageCookie(event, ctx.orgId, sub.id, sub.manage_version)
   if (result.firstTime) {
+    background(event, deliver(result.welcome))
     forwardInBackground(event, { orgId: ctx.orgId, slug: ctx.slug, host: ctx.host }, {
       event_type: 'campaign_signup_verified',
       email: result.email,
