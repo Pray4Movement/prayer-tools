@@ -27,6 +27,14 @@ async function patch(body: Record<string, unknown>, message = 'Saved') {
   }
 }
 
+// Personal-start campaigns: "Day 7 of 30 · last moved Oct 21".
+function progress(c: Record<string, any>): string | null {
+  if (c.start_mode !== 'join') return null
+  const done = Number(c.entries_done)
+  const day = c.entries && done >= c.entries ? `Finished all ${c.entries} entries` : `Day ${done + 1}${c.entries ? ` of ${c.entries}` : ''}`
+  return c.advanced_on ? `${day} · last moved ${ptFormatDate(c.advanced_on)}` : day
+}
+
 function describe(c: Record<string, any>): string {
   const when = c.kind === 'dates'
     ? `${c.dates.length} date${c.dates.length === 1 ? '' : 's'}`
@@ -164,6 +172,12 @@ async function remove() {
               </p>
               <p class="text-(--ui-text-muted)">
                 {{ describe(c) }}<span v-if="c.paused"> · paused</span>
+              </p>
+              <p
+                v-if="progress(c)"
+                class="text-xs text-(--ui-text-muted)"
+              >
+                {{ progress(c) }}
               </p>
               <p
                 v-if="c.next_reminder_utc"

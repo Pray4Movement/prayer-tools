@@ -49,13 +49,10 @@ export async function completePersonalStart(ctx: WorkerContext, log: Logger): Pr
       AND NOT EXISTS (
         SELECT 1 FROM pt_commitment c
         JOIN pt_campaign k ON k.id = c.campaign_id
-        CROSS JOIN LATERAL (
-          SELECT CASE WHEN k.start_mode = 'join' AND k.end_mode = 'days'
-            THEN c.starts_on + coalesce(k.length_days, nullif(${contentLengthSql(sql.ref('k.id'))}, 0)) * CASE WHEN k.cadence = 'weekly' THEN 7 ELSE 1 END - 1
-            ELSE c.ends_on END AS last_day
-        ) e
         WHERE c.subscription_id = s.id
-          AND (e.last_day IS NULL OR e.last_day >= (${now}::timestamptz AT TIME ZONE c.timezone)::date)
+          AND CASE WHEN k.start_mode = 'join'
+            THEN NOT coalesce(k.end_mode = 'days' AND c.entries_done >= coalesce(k.length_days, nullif(${contentLengthSql(sql.ref('k.id'))}, 0)), false)
+            ELSE c.ends_on IS NULL OR c.ends_on >= (${now}::timestamptz AT TIME ZONE c.timezone)::date END
       )
   `.execute(ctx.admin)
   let completed = 0

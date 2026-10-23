@@ -182,7 +182,7 @@ export type PageView =
   | { kind: 'between', stats: StatsView | null, endMessage: string, cta: { label: string, url: string } | null }
   | { kind: 'archived' }
   | { kind: 'not_started', startDate: string }
-  | { kind: 'pray', day: number, dateLabel: string | null, blocks: ContentBlockView[], prev: number | null, next: number | null, length: number | null }
+  | { kind: 'pray', day: number, chosen: boolean, personal: boolean, dateLabel: string | null, blocks: ContentBlockView[], prev: number | null, next: number | null, length: number | null }
   | { kind: 'signup', form: SignupFormView }
   | { kind: 'stats', stats: StatsView }
   | { kind: 'coverage', progress: GoalProgressView | null }

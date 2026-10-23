@@ -2,9 +2,11 @@
 // handles each inside its org; `pt_reminder_sent` is reserved before sending so a day is never sent twice.
 import { sql } from 'kysely'
 import { withOrg, type Tx } from '@prayertools/shared/db/scope'
-import { localDateOf } from '@prayertools/shared/dates'
+import { daysBetween, localDateOf, toIsoDate } from '@prayertools/shared/dates'
 import { entryNumber, nextReminderUtc } from '@prayertools/shared/schedule'
-import { personalEndOn, ruleOf } from '@prayertools/shared/subscriptions'
+import { normalizeCampaign, ruleOf } from '@prayertools/shared/subscriptions'
+import { campaignEntries } from '@prayertools/shared/content'
+import { MISSES_BEFORE_WEEKLY, positionOf } from '@prayertools/shared/progress'
 import { primaryEmailOf } from '@prayertools/shared/crm'
 import { isSuppressed } from '@prayertools/shared/email/suppression'
 import { loadSiteMailContext, reminderEmail, type SiteMailContext } from '@prayertools/shared/email/templates'
@@ -27,7 +29,7 @@ export interface Claimed {
   next_reminder_utc: Date
 }
 
-export type Outcome = 'sent' | 'duplicate' | 'suppressed' | 'stale' | 'ineligible' | 'changed' | 'no_email' | 'failed'
+export type Outcome = 'sent' | 'duplicate' | 'suppressed' | 'stale' | 'ineligible' | 'changed' | 'no_email' | 'failed' | 'finished' | 'prayed' | 'slowed'
 
 export async function claimDue(ctx: WorkerContext, now: Date, limit: number): Promise<Claimed[]> {
   const res = await sql<Claimed>`
@@ -109,6 +111,17 @@ async function advance(tx: Tx, id: string, occurrence: Date, next: Date | null):
     .execute()
 }
 
+// Reminders sent since the person last moved forward went unopened. After
+// MISSES_BEFORE_WEEKLY of them, one goes out per week until they open one.
+async function slowedDown(tx: Tx, commitmentId: string, advancedOn: string | null, localDate: string): Promise<boolean> {
+  let q = tx.selectFrom('pt_reminder_sent').select('local_date').where('commitment_id', '=', commitmentId)
+  const advanced = toIsoDate(advancedOn)
+  if (advanced) q = q.where('local_date', '>', advanced)
+  const sent = await q.orderBy('local_date', 'desc').limit(MISSES_BEFORE_WEEKLY).execute()
+  if (sent.length < MISSES_BEFORE_WEEKLY) return false
+  return daysBetween(toIsoDate(sent[0]!.local_date as unknown as string)!, localDate) < 7
+}
+
 // Everything up to the send, in one org transaction: eligibility, the
 // suppression check, and the dedupe reservation.
 async function prepare(tx: Tx, claimed: Claimed, now: Date, mailCtx: Map<string, Promise<SiteMailContext>>): Promise<Step> {
@@ -127,11 +140,6 @@ async function prepare(tx: Tx, claimed: Claimed, now: Date, mailCtx: Map<string,
     return { outcome: 'ineligible' }
   }
   const rule = ruleOf(c)
-  rule.ends_on ??= await personalEndOn(tx, campaign, rule.starts_on)
-  if (rule.ends_on && localDateOf(occurrence, c.timezone) > rule.ends_on) {
-    await advance(tx, c.id, occurrence, null)
-    return { outcome: 'ineligible' }
-  }
   const lateFloor = new Date(now.getTime() - MAX_LATE_MS)
   const next = nextReminderUtc(rule, occurrence > lateFloor ? occurrence : lateFloor)
   if (occurrence < lateFloor) {
@@ -142,6 +150,27 @@ async function prepare(tx: Tx, claimed: Claimed, now: Date, mailCtx: Map<string,
     await advance(tx, c.id, occurrence, next)
     return { outcome: 'ineligible' }
   }
+  const localDate = localDateOf(occurrence, c.timezone)
+  let day: number | null
+  if (campaign.start_mode === 'join') {
+    const pos = positionOf(c, campaign.cadence, await campaignEntries(tx, normalizeCampaign(campaign)), occurrence)
+    if (pos.finished) {
+      await advance(tx, c.id, occurrence, null)
+      return { outcome: 'finished' }
+    }
+    if (pos.movedToday) {
+      await advance(tx, c.id, occurrence, next)
+      return { outcome: 'prayed' }
+    }
+    if (await slowedDown(tx, c.id, c.advanced_on, localDate)) {
+      await advance(tx, c.id, occurrence, next)
+      return { outcome: 'slowed' }
+    }
+    day = pos.current
+  } else {
+    const entry = campaign.start_date ? entryNumber(campaign.start_date, campaign.cadence, localDate) : 0
+    day = entry > 0 ? entry : null
+  }
   const email = sub.contact_id ? await primaryEmailOf(tx, sub.contact_id) : null
   if (!email) {
     await advance(tx, c.id, occurrence, null)
@@ -151,7 +180,6 @@ async function prepare(tx: Tx, claimed: Claimed, now: Date, mailCtx: Map<string,
     await advance(tx, c.id, occurrence, next)
     return { outcome: 'suppressed' }
   }
-  const localDate = localDateOf(occurrence, c.timezone)
   const reserved = await tx
     .insertInto('pt_reminder_sent')
     .values({ commitment_id: c.id, local_date: localDate, sent_at: now })
@@ -171,9 +199,6 @@ async function prepare(tx: Tx, claimed: Claimed, now: Date, mailCtx: Map<string,
   }
   const ctx = await ctxP
   const lang = personLanguage(sub.language, site)
-  const anchor = campaign.start_mode === 'join' ? c.starts_on : campaign.start_date
-  const entry = anchor ? entryNumber(anchor, campaign.cadence, localDate) : 0
-  const day = entry > 0 ? entry : null
   const links = personLinks(ctx, sub)
   const rendered = reminderEmail(ctx, lang, {
     campaignName: campaign.name,

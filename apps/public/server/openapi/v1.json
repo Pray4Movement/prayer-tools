@@ -684,7 +684,7 @@
       },
       "Commitment": {
         "type": "object",
-        "required": ["id", "campaign_id", "kind", "frequency", "days_of_week", "time", "timezone", "duration_min", "dates", "starts_on", "ends_on", "paused"],
+        "required": ["id", "campaign_id", "kind", "frequency", "days_of_week", "time", "timezone", "duration_min", "dates", "starts_on", "ends_on", "paused", "current_entry"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "campaign_id": { "type": "string", "format": "uuid" },
@@ -697,7 +697,8 @@
           "dates": { "type": "array", "items": { "type": "string", "format": "date-time" }, "description": "ISO instants. Empty unless kind is `dates`." },
           "starts_on": { "$ref": "#/components/schemas/IsoDate" },
           "ends_on": { "type": ["string", "null"], "format": "date", "description": "Last date (YYYY-MM-DD), or null when open-ended." },
-          "paused": { "type": "boolean" }
+          "paused": { "type": "boolean" },
+          "current_entry": { "type": "integer", "minimum": 1, "description": "Personal-start campaigns: the entry the person is on. They move forward one entry per day (week, for weekly campaigns) by opening or praying the entry they are on; past the last entry once they have finished." }
         }
       },
       "Campaign": {

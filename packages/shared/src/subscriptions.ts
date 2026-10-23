@@ -5,7 +5,7 @@ import { sql, type Selectable } from 'kysely'
 import type { Tx } from './db/scope'
 import type { PtCampaignTable, PtCommitmentTable, PtSubscriptionTable } from './db/schema'
 import { todayIn, toIsoDate } from './dates'
-import { lastDayOf, nextReminderUtc, validateRule, type CommitmentRule } from './schedule'
+import { nextReminderUtc, validateRule, type CommitmentRule } from './schedule'
 import { campaignEntries } from './content'
 import { hashToken, randomToken, shortCode } from './tokens'
 import { consentHistory, consentState, markChannelVerified, primaryEmailOf, setConsent, upsertContact, type ConsentCapture } from './crm'
@@ -49,8 +49,8 @@ export interface RuleInput {
 
 // A commitment's date window: shared-calendar campaigns run from the later of
 // the campaign start and the join date to the campaign end; personal-start
-// commitments run from the person's own start and store no end, because the
-// campaign's length can follow its content (see `personalEndOn`).
+// commitments run from the person's own start and store no end: a person
+// finishes by reaching the last entry (see progress.ts).
 export async function commitmentWindow(tx: Tx, campaign: CampaignRow, subscriptionId: string | null, tz: string): Promise<{ starts_on: string, ends_on: string | null }> {
   const c = normalizeCampaign(campaign)
   const today = todayIn(tz)
@@ -72,15 +72,6 @@ export async function commitmentWindow(tx: Tx, campaign: CampaignRow, subscripti
   return { starts_on: start, ends_on: c.end_mode === 'date' ? c.end_date : null }
 }
 
-// The last day of a personal-start commitment, from the person's start and
-// the campaign's current length. Null for other campaigns or when unbounded.
-export async function personalEndOn(tx: Tx, campaign: CampaignRow, startsOn: string): Promise<string | null> {
-  const c = normalizeCampaign(campaign)
-  if (c.start_mode !== 'join') return null
-  const entries = await campaignEntries(tx, c)
-  return entries ? lastDayOf(startsOn, c.cadence, entries) : null
-}
-
 export function validateRuleForCampaign(input: RuleInput, campaign: CampaignRow): string[] {
   const kind = input.kind ?? 'recurring'
   const errors = validateRule({ ...input, kind, frequency: input.frequency ?? null, days_of_week: input.days_of_week ?? [], dates: input.dates ?? [], duration_min: input.duration_min ?? null })
@@ -98,7 +89,20 @@ function remindersOn(sub: Pick<SubscriptionRow, 'status' | 'delivery' | 'verifie
   return sub.status === 'active' && sub.delivery === 'email' && !!sub.verified_at
 }
 
+// A person has one commitment per personal-start campaign, because it carries
+// their progress: adding another updates its prayer time instead, and
+// restarts the campaign when they had finished it.
 export async function insertCommitment(tx: Tx, sub: SubscriptionRow, campaign: CampaignRow, input: RuleInput): Promise<CommitmentRow> {
+  if (campaign.start_mode === 'join') {
+    const existing = await tx.selectFrom('pt_commitment').select(['id', 'entries_done', 'timezone']).where('subscription_id', '=', sub.id).where('campaign_id', '=', campaign.id).executeTakeFirst()
+    if (existing) {
+      const entries = await campaignEntries(tx, normalizeCampaign(campaign))
+      if (entries && existing.entries_done >= entries) {
+        await tx.updateTable('pt_commitment').set({ entries_done: 0, advanced_on: null, starts_on: todayIn(input.timezone || existing.timezone) }).where('id', '=', existing.id).execute()
+      }
+      return (await updateCommitment(tx, sub, existing.id, input))!
+    }
+  }
   const tz = input.timezone || sub.timezone
   const window = await commitmentWindow(tx, campaign, sub.id, tz)
   const kind = input.kind ?? 'recurring'
@@ -116,8 +120,7 @@ export async function insertCommitment(tx: Tx, sub: SubscriptionRow, campaign: C
     starts_on: window.starts_on,
     ends_on: window.ends_on
   }
-  const endsOn = window.ends_on ?? await personalEndOn(tx, campaign, window.starts_on)
-  const next = remindersOn(sub) ? nextReminderUtc({ ...values, ends_on: endsOn, paused: false } as CommitmentRule) : null
+  const next = remindersOn(sub) ? nextReminderUtc({ ...values, paused: false } as CommitmentRule) : null
   return await tx
     .insertInto('pt_commitment')
     .values({ ...values, days_of_week: sql`${`{${values.days_of_week.join(',')}}`}::smallint[]`, dates: sql`${`{${values.dates.map(d => `"${d.toISOString()}"`).join(',')}}`}::timestamptz[]`, next_reminder_utc: next })

@@ -121,14 +121,14 @@ describe('end of a shared-calendar campaign', () => {
 })
 
 describe('personal-start completion', () => {
-  it('marks the subscription completed after the last day, stops reminders and sends the personal thank-you', async () => {
+  it('marks the subscription completed after the last entry is opened, stops reminders and sends the personal thank-you', async () => {
     const { orgId } = await createSite(env)
     const today = todayIn(TZ)
     const campaignId = await createCampaign(env, orgId, { name: 'Seven days', startMode: 'join', endMode: 'days', lengthDays: 7 })
     const done = await createSubscriber(env, orgId, campaignId)
-    const cid = await addCommitment(env, orgId, done.subscriptionId, campaignId, { startsOn: addDays(today, -8), next: new Date(Date.now() + 3600_000) })
+    const cid = await addCommitment(env, orgId, done.subscriptionId, campaignId, { startsOn: addDays(today, -8), entriesDone: 7, next: new Date(Date.now() + 3600_000) })
     const midway = await createSubscriber(env, orgId, campaignId)
-    await addCommitment(env, orgId, midway.subscriptionId, campaignId, { startsOn: addDays(today, -3) })
+    await addCommitment(env, orgId, midway.subscriptionId, campaignId, { startsOn: addDays(today, -30), entriesDone: 6 })
     const ctx = testCtx(env)
     const res = await completePersonalStart(ctx, ctx.log)
     expect(res.completed).toBeGreaterThanOrEqual(1)
@@ -152,9 +152,9 @@ describe('personal-start completion', () => {
     const today = todayIn(TZ)
     const campaignId = await createCampaign(env, orgId, { startMode: 'join', endMode: 'days', lengthDays: null })
     const done = await createSubscriber(env, orgId, campaignId)
-    await addCommitment(env, orgId, done.subscriptionId, campaignId, { startsOn: addDays(today, -6) })
+    await addCommitment(env, orgId, done.subscriptionId, campaignId, { startsOn: addDays(today, -6), entriesDone: 5 })
     const midway = await createSubscriber(env, orgId, campaignId)
-    await addCommitment(env, orgId, midway.subscriptionId, campaignId, { startsOn: addDays(today, -4) })
+    await addCommitment(env, orgId, midway.subscriptionId, campaignId, { startsOn: addDays(today, -6), entriesDone: 4 })
     const ctx = testCtx(env)
     const statusOf = async (id: string) => (await withOrg(env.admin, orgId, tx => tx.selectFrom('pt_subscription').select('status').where('id', '=', id).executeTakeFirstOrThrow())).status
 

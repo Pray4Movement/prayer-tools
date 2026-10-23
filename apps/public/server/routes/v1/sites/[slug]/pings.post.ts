@@ -1,6 +1,7 @@
 // Prayer session ping from the app (same upsert as the web, source `app`).
 import { withOrg } from '@prayertools/shared/db/scope'
 import { prayingNow } from '@prayertools/shared/stats'
+import { openEntry } from '@prayertools/shared/progress'
 import { useDb } from '../../../../utils/db'
 import { limit, readJson } from '../../../../utils/request'
 import { apiSite, appSubscription, requireDevice } from '../../../../utils/app-api'
@@ -17,13 +18,14 @@ export default defineEventHandler(async (event) => {
   const day = Number.isInteger(body.day) && (body.day as number) > 0 ? body.day as number : null
   const language = typeof body.language === 'string' ? body.language.slice(0, 10) : null
   const result = await withOrg(useDb(), site.orgId, async (tx) => {
-    const campaign = await tx.selectFrom('pt_campaign').select(['id', 'timezone']).where('id', '=', body.campaign as string).executeTakeFirst()
+    const campaign = await tx.selectFrom('pt_campaign').selectAll().where('id', '=', body.campaign as string).executeTakeFirst()
     if (!campaign) throw createError({ statusCode: 404 })
     const sub = await appSubscription(tx, device.intercessorId)
     const ping = await recordPing(tx, {
       id: body.id as string, campaignId: campaign.id, timezone: campaign.timezone, day, language, source: 'app',
       subscriptionId: sub?.id ?? null, intercessorId: device.intercessorId, country: getRequestHeader(event, 'cf-ipcountry')?.slice(0, 2) ?? null
     })
+    if (ping.first && sub) await openEntry(tx, sub.id, campaign, day)
     return { ping, now: await prayingNow(tx) }
   })
   if (result.ping.first) {

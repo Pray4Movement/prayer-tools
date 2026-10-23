@@ -167,6 +167,8 @@ export interface CommitmentOpts {
   endsOn?: string | null
   next?: Date | null
   durationMin?: number | null
+  entriesDone?: number
+  advancedOn?: string | null
 }
 
 export async function addCommitment(env: TestEnv, orgId: string, subscriptionId: string, campaignId: string, o: CommitmentOpts): Promise<string> {
@@ -180,7 +182,9 @@ export async function addCommitment(env: TestEnv, orgId: string, subscriptionId:
     duration_min: o.durationMin ?? null,
     starts_on: o.startsOn,
     ends_on: o.endsOn ?? null,
-    next_reminder_utc: o.next ?? null
+    next_reminder_utc: o.next ?? null,
+    entries_done: o.entriesDone ?? 0,
+    advanced_on: o.advancedOn ?? null
   }).returning('id').executeTakeFirstOrThrow())
   return row.id
 }

@@ -116,7 +116,7 @@ const summary = computed(() => {
   if (!c) return ''
   const per = weekly.value ? 'each week' : 'each day'
   if (c.start_mode === 'join') {
-    return `Each person starts at ${unit.value} 1 on the day they sign up and gets a new entry ${per}${length.value ? ` for ${length.value} ${unit.value}s` : c.end_mode === 'days' ? ' until the last entry' : ''}.`
+    return `Each person starts at ${unit.value} 1 when they sign up and moves to the next entry at most once a ${unit.value}, by opening the one they are on${length.value ? `, for ${length.value} ${unit.value}s` : c.end_mode === 'days' ? ', until the last entry' : ''}.`
   }
   const start = c.start_date ? ptFormatDate(c.start_date, { dateStyle: 'long' }) : ''
   if (length.value && c.end_date) return `Write what people pray ${per} of ${c.name}: ${length.value} ${unit.value}s, from ${start} to ${ptFormatDate(c.end_date, { dateStyle: 'long' })}.`

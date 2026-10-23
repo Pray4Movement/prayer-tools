@@ -15,7 +15,9 @@ const profile = reactive({ name: props.manage?.name ?? '', language: props.manag
 const tzItems = timezones()
 const languageItems = computed(() => site.value.languages.map(l => ({ label: l.native, value: l.code })))
 const campaign = computed(() => site.value.campaign)
-const canAdd = computed(() => !!campaign.value && (campaign.value.state === 'active' || campaign.value.state === 'upcoming') && props.manage?.status !== 'unsubscribed')
+// A personal-start campaign holds one prayer time per person, which carries their progress.
+const hasPersonalTime = computed(() => campaign.value?.startMode === 'join' && !!props.manage?.commitments.some(c => c.campaignId === campaign.value?.id))
+const canAdd = computed(() => !!campaign.value && (campaign.value.state === 'active' || campaign.value.state === 'upcoming') && props.manage?.status !== 'unsubscribed' && !hasPersonalTime.value)
 
 async function call(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: Record<string, unknown>, message = t('manage.saved')) {
   busy.value = true
