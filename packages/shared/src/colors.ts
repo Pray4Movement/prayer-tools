@@ -36,6 +36,13 @@ export interface BrandColorInfo {
 
 export const DEFAULT_BRAND_COLOR = '#2f6f5e'
 
+export const BRAND_COLOR_PRESETS = [DEFAULT_BRAND_COLOR, '#1d4ed8', '#0f766e', '#15803d', '#b45309', '#b91c1c', '#7e22ce', '#be185d', '#334155']
+
+// A new site starts on a random preset so sites don't all look alike.
+export function randomBrandColor(): string {
+  return BRAND_COLOR_PRESETS[Math.floor(Math.random() * BRAND_COLOR_PRESETS.length)]!
+}
+
 export function brandColor(color: string | null | undefined): BrandColorInfo {
   const rgb = parseHex(color ?? '') ?? parseHex(DEFAULT_BRAND_COLOR)!
   const hex = `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`

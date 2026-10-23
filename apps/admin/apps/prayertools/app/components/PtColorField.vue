@@ -1,9 +1,7 @@
 <script setup lang="ts">
 // Brand color: a picker, suggested colors, a hex field and a preview of
 // readable text on the chosen color.
-import { brandColor, DEFAULT_BRAND_COLOR, parseHex } from '@prayertools/shared/colors'
-
-const PRESETS = [DEFAULT_BRAND_COLOR, '#1d4ed8', '#0f766e', '#15803d', '#b45309', '#b91c1c', '#7e22ce', '#be185d', '#334155']
+import { brandColor, BRAND_COLOR_PRESETS as PRESETS, DEFAULT_BRAND_COLOR, parseHex } from '@prayertools/shared/colors'
 
 const color = defineModel<string>({ required: true })
 defineProps<{ label?: string }>()
