@@ -34,7 +34,7 @@ Ports come from each app's `.env`: `NUXT_PORT` for admin, `--port` for public, a
 
 ## Architecture
 
-Three processes on one Postgres, one Docker image (`PT_PROCESS=admin|public|worker`, see `scripts/start.sh`):
+Three processes on one Postgres, one Docker image each (`apps/<app>/Dockerfile`, built from the repo root; Railway settings in `apps/<app>/railway.json`):
 
 - **`packages/shared`** (`@prayertools/shared`, imported as `@prayertools/shared/<file>`, e.g. `@prayertools/shared/db/scope`): all domain logic: DB types (`src/db/schema.ts`), connections and RLS scopes, campaign setup, commitment schedules and DST-exact coverage, subscriptions/signup, CRM and inbox adapters, email transport and templates with email i18n, signed links, stats. Shared functions take the shared `Tx` type; the admin app casts its transaction with `ptTx()` (`apps/admin/apps/prayertools/server/utils/pt-context.ts`).
 - **`apps/admin`**: Nuxtinator host (SPA). `layers.ts` lists the fetched Nuxtinator layers (core, tenancy, email-mailgun, ai, crm, inbox), pinned in `layers.lock.json` and fetched into `_layers/`. **Never edit `_layers/`.** `NUXTINATOR_SOURCE_DIR` loads every layer from a local Nuxtinator checkout instead; `NUXTINATOR_<ID>_PATH` overrides one layer. Some admin features need unreleased Nuxtinator changes, so develop with `NUXTINATOR_SOURCE_DIR` set. prayer.tools' own layers are globbed from `apps/admin/apps/*`:
