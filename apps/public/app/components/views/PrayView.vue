@@ -20,6 +20,33 @@ const groupOpen = ref(false)
 const groupCount = ref<number | null>(2)
 const groupSent = ref(false)
 
+// Personal-start campaigns: where a recognised subscriber is (see
+// /api/pray/position). Null for visitors we don't recognise.
+interface Position { current: number, movedToday: boolean, entries: number | null, finished: boolean }
+const position = ref<Position | null>(null)
+const positionChecked = ref(false)
+const weekly = computed(() => site.value.campaign?.cadence === 'weekly')
+const nextOpensLater = computed(() => {
+  const p = position.value
+  return !!p && p.movedToday && !p.finished && props.page.day === p.current - 1
+})
+
+// The entry `/pray` shows a recognised subscriber: the one they are on, or
+// the one they already prayed today.
+function entryFor(p: Position): number {
+  if (p.finished) return Math.max(1, p.entries ?? 1)
+  return Math.max(1, p.movedToday ? p.current - 1 : p.current)
+}
+
+async function lookupPosition(): Promise<Position | null> {
+  try {
+    const res = await $fetch<{ position: Position | null }>('/api/pray/position', { method: 'POST', body: { campaign: site.value.campaign!.id, p: personal } })
+    return res.position
+  } catch {
+    return null
+  }
+}
+
 const LICENSES: Record<string, string> = { cc_by: 'CC BY 4.0', cc_by_sa: 'CC BY-SA 4.0' }
 
 function licenseLabel(l: string | null): string {
@@ -37,17 +64,18 @@ let timer: ReturnType<typeof setInterval> | null = null
 async function ping() {
   if (document.visibilityState === 'hidden' || amened.value || !site.value.campaign) return
   try {
-    const res = await $fetch<{ praying_now: number }>('/api/pray/ping', {
+    const res = await $fetch<{ praying_now: number, position: Position | null }>('/api/pray/ping', {
       method: 'POST',
       body: { id: sessionId.value, campaign: site.value.campaign.id, day: props.page.day, language: site.value.lang, source: personal ? 'manage' : 'porch', p: personal }
     })
     prayingNow.value = res.praying_now
+    if (res.position) position.value = res.position
   } catch {
     // non-critical
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   sessionId.value = crypto.randomUUID()
   const hash = new URLSearchParams(location.hash.slice(1))
   personal = hash.get('p')
@@ -63,6 +91,15 @@ onMounted(() => {
       personal = sessionStorage.getItem('pt_p')
     } catch {
       personal = null
+    }
+  }
+  if (props.page.personal && site.value.campaign) {
+    position.value = await lookupPosition()
+    positionChecked.value = true
+    const target = position.value && !props.page.chosen ? entryFor(position.value) : null
+    if (target && target !== props.page.day) {
+      await navigateTo({ path: link('pray', [target]), query: route.query }, { replace: true })
+      return
     }
   }
   void ping()
@@ -120,7 +157,8 @@ async function sendGroup() {
 
     <header class="space-y-1">
       <p v-if="site.campaign" class="text-sm text-stone-600">{{ site.campaign.name }}</p>
-      <h1 class="text-3xl font-bold">{{ t('pray.day', { n: num(page.day) }) }}</h1>
+      <h1 class="text-3xl font-bold">{{ page.personal && page.length ? t('pray.day_of', { n: num(page.day), total: num(page.length) }) : t('pray.day', { n: num(page.day) }) }}</h1>
+      <UProgress v-if="position?.entries" :model-value="Math.min(position.current - 1, position.entries)" :max="position.entries" size="sm" class="max-w-xs" />
       <p v-if="page.dateLabel" class="text-stone-600">{{ page.dateLabel }}</p>
       <p v-if="prayingNow > 1 && site.settings.showPrayingNow" class="text-sm text-stone-700" aria-live="polite">
         {{ t('pray.praying_now', { n: num(prayingNow) }, prayingNow) }}
@@ -150,6 +188,14 @@ async function sendGroup() {
         </form>
         <p v-if="groupSent" class="text-sm text-stone-700 mt-2" role="status">{{ t('pray.group_thanks') }}</p>
       </div>
+    </div>
+
+    <p v-if="nextOpensLater" class="text-stone-700" role="status">{{ t(weekly ? 'pray.opens_next_week' : 'pray.opens_tomorrow', { n: num(position!.current) }) }}</p>
+    <div v-if="page.personal && positionChecked && !position" class="rounded-2xl bg-white border border-stone-200 p-5 space-y-3">
+      <h2 class="text-lg font-semibold">{{ t('pray.personal_signup_title') }}</h2>
+      <p class="text-stone-700">{{ t('pray.personal_signup_body') }}</p>
+      <UButton :to="link('signup')" :label="t('pray.personal_signup')" />
+      <p class="text-sm text-stone-600">{{ t('pray.personal_signed_up') }}</p>
     </div>
 
     <nav class="flex justify-between gap-4" :aria-label="t('pray.nav')">

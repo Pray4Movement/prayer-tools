@@ -94,7 +94,9 @@ export function commitmentJson(c: CommitmentRow) {
     dates: (c.dates ?? []).map(d => new Date(d).toISOString()),
     starts_on: toIsoDate(c.starts_on as unknown as string),
     ends_on: toIsoDate(c.ends_on as unknown as string | null),
-    paused: c.paused
+    paused: c.paused,
+    // Personal-start campaigns: the entry the person is on.
+    current_entry: c.entries_done + 1
   }
 }
 

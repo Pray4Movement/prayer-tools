@@ -415,6 +415,8 @@ export interface PtCommitmentTable {
   paused: Generated<boolean>
   next_reminder_utc: NullableTimestamp
   claimed_at: NullableTimestamp
+  entries_done: Generated<number>
+  advanced_on: NullableDateOnly
   created_at: Timestamp
   updated_at: Timestamp
 }

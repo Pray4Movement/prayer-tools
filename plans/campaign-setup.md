@@ -51,7 +51,7 @@ Every campaign shows the number of people signed up, whatever its goal.
 ## End of a campaign
 
 - **Shared calendar:** when the campaign ends, everyone gets the end-of-campaign thank-you with the champion's optional message and call to action (see [admin-app.md](admin-app.md)).
-- **Personal start:** when a person reaches the last day, their subscription becomes `completed` and reminders stop; it never loops back to day 1. They get the same thank-you and call to action.
+- **Personal start:** when a person opens the last entry, their subscription becomes `completed` and reminders stop; it never loops back to day 1. They get the same thank-you and call to action.
 - The call to action is where a campaign hands people on, e.g. a 4-day crisis campaign's "Join the 12-day campaign".
 
 ## Templates
@@ -73,8 +73,10 @@ All templates preselect the people-mobilized goal.
 
 ## Content
 
-- Content is a numbered sequence of entries (1…N) with a cadence. Today's entry = anchor + cadence, where the anchor is the campaign start (shared calendar) or the person's start (personal start).
-- Public URLs address the entry number, so pages stay shared and edge-cacheable even for personal-start campaigns. Reminders and the app compute which entry a person is on.
+- Content is a numbered sequence of entries (1…N) with a cadence. On a shared calendar, today's entry = campaign start + cadence.
+- Public URLs address the entry number, so pages stay shared and edge-cacheable even for personal-start campaigns.
+- **Personal start is paced by progress, like a devotional.** A person has one prayer time per campaign, which records how far they are. Opening the entry they are on (from a reminder link, the site in a browser they confirmed in, or the app) moves them to the next one, at most once per day (once per week for weekly campaigns) in their timezone. A missed day is not skipped: the next reminder sends the same entry. Reminders are skipped on a day they already moved forward, and drop to weekly after three unopened reminders in a row until they open one.
+- Personal-start pray pages have no "Next" link. `/pray` takes a recognised subscriber to their entry and shows "Day N of M" with a progress bar; anyone else sees day 1 with an invitation to sign up.
 - Personal start suits devotionals and crises where people should start praying right away, daily.
 
 ## 24/7 coverage and DST

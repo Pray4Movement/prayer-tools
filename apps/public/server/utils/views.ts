@@ -216,13 +216,18 @@ async function prayPage(tx: Parameters<typeof loadSiteData>[0], ctx: SiteContext
   if (day < 1 || (last > 0 && day > last)) return { kind: 'not_found' }
   const blocks = await contentBlocks(tx, data, ctx.name, campaign, day, lang)
   const maxDay = campaign.start_mode === 'date' && cv.state === 'active' ? Math.min(cv.todayEntry, last || cv.todayEntry) : last
+  // Personal-start campaigns move each person forward one entry per day, so
+  // their pages never link ahead.
+  const personal = campaign.start_mode === 'join'
   return {
     kind: 'pray',
     day,
+    chosen: rest[0] !== undefined,
+    personal,
     dateLabel: campaign.start_mode === 'date' && campaign.start_date ? formatDate(entryDate(campaign.start_date, campaign.cadence, day), lang) : null,
     blocks,
     prev: day > 1 ? day - 1 : null,
-    next: day < maxDay ? day + 1 : null,
+    next: !personal && day < maxDay ? day + 1 : null,
     length: last || null
   }
 }

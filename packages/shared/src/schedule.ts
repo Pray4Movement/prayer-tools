@@ -88,11 +88,6 @@ export function entryDate(anchor: string, cadence: Cadence, entry: number): stri
   return addDays(anchor, (entry - 1) * (cadence === 'weekly' ? 7 : 1))
 }
 
-// The last day of a run of `entries` entries from an anchor date.
-export function lastDayOf(anchor: string, cadence: Cadence, entries: number): string {
-  return addDays(entryDate(anchor, cadence, entries + 1), -1)
-}
-
 // Minutes of prayer a rule commits per occurrence, used for the prayer-time goal.
 export function committedMinutes(rule: CommitmentRule, defaultMinutes: number): number {
   return rule.duration_min ?? defaultMinutes
