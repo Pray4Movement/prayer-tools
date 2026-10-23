@@ -5,7 +5,7 @@
 import { sql } from 'kysely'
 import { goalProgress, prayingNow, statTotals, activeRules } from '@prayertools/shared/stats'
 import { buildGrid, coverageByDay } from '@prayertools/shared/coverage'
-import { campaignStatus, displayLength } from '@prayertools/shared/setup'
+import { campaignStatus, displayLength, slotMinutes } from '@prayertools/shared/setup'
 import { toIsoDate } from '@prayertools/shared/dates'
 
 export default definePtHandler('pt.stats.read', async (event, tx) => {
@@ -35,7 +35,7 @@ export default definePtHandler('pt.stats.read', async (event, tx) => {
     const cRow = await tx.selectFrom('pt_commitment').select(eb => eb.fn.countAll<string>().as('n')).where('campaign_id', '=', campaign.id).executeTakeFirst()
     commitments = Number(cRow?.n ?? 0)
     if (campaign.goal === 'coverage' && campaign.start_date && campaign.end_date) {
-      const grid = buildGrid(campaign.start_date, campaign.end_date, campaign.timezone, await activeRules(t, campaign.id), site.settings_merged.default_duration_min)
+      const grid = buildGrid(campaign.start_date, campaign.end_date, campaign.timezone, await activeRules(t, campaign.id), site.settings_merged.default_duration_min, slotMinutes(campaign))
       coverage = coverageByDay(grid, campaign.start_date, campaign.end_date, campaign.timezone).map(d => ({ date: d.date, percent: d.percent }))
     }
   }

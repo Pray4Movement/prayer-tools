@@ -133,9 +133,10 @@
     "timezone_help": "Reminders are sent at your local time.",
     "when_title": "When will you pray?",
     "when_help": "Choose when we should remind you. You can add more than one prayer time.",
+    "when_help_coverage": "Choose a time that needs someone. You can add more than one prayer time.",
     "contact_title": "Your details",
     "add_time": "Add another prayer time",
-    "pick_slots": "Pick times on the prayer calendar",
+    "pick_slots": "Pick specific dates on the prayer calendar",
     "picked_times": "Times you picked on the calendar",
     "about_you": "About you",
     "consent_title": "Stay in touch (optional)",
@@ -187,6 +188,21 @@
     "picked": "{n} time selected | {n} times selected",
     "signup_picked": "Sign up for these times",
     "clear": "Clear"
+  },
+  "picker": {
+    "title": "At what time?",
+    "need_title": "Times that need someone",
+    "nobody": "nobody yet",
+    "mostly_open": "mostly open",
+    "some_gaps": "some gaps",
+    "show_more": "Show more",
+    "legend_none": "Nobody yet",
+    "legend_some": "Some days covered",
+    "legend_full": "Every day covered",
+    "hour_label": "{hour}: {percent}% covered",
+    "time_label": "{time}: {percent}% covered",
+    "open_on": "{time}: still open on {open} of {total} days",
+    "all_covered": "{time}: someone is already praying on every coming day"
   },
   "between": {
     "ended": "{campaign} has ended.",
@@ -296,7 +312,8 @@
     "closed": "Sign-up is not open right now.",
     "required_field": "Please answer the required questions.",
     "id_token": "We could not confirm your sign-in. Please use your email instead.",
-    "rate": "Too many attempts. Please wait a minute and try again."
+    "rate": "Too many attempts. Please wait a minute and try again.",
+    "time": "Please choose a time to pray."
   },
   "my": {
     "title": "My prayer",

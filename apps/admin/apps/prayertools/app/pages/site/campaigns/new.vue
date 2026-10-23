@@ -17,13 +17,13 @@ const { data: previous } = useFetch<{ campaign: PtCampaign }>(() => `/api/pt/cam
 
 const templateKey = ref('generic')
 const name = ref('')
-const setup = ref<SetupState>({ start_mode: 'date', start_date: null, end_mode: 'date', end_date: null, length_days: null, goal: 'people', cadence: 'daily', track_time: false, goal_target: null })
+const setup = ref<SetupState>({ start_mode: 'date', start_date: null, end_mode: 'date', end_date: null, length_days: null, goal: 'people', cadence: 'daily', track_time: false, goal_target: null, slot_min: null })
 watch(previous, (p) => {
   const c = p?.campaign
   if (!c) return
   templateKey.value = c.template_key ?? 'generic'
   name.value = c.name.replace(/\d{4}/, (y: string) => String(Number(y) + 1))
-  setup.value = { start_mode: c.start_mode, start_date: null, end_mode: c.end_mode, end_date: null, length_days: c.length_days, goal: c.goal, cadence: c.cadence, track_time: c.track_time, goal_target: c.goal_target }
+  setup.value = { start_mode: c.start_mode, start_date: null, end_mode: c.end_mode, end_date: null, length_days: c.length_days, goal: c.goal, cadence: c.cadence, track_time: c.track_time, goal_target: c.goal_target, slot_min: c.slot_min ?? null }
 }, { immediate: true })
 
 const templateKeys = computed(() => meta.value?.templates.map(t => t.key) ?? Object.keys(PT_LABELS.template))

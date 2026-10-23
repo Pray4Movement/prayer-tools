@@ -8,7 +8,7 @@ There are no campaign types. A campaign is described by four setup answers; temp
 |---|---|
 | Start | **on a date** (shared calendar, everyone on the same day) · **when each person joins** (personal start: each intercessor's day 1 is the day they sign up) |
 | End | **on a date** · **no end** · for personal start: **how many days** each person goes through |
-| Goal | **people mobilized** (preselected, recommended) · **prayer time** (e.g. 24 hours of prayer every day) · **24/7 coverage** — offered in this order |
+| Goal | **people mobilized** (preselected, recommended) · **prayer time** (e.g. 24 hours of prayer every day) · **24/7 coverage** (needs a start date and an end date) — offered in this order |
 | Content cadence | daily · weekly |
 
 ## Length
@@ -31,12 +31,14 @@ Signup is built around the reminder (Doxa model): the intercessor says when they
 |---|---|---|
 | People mobilized | required | asked only when the champion turns on "track time committed" (off by default); default 15 min |
 | Prayer time | required | required, intercessor's choice; default 15 min |
-| 24/7 coverage | required | required; default 15 min |
+| 24/7 coverage | required | required, whole slots only; default 15 min, raised to one slot |
 
 - Daily means choosing a time; weekly or selected days means choosing the days and a time. There is no weekly without a day.
 - The time is when the reminder is sent. Only for 24/7 coverage is it also the prayer slot that fills the coverage grid.
 - One `commitment` row per prayer time. People mobilized counts distinct people with an active commitment, prayer time sums durations, 24/7 expands each row into slots.
 - 24/7 campaigns also allow specific-date picks.
+- 24/7 coverage needs a start date and an end date. A grid with no end can't be filled, and its percentage drops as days are added, so open-ended campaigns aim for prayer time instead.
+- A 24/7 campaign chooses its slot length: 5, 10, 15 (default), 30 or 60 minutes. Durations are whole multiples of it, so every commitment fills complete slots.
 
 ## Counting people
 
@@ -83,7 +85,7 @@ All templates preselect the people-mobilized goal.
 
 24/7 coverage is used for fixed-date events in general, so DST must be handled.
 
-- **Calculation:** the campaign is a grid of real 15-minute instants from its start to its end (a DST day in the campaign's timezone simply has 92 or 100 slots). Each recurring commitment expands to occurrences by converting date + time in its anchor timezone to UTC; picks are instants already. Each occurrence marks the slots it overlaps. Coverage = share of slots with at least one intercessor. Because everything is in real instants, the result is exact across DST.
+- **Calculation:** the campaign is a grid of real slot instants (15 minutes unless the campaign chooses another length) from its start to its end (a DST day in the campaign's timezone simply has 92 or 100 15-minute slots). Each recurring commitment expands to occurrences by converting date + time in its anchor timezone to UTC; picks are instants already. Each occurrence marks the slots it overlaps. Coverage = share of slots with at least one intercessor. Because everything is in real instants, the result is exact across DST.
 - **Where DST bites:** not the maths but the behaviour. A daily commitment anchored to the intercessor's local time moves by an hour in real time at their DST change, so the grid correctly shows a gap in one slot and a double in another. Anchoring to the campaign's timezone doesn't avoid it: the campaign's own change day skips or repeats an hour.
 - **Specific-date picks are unaffected** — they are absolute instants.
 - **Policy (leaning):** anchor recurring commitments to the intercessor's local time. The grid then shows where people will actually pray, so "real 24/7 coverage" is an honest claim; gaps created by a DST change show up on the calendar to be filled.

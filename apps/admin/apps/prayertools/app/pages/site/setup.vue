@@ -70,13 +70,13 @@ async function saveAbout() {
 const templateKey = ref('generic')
 watch(site, s => { if (s?.site.template_key) templateKey.value = s.site.template_key }, { immediate: true })
 const campaignName = ref('')
-const setup = ref<SetupState>({ start_mode: 'date', start_date: null, end_mode: 'date', end_date: null, length_days: null, goal: 'people', cadence: 'daily', track_time: false, goal_target: 100 })
+const setup = ref<SetupState>({ start_mode: 'date', start_date: null, end_mode: 'date', end_date: null, length_days: null, goal: 'people', cadence: 'daily', track_time: false, goal_target: 100, slot_min: null })
 const existingCampaign = computed(() => site.value?.currentCampaign ?? null)
 
 watch(existingCampaign, (c) => {
   if (!c) return
   campaignName.value = c.name
-  setup.value = { start_mode: c.start_mode, start_date: c.start_date, end_mode: c.end_mode, end_date: c.end_date, length_days: c.length_days, goal: c.goal, cadence: c.cadence, track_time: c.track_time, goal_target: c.goal_target }
+  setup.value = { start_mode: c.start_mode, start_date: c.start_date, end_mode: c.end_mode, end_date: c.end_date, length_days: c.length_days, goal: c.goal, cadence: c.cadence, track_time: c.track_time, goal_target: c.goal_target, slot_min: c.slot_min ?? null }
 }, { immediate: true })
 
 function chooseTemplate(key: string) {

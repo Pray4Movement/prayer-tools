@@ -5,6 +5,7 @@ import { withOrg } from '@prayertools/shared/db/scope'
 import { createWebSignup, validateRuleForCampaign, type RuleInput } from '@prayertools/shared/subscriptions'
 import { findContactByEmail, normalizeEmail } from '@prayertools/shared/crm'
 import { isValidTimezone } from '@prayertools/shared/dates'
+import { defaultDuration } from '@prayertools/shared/setup'
 import { recordEvent } from '@prayertools/shared/stats'
 import { textIn } from '@prayertools/shared/translatable'
 import { manageUrl } from '@prayertools/shared/links'
@@ -61,7 +62,7 @@ export default defineEventHandler(async (event) => {
     for (const raw of rawCommitments) {
       const rule = parseRuleInput(raw)
       if (!rule) bad('commitment')
-      if (rule.duration_min === null && campaign.goal !== 'people') rule.duration_min = data.settings.default_duration_min
+      if (rule.duration_min === null && campaign.goal !== 'people') rule.duration_min = defaultDuration(campaign, data.settings.default_duration_min)
       if (validateRuleForCampaign(rule, campaign).length) bad('commitment')
       commitments.push(rule)
     }

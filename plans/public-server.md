@@ -61,6 +61,7 @@ Templates set which sections show by default and pre-fill guidance text.
 - Web signup uses email, verified by the email link, or Google / Apple sign-in, which gives an already-verified email. Apple's "Hide My Email" gives a relay address, so the same person typing their real email later becomes a second person.
 - After signing up, the person lands on today's prayer content with a note to confirm their email. No reminders are sent until the email is verified; unverified signups are deleted after 7 days.
 - Every commitment has days and a reminder time; duration depends on the campaign's goal (see [campaign-setup.md](campaign-setup.md)).
+- On 24/7 campaigns each recurring prayer time is chosen on a coverage picker: the hours that most need someone are listed first, then a grid of the 24 hours shaded by how covered each is from now to the campaign's end (only the chosen weekdays for weekly), then the slots of the chosen hour. One line gives the numbers for the selected time ("still open on 12 of 30 days"). Specific dates are picked on the prayer calendar page. Other goals ask for a plain reminder time.
 - Consent boxes, unchecked: updates from this site, news from Prayer.Tools, and any custom options the champion added.
 - Turnstile and rate limiting on public endpoints.
 - Creates or reuses the site's CRM contact by email, inside the site's org; a subscription on the site; commitments in the current campaign as recurring rules. Once the email is verified, the contact is linked to the global `intercessor` for that address.

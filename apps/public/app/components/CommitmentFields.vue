@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // One prayer time: daily at a time, or chosen weekdays at a time, with a
-// duration when the campaign's goal uses it.
+// duration when the campaign's goal uses it. `timeless` leaves the time to a
+// picker next to it.
 import type { CommitmentInput } from '~/utils/commitment'
 
 const model = defineModel<CommitmentInput>({ required: true })
-const props = defineProps<{ durationRule: 'required' | 'optional' | 'hidden', durations: number[], idPrefix: string, lang: string }>()
+const props = defineProps<{ durationRule: 'required' | 'optional' | 'hidden', durations: number[], idPrefix: string, lang: string, timeless?: boolean }>()
 const { t } = useI18n()
 
 const frequencies = computed(() => [
@@ -36,7 +37,7 @@ const durationItems = computed(() => props.durations.map(d => ({ label: formatMi
     <UFormField :label="t('commitment.how_often')" :name="`${idPrefix}-frequency`">
       <URadioGroup v-model="model.frequency" :items="frequencies" orientation="horizontal" />
     </UFormField>
-    <UFormField :label="t('commitment.time')" :name="`${idPrefix}-time`" :help="t('commitment.time_help')" required>
+    <UFormField v-if="!timeless" :label="t('commitment.time')" :name="`${idPrefix}-time`" :help="t('commitment.time_help')" required>
       <UInput :id="`${idPrefix}-time`" v-model="model.time" type="time" required class="w-40" />
     </UFormField>
     <UFormField v-if="model.frequency === 'weekly'" :label="t('commitment.days')" :name="`${idPrefix}-days`" class="sm:col-span-2" required>

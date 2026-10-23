@@ -4,7 +4,7 @@ import { sql } from 'kysely'
 import { forEachOrg, type Tx } from '@prayertools/shared/db/scope'
 import { jsonb } from '@prayertools/shared/db/json'
 import { buildGrid } from '@prayertools/shared/coverage'
-import { campaignStatus, pickCurrentCampaign } from '@prayertools/shared/setup'
+import { campaignStatus, pickCurrentCampaign, slotMinutes } from '@prayertools/shared/setup'
 import { siteSettings } from '@prayertools/shared/site'
 import { activeRules, peopleCount } from '@prayertools/shared/stats'
 import { daysBetween } from '@prayertools/shared/dates'
@@ -66,7 +66,7 @@ async function refreshCoverage(tx: Tx, now: Date): Promise<number> {
   for (const c of campaigns) {
     if (!c.start_date || !c.end_date || daysBetween(c.start_date, c.end_date) <= LONG_COVERAGE_DAYS) continue
     if (campaignStatus(c, now) === 'ended') continue
-    const grid = buildGrid(c.start_date, c.end_date, c.timezone, await activeRules(tx, c.id), defaultMinutes)
+    const grid = buildGrid(c.start_date, c.end_date, c.timezone, await activeRules(tx, c.id), defaultMinutes, slotMinutes(c))
     await tx
       .insertInto('pt_coverage_cache')
       .values({ campaign_id: c.id, slots: jsonb(grid.slots), computed_at: now })

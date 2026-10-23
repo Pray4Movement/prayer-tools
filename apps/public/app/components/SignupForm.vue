@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SignupFormView } from '~~/shared/view'
+import type { SlotCounts } from '@prayertools/shared/coverage'
 import { browserTimezone, newCommitment, timezones, type CommitmentInput } from '~/utils/commitment'
 
 const props = defineProps<{ form: SignupFormView }>()
@@ -9,13 +10,29 @@ const route = useRoute()
 
 const campaign = computed(() => site.value.campaign!)
 const tzItems = timezones()
+const isCoverage = computed(() => campaign.value.goal === 'coverage')
+
+// 24/7 campaigns pick each time on the coverage picker; without coverage data
+// the plain time field is shown instead.
+const { data: coverage, status: coverageStatus } = useFetch<SlotCounts>('/api/coverage.json', {
+  query: { campaign: campaign.value.id },
+  server: false,
+  immediate: isCoverage.value
+})
+const usePicker = computed(() => isCoverage.value && coverageStatus.value !== 'error')
+
+function blankCommitment(): CommitmentInput {
+  const c = newCommitment(campaign.value.durationRule, campaign.value.defaultDuration, campaign.value.cadence)
+  if (isCoverage.value) c.time = ''
+  return c
+}
 
 const state = reactive({
   email: '',
   name: '',
   language: site.value.lang,
   timezone: 'UTC',
-  commitments: [newCommitment(campaign.value.durationRule, campaign.value.defaultDuration, campaign.value.cadence)] as CommitmentInput[],
+  commitments: [blankCommitment()] as CommitmentInput[],
   picks: [] as string[],
   siteUpdates: false,
   platformNews: false,
@@ -39,11 +56,16 @@ onMounted(() => {
 const languageItems = computed(() => site.value.languages.map(l => ({ label: l.native, value: l.code })))
 
 function addCommitment() {
-  state.commitments.push(newCommitment(campaign.value.durationRule, campaign.value.defaultDuration, campaign.value.cadence))
+  state.commitments.push(blankCommitment())
 }
 
 function removePick(iso: string) {
   state.picks = state.picks.filter(p => p !== iso)
+}
+
+// Wall-clock time of an instant in the chosen timezone, as HH:MM.
+function wallTime(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: state.timezone || undefined }).format(new Date(iso))
 }
 
 function pickLabel(iso: string): string {
@@ -56,6 +78,10 @@ async function submit() {
     error.value = t('errors.commitments')
     return
   }
+  if (state.commitments.some(c => !c.time)) {
+    error.value = t('errors.time')
+    return
+  }
   sending.value = true
   try {
     const commitments: Record<string, unknown>[] = state.commitments.map(c => ({
@@ -66,10 +92,7 @@ async function submit() {
       duration_min: c.duration_min
     }))
     if (state.picks.length) {
-      const first = new Date(state.picks[0]!)
-      const hh = String(first.getHours()).padStart(2, '0')
-      const mm = String(first.getMinutes()).padStart(2, '0')
-      commitments.push({ kind: 'dates', dates: state.picks, time: `${hh}:${mm}`, duration_min: campaign.value.defaultDuration })
+      commitments.push({ kind: 'dates', dates: state.picks, time: wallTime(state.picks[0]!), duration_min: campaign.value.defaultDuration })
     }
     const res = await $fetch<{ ok: true, verify: boolean, referral_code: string | null }>('/api/signup', {
       method: 'POST',
@@ -115,9 +138,22 @@ function onIdToken(provider: 'google' | 'apple', token: string) {
     <div class="grid gap-8 @2xl:grid-cols-2 @2xl:gap-10">
       <fieldset class="space-y-4">
         <legend class="text-lg font-semibold">{{ t('signup.when_title') }}</legend>
-        <p class="text-sm text-stone-600">{{ t('signup.when_help') }}</p>
+        <p class="text-sm text-stone-600">{{ t(isCoverage ? 'signup.when_help_coverage' : 'signup.when_help') }}</p>
         <div v-for="(c, i) in state.commitments" :key="i" class="rounded-lg border border-stone-200 bg-white p-4 space-y-3">
-          <CommitmentFields v-model="state.commitments[i]!" :duration-rule="campaign.durationRule" :durations="form.durations" :id-prefix="`c${i}`" :lang="site.lang" />
+          <CommitmentFields v-model="state.commitments[i]!" :duration-rule="campaign.durationRule" :durations="campaign.durations" :id-prefix="`c${i}`" :lang="site.lang" :timeless="usePicker" />
+          <template v-if="usePicker">
+            <CoveragePicker
+              v-if="coverage"
+              v-model="state.commitments[i]!.time"
+              :counts="coverage"
+              :tz="state.timezone"
+              :weekdays="c.frequency === 'weekly' ? c.days_of_week : []"
+              :duration="c.duration_min ?? campaign.defaultDuration"
+              :lang="site.lang"
+              :id-prefix="`c${i}`"
+            />
+            <p v-else class="text-sm text-stone-600">{{ t('common.loading') }}</p>
+          </template>
           <UButton v-if="state.commitments.length > 1 || state.picks.length" variant="link" color="neutral" icon="i-lucide-x" :label="t('commitment.remove')" @click="state.commitments.splice(i, 1)" />
         </div>
         <div v-if="state.picks.length" class="rounded-lg border border-stone-200 bg-white p-4">

@@ -2,7 +2,7 @@
 // My prayer. Every function runs inside the subscription's org.
 import type { Tx } from '@prayertools/shared/db/scope'
 import { insertCommitment, refreshReminders, setSubscriptionStatus, updateCommitment, validateRuleForCampaign, normalizeCampaign, type CampaignRow, type SubscriptionRow } from '@prayertools/shared/subscriptions'
-import { campaignStatus } from '@prayertools/shared/setup'
+import { campaignStatus, defaultDuration } from '@prayertools/shared/setup'
 import { customPurpose, primaryEmailOf, PURPOSE_SITE_UPDATES, setConsent, type ConsentCapture } from '@prayertools/shared/crm'
 import { isValidTimezone } from '@prayertools/shared/dates'
 import { siteSettings } from '@prayertools/shared/site'
@@ -30,7 +30,7 @@ export async function addCommitment(tx: Tx, sub: SubscriptionRow, campaignId: st
   if (!rule) bad('commitment')
   if (rule.duration_min === null && campaign.goal !== 'people') {
     const site = await tx.selectFrom('pt_site').select('settings').executeTakeFirstOrThrow()
-    rule.duration_min = siteSettings(site.settings).default_duration_min
+    rule.duration_min = defaultDuration(campaign, siteSettings(site.settings).default_duration_min)
   }
   if (validateRuleForCampaign(rule, campaign).length) bad('commitment')
   await insertCommitment(tx, sub, campaign, rule)

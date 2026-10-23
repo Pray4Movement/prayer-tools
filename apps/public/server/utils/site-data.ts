@@ -2,7 +2,7 @@
 import type { Selectable } from 'kysely'
 import type { Tx } from '@prayertools/shared/db/scope'
 import type { PtSiteTable, SiteBranding, SiteLanding, SiteShare, TranslatableText } from '@prayertools/shared/db/schema'
-import { campaignLength, campaignStatus, durationRule, pickCurrentCampaign } from '@prayertools/shared/setup'
+import { campaignLength, campaignStatus, defaultDuration, durationOptions, durationRule, pickCurrentCampaign, slotMinutes } from '@prayertools/shared/setup'
 import { entryNumber } from '@prayertools/shared/schedule'
 import { todayIn } from '@prayertools/shared/dates'
 import { normalizeCampaign, type CampaignRow } from '@prayertools/shared/subscriptions'
@@ -67,7 +67,9 @@ export function campaignView(data: SiteData, c: CampaignRow): CampaignView {
     timezone: c.timezone,
     length,
     durationRule: durationRule(c.goal, c.track_time),
-    defaultDuration: data.settings.default_duration_min,
+    durations: durationOptions(c),
+    defaultDuration: defaultDuration(c, data.settings.default_duration_min),
+    slotMinutes: c.goal === 'coverage' ? slotMinutes(c) : null,
     todayEntry
   }
 }

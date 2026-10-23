@@ -133,9 +133,10 @@
     "timezone_help": "Os lembretes são enviados no seu horário local.",
     "when_title": "Quando você vai orar?",
     "when_help": "Escolha quando devemos lembrar você. Você pode adicionar mais de um horário de oração.",
+    "when_help_coverage": "Escolha um horário que precise de alguém. Você pode adicionar mais de um horário de oração.",
     "contact_title": "Seus dados",
     "add_time": "Adicionar outro horário de oração",
-    "pick_slots": "Escolher horários no calendário de oração",
+    "pick_slots": "Escolher datas específicas no calendário de oração",
     "picked_times": "Horários que você escolheu no calendário",
     "about_you": "Sobre você",
     "consent_title": "Vamos manter contato (opcional)",
@@ -187,6 +188,21 @@
     "picked": "{n} horário selecionado | {n} horários selecionados",
     "signup_picked": "Inscrever-me nestes horários",
     "clear": "Limpar"
+  },
+  "picker": {
+    "title": "A que horas?",
+    "need_title": "Horários que precisam de alguém",
+    "nobody": "ninguém ainda",
+    "mostly_open": "quase livre",
+    "some_gaps": "algumas lacunas",
+    "show_more": "Ver mais",
+    "legend_none": "Ninguém ainda",
+    "legend_some": "Alguns dias cobertos",
+    "legend_full": "Todos os dias cobertos",
+    "hour_label": "{hour}: {percent}% coberto",
+    "time_label": "{time}: {percent}% coberto",
+    "open_on": "{time}: ainda livre em {open} de {total} dias",
+    "all_covered": "{time}: alguém já ora em todos os próximos dias"
   },
   "between": {
     "ended": "{campaign} chegou ao fim.",
@@ -296,7 +312,8 @@
     "closed": "As inscrições não estão abertas no momento.",
     "required_field": "Responda às perguntas obrigatórias.",
     "id_token": "Não conseguimos confirmar seu login. Use seu e-mail.",
-    "rate": "Muitas tentativas. Aguarde um minuto e tente novamente."
+    "rate": "Muitas tentativas. Aguarde um minuto e tente novamente.",
+    "time": "Escolha um horário para orar."
   },
   "my": {
     "title": "Minha oração",

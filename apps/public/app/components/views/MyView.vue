@@ -96,6 +96,7 @@ function languageItems(s: MySiteView) {
             <CommitmentList
               :commitments="cur.commitments"
               :duration-rule="cur.campaign.durationRule"
+              :durations="cur.campaign.durations"
               :default-duration="cur.campaign.defaultDuration"
               :can-add="s.status !== 'unsubscribed'"
               :lang="lang"

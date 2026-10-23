@@ -39,6 +39,7 @@ export default definePtHandler('pt.campaigns.write', async (event, tx, ctx) => {
     ...answers,
     timezone,
     goal_target: (extras.goal_target as number | null | undefined) ?? previous?.goal_target ?? null,
+    slot_min: 'slot_min' in extras ? extras.slot_min as number | null : (previous?.slot_min ?? null),
     end_message: b.end_message ? jsonb(parseText(b.end_message)) : (previous?.end_message ? jsonb(previous.end_message) : null),
     cta: jsonb(b.cta ? ptCta(b.cta) : (previous?.cta ?? {}))
   } as never).returningAll().executeTakeFirstOrThrow()

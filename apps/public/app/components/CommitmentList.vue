@@ -2,12 +2,12 @@
 // A person's prayer times with edit / pause / remove, and adding a new one.
 // The parent performs the API calls.
 import type { CommitmentView } from '~~/shared/view'
-import { DURATION_OPTIONS } from '@prayertools/shared/setup'
 import { describeRule, formatMinutes, newCommitment, type CommitmentInput } from '~/utils/commitment'
 
 const props = defineProps<{
   commitments: CommitmentView[]
   durationRule: 'required' | 'optional' | 'hidden'
+  durations: number[]
   defaultDuration: number
   canAdd: boolean
   lang: string
@@ -67,7 +67,7 @@ function dateList(c: CommitmentView): string {
           <UBadge v-if="c.paused" color="warning" variant="soft" :label="t('manage.paused')" />
         </div>
         <div v-if="editing === c.id" class="space-y-3">
-          <CommitmentFields v-model="draft" :duration-rule="durationRule" :durations="DURATION_OPTIONS" :id-prefix="`e-${c.id}`" :lang="lang" />
+          <CommitmentFields v-model="draft" :duration-rule="durationRule" :durations="durations" :id-prefix="`e-${c.id}`" :lang="lang" />
           <div class="flex gap-2">
             <UButton :loading="busy" :label="t('common.save')" @click="save" />
             <UButton variant="ghost" color="neutral" :label="t('common.cancel')" @click="editing = null" />
@@ -82,7 +82,7 @@ function dateList(c: CommitmentView): string {
       </li>
     </ul>
     <div v-if="adding" class="rounded-lg border border-stone-200 bg-white p-4 space-y-3">
-      <CommitmentFields v-model="draft" :duration-rule="durationRule" :durations="DURATION_OPTIONS" id-prefix="new" :lang="lang" />
+      <CommitmentFields v-model="draft" :duration-rule="durationRule" :durations="durations" id-prefix="new" :lang="lang" />
       <div class="flex gap-2">
         <UButton :loading="busy" :label="t('manage.add_time')" @click="save" />
         <UButton variant="ghost" color="neutral" :label="t('common.cancel')" @click="adding = false" />

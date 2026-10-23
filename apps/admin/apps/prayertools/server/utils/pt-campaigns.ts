@@ -1,6 +1,6 @@
 import type { Transaction } from 'kysely'
 import type { Database } from '#core/server/database/schema'
-import { applyTemplate, campaignsOverlap, validateSetup, type SetupAnswers } from '@prayertools/shared/setup'
+import { applyTemplate, campaignsOverlap, DEFAULT_SLOT_MIN, SLOT_OPTIONS, validateSetup, type SetupAnswers } from '@prayertools/shared/setup'
 import { campaignSlugError } from '@prayertools/shared/paths'
 import { isValidTimezone } from '@prayertools/shared/dates'
 import { parseText } from '@prayertools/shared/translatable'
@@ -43,6 +43,11 @@ export function ptCampaignExtras(b: Record<string, unknown>) {
     const v = b.goal_target
     if (v !== null && !(Number.isInteger(v) && (v as number) > 0 && (v as number) < 10_000_000)) ptBadRequest('Goal target must be a positive whole number.')
     out.goal_target = v
+  }
+  if ('slot_min' in b) {
+    const v = b.slot_min
+    if (v !== null && !SLOT_OPTIONS.includes(v as number)) ptBadRequest('Choose a slot length from the list.')
+    out.slot_min = v === DEFAULT_SLOT_MIN ? null : v
   }
   return out
 }

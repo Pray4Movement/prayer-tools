@@ -703,7 +703,7 @@
       },
       "Campaign": {
         "type": "object",
-        "required": ["id", "slug", "name", "status", "goal", "goal_target", "cadence", "start_mode", "start_date", "end_date", "length_days", "timezone", "duration", "default_duration_min"],
+        "required": ["id", "slug", "name", "status", "goal", "goal_target", "cadence", "start_mode", "start_date", "end_date", "length_days", "timezone", "duration", "duration_options", "default_duration_min", "slot_minutes"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "slug": { "type": "string" },
@@ -718,7 +718,9 @@
           "length_days": { "type": ["integer", "null"], "description": "Length for personal-start campaigns." },
           "timezone": { "type": "string" },
           "duration": { "type": "string", "enum": ["required", "optional", "hidden"], "description": "Whether a commitment asks for `duration_min`." },
-          "default_duration_min": { "type": "integer", "description": "The site's default prayer duration in minutes." }
+          "duration_options": { "type": "array", "items": { "type": "integer" }, "description": "The `duration_min` values a commitment may use. On 24/7 coverage campaigns these are whole multiples of `slot_minutes`." },
+          "default_duration_min": { "type": "integer", "description": "The default prayer duration in minutes: the site's default, raised to a whole number of slots on 24/7 coverage campaigns." },
+          "slot_minutes": { "type": ["integer", "null"], "description": "24/7 coverage campaigns: length of one coverage slot in minutes; null for other goals." }
         }
       },
       "GoalProgress": {

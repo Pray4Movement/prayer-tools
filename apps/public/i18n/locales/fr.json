@@ -133,9 +133,10 @@
     "timezone_help": "Les rappels sont envoyés à votre heure locale.",
     "when_title": "Quand allez-vous prier ?",
     "when_help": "Choisissez quand nous devons vous le rappeler. Vous pouvez ajouter plusieurs moments de prière.",
+    "when_help_coverage": "Choisissez un horaire qui a besoin de quelqu’un. Vous pouvez ajouter plusieurs moments de prière.",
     "contact_title": "Vos coordonnées",
     "add_time": "Ajouter un autre moment de prière",
-    "pick_slots": "Choisir des créneaux dans le calendrier de prière",
+    "pick_slots": "Choisir des dates précises dans le calendrier de prière",
     "picked_times": "Créneaux choisis dans le calendrier",
     "about_you": "À propos de vous",
     "consent_title": "Restons en contact (facultatif)",
@@ -187,6 +188,21 @@
     "picked": "{n} créneau sélectionné | {n} créneaux sélectionnés",
     "signup_picked": "M'inscrire pour ces créneaux",
     "clear": "Effacer"
+  },
+  "picker": {
+    "title": "À quelle heure ?",
+    "need_title": "Horaires qui ont besoin de quelqu’un",
+    "nobody": "personne pour l’instant",
+    "mostly_open": "presque libre",
+    "some_gaps": "quelques trous",
+    "show_more": "Voir plus",
+    "legend_none": "Personne pour l’instant",
+    "legend_some": "Certains jours couverts",
+    "legend_full": "Tous les jours couverts",
+    "hour_label": "{hour} : couvert à {percent} %",
+    "time_label": "{time} : couvert à {percent} %",
+    "open_on": "{time} : encore libre {open} jours sur {total}",
+    "all_covered": "{time} : quelqu’un prie déjà chacun des jours à venir"
   },
   "between": {
     "ended": "{campaign} a pris fin.",
@@ -296,7 +312,8 @@
     "closed": "Les inscriptions ne sont pas ouvertes pour le moment.",
     "required_field": "Veuillez répondre aux questions obligatoires.",
     "id_token": "Nous n'avons pas pu confirmer votre connexion. Veuillez plutôt utiliser votre adresse e-mail.",
-    "rate": "Trop de tentatives. Veuillez patienter une minute et réessayer."
+    "rate": "Trop de tentatives. Veuillez patienter une minute et réessayer.",
+    "time": "Veuillez choisir une heure pour prier."
   },
   "my": {
     "title": "Ma prière",

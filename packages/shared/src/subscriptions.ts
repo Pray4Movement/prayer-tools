@@ -10,7 +10,7 @@ import { campaignEntries } from './content'
 import { hashToken, randomToken, shortCode } from './tokens'
 import { consentHistory, consentState, markChannelVerified, primaryEmailOf, setConsent, upsertContact, type ConsentCapture } from './crm'
 import { bumpStat } from './stats'
-import { durationRule } from './setup'
+import { durationOptions, durationRule } from './setup'
 
 export type CampaignRow = Selectable<PtCampaignTable>
 export type SubscriptionRow = Selectable<PtSubscriptionTable>
@@ -81,6 +81,7 @@ export function validateRuleForCampaign(input: RuleInput, campaign: CampaignRow)
   }
   const rule = durationRule(campaign.goal, campaign.track_time)
   if (rule === 'required' && !input.duration_min) errors.push('duration_min')
+  else if (campaign.goal === 'coverage' && !durationOptions(campaign).includes(input.duration_min!)) errors.push('duration_min')
   return errors
 }
 

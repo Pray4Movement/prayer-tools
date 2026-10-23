@@ -4,7 +4,7 @@
 import type { H3Event } from 'h3'
 import { withOrg, withPerson, type Tx } from '@prayertools/shared/db/scope'
 import { hashToken } from '@prayertools/shared/tokens'
-import { campaignStatus, durationRule, pickCurrentCampaign } from '@prayertools/shared/setup'
+import { campaignStatus, defaultDuration, durationOptions, durationRule, pickCurrentCampaign } from '@prayertools/shared/setup'
 import { primaryEmailOf, PURPOSE_SITE_UPDATES } from '@prayertools/shared/crm'
 import { siteSettings, siteUrlFor } from '@prayertools/shared/site'
 import { getLanguage } from '@prayertools/shared/languages'
@@ -102,7 +102,8 @@ export async function buildMyView(intercessorId: string | null): Promise<MyView>
             state: (campaignStatus(c) === 'upcoming' ? 'upcoming' : 'active') as 'upcoming' | 'active',
             goal: c.goal,
             durationRule: durationRule(c.goal, c.track_time),
-            defaultDuration: settings.default_duration_min
+            durations: durationOptions(c),
+            defaultDuration: defaultDuration(c, settings.default_duration_min)
           },
           commitments: commitments.filter(x => x.campaignId === c.id)
         })),

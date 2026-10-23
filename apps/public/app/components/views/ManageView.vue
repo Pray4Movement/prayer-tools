@@ -80,6 +80,7 @@ async function deleteData() {
         <CommitmentList
           :commitments="manage.commitments"
           :duration-rule="campaign?.durationRule ?? 'hidden'"
+          :durations="campaign?.durations ?? []"
           :default-duration="campaign?.defaultDuration ?? 15"
           :can-add="canAdd"
           :lang="site.lang"

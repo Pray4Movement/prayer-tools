@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildGrid, campaignWindow, coverageByDay, coveragePercent } from '../src/coverage'
+import { buildGrid, campaignWindow, coverageByDay, coverageByTimeOfDay, coveragePercent, openOccurrences } from '../src/coverage'
 import type { CommitmentRule } from '../src/schedule'
 
 const NY = 'America/New_York'
@@ -57,5 +57,46 @@ describe('coverage grid', () => {
     const grid = buildGrid('2026-03-10', '2026-03-10', NY, [pick])
     // 23:50 EDT on 9 March for 30 minutes covers 00:00–00:20 on 10 March.
     expect(grid.slots.slice(0, 3)).toEqual([1, 1, 0])
+  })
+})
+
+describe('slot lengths', () => {
+  it('a day has 288 five-minute slots and 24 hour-long slots', () => {
+    expect(buildGrid('2026-03-10', '2026-03-10', NY, [], 15, 5).slots).toHaveLength(288)
+    expect(buildGrid('2026-03-10', '2026-03-10', NY, [], 15, 60).slots).toHaveLength(24)
+    const grid = buildGrid('2026-03-10', '2026-03-11', NY, [daily('07:00', 10)], 15, 5)
+    expect(grid.slotMinutes).toBe(5)
+    expect(coverageByDay(grid, '2026-03-10', '2026-03-11', NY).map(d => d.slots.filter(n => n > 0).length)).toEqual([2, 2])
+  })
+})
+
+describe('coverage by time of day', () => {
+  const grid = buildGrid('2026-03-07', '2026-03-10', NY, [daily('07:00', 30)])
+  const counts = { start: grid.start.toISOString(), slotMinutes: 15, slots: grid.slots }
+  const from = new Date('2026-03-07T05:00:00Z')
+
+  it('counts every coming day at each local time, across DST', () => {
+    const rows = coverageByTimeOfDay(counts, NY, from)
+    expect(rows.find(r => r.minute === 7 * 60)).toEqual({ minute: 420, total: 4, covered: 4 })
+    expect(rows.find(r => r.minute === 7 * 60 + 30)).toEqual({ minute: 450, total: 4, covered: 0 })
+    // 02:00 does not exist on the spring DST day.
+    expect(rows.find(r => r.minute === 2 * 60)!.total).toBe(3)
+  })
+
+  it('reads the same slots in another timezone', () => {
+    const rows = coverageByTimeOfDay(counts, 'Europe/London', from)
+    expect(rows.filter(r => r.covered > 0).map(r => r.minute)).toEqual([11 * 60, 11 * 60 + 15, 12 * 60, 12 * 60 + 15])
+  })
+
+  it('skips slots before now and keeps only the chosen weekdays', () => {
+    expect(coverageByTimeOfDay(counts, NY, new Date('2026-03-09T04:00:00Z')).find(r => r.minute === 420)!.total).toBe(2)
+    // 2026-03-08 is a Sunday.
+    expect(coverageByTimeOfDay(counts, NY, from, [0]).find(r => r.minute === 420)!.total).toBe(1)
+  })
+
+  it('an occurrence is open when any slot of its length has nobody', () => {
+    expect(openOccurrences(counts, NY, from, 420, 30)).toEqual({ total: 4, open: 0 })
+    expect(openOccurrences(counts, NY, from, 420, 45)).toEqual({ total: 4, open: 4 })
+    expect(openOccurrences(counts, NY, from, 6 * 60 + 45, 30)).toEqual({ total: 4, open: 4 })
   })
 })

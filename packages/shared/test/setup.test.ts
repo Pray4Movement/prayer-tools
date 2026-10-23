@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyTemplate, campaignLength, campaignStatus, campaignsOverlap, displayLength, durationRule, pickCurrentCampaign, suggestCampaignSlug, validateSetup, type CampaignDates } from '../src/setup'
+import { applyTemplate, campaignLength, campaignStatus, campaignsOverlap, defaultDuration, displayLength, durationOptions, durationRule, pickCurrentCampaign, slotMinutes, suggestCampaignSlug, validateSetup, type CampaignDates } from '../src/setup'
 
 const NY = 'America/New_York'
 
@@ -84,6 +84,12 @@ describe('applyTemplate', () => {
     expect(validateSetup(applyTemplate('anytime', {}))).toEqual([])
     expect(validateSetup(applyTemplate('generic', { start_mode: 'join', end_mode: 'days', length_days: 0 }))).toEqual(['length_days'])
   })
+
+  it('24/7 coverage needs a start date and an end date', () => {
+    expect(validateSetup(applyTemplate('generic', { goal: 'coverage', start_mode: 'date', start_date: '2026-10-01', end_mode: 'date', end_date: '2026-10-07' }))).toEqual([])
+    expect(validateSetup(applyTemplate('generic', { goal: 'coverage', start_mode: 'date', start_date: '2026-10-01', end_mode: 'none' }))).toEqual(['goal'])
+    expect(validateSetup(applyTemplate('generic', { goal: 'coverage', start_mode: 'join', end_mode: 'days' }))).toEqual(['goal'])
+  })
 })
 
 describe('derived answers', () => {
@@ -99,6 +105,18 @@ describe('derived answers', () => {
     expect(durationRule('people', false)).toBe('hidden')
     expect(durationRule('people', true)).toBe('optional')
     expect(durationRule('coverage', false)).toBe('required')
+  })
+
+  it('24/7 durations are whole slots', () => {
+    expect(slotMinutes({ goal: 'coverage', slot_min: null })).toBe(15)
+    expect(durationOptions({ goal: 'coverage', slot_min: null })).toEqual([15, 30, 45, 60, 90, 120])
+    expect(durationOptions({ goal: 'coverage', slot_min: 5 })).toEqual([5, 10, 15, 20, 30, 45, 60, 90, 120])
+    expect(durationOptions({ goal: 'coverage', slot_min: 10 })).toEqual([10, 20, 30, 60, 90, 120])
+    expect(durationOptions({ goal: 'coverage', slot_min: 60 })).toEqual([60, 120])
+    expect(durationOptions({ goal: 'prayer_time', slot_min: 60 })).toContain(5)
+    expect(defaultDuration({ goal: 'coverage', slot_min: 30 }, 15)).toBe(30)
+    expect(defaultDuration({ goal: 'coverage', slot_min: 60 }, 200)).toBe(120)
+    expect(defaultDuration({ goal: 'prayer_time', slot_min: 30 }, 15)).toBe(15)
   })
 
   it('overlap and slugs', () => {

@@ -24,7 +24,7 @@ Source: the WordPress multisite (Disciple.Tools theme + `disciple-tools-prayer-c
 
 | WordPress | v3 |
 |---|---|
-| Subsite + `campaigns` posts | site (org) + campaigns; campaign type mapped to start, end, goal and cadence |
+| Subsite + `campaigns` posts | site (org) + campaigns; campaign type mapped to start, end, goal and cadence; `min_time_duration` becomes the slot length; 24/7 campaigns without an end date become prayer-time campaigns (`goal_quantity` hours a day, 24 by default) |
 | Champion users | accounts + org membership with a site role |
 | `subscriptions` posts, contact email, timezone, language | CRM contact on the site (verified status kept), subscription; `intercessor` per verified email |
 | `dt_reports` `recurring_signup` rows (rule in payload) | commitment rules; pre-expanded slot rows are dropped |

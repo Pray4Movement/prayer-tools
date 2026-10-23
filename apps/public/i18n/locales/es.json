@@ -133,9 +133,10 @@
     "timezone_help": "Los recordatorios se envían según tu hora local.",
     "when_title": "¿Cuándo vas a orar?",
     "when_help": "Elige cuándo quieres que te lo recordemos. Puedes agregar más de un horario de oración.",
+    "when_help_coverage": "Elige un horario que necesite a alguien. Puedes añadir más de un horario de oración.",
     "contact_title": "Tus datos",
     "add_time": "Agregar otro horario de oración",
-    "pick_slots": "Elegir horarios en el calendario de oración",
+    "pick_slots": "Elegir fechas concretas en el calendario de oración",
     "picked_times": "Horarios que elegiste en el calendario",
     "about_you": "Sobre ti",
     "consent_title": "Mantengámonos en contacto (opcional)",
@@ -187,6 +188,21 @@
     "picked": "{n} horario seleccionado | {n} horarios seleccionados",
     "signup_picked": "Inscribirme en estos horarios",
     "clear": "Borrar"
+  },
+  "picker": {
+    "title": "¿A qué hora?",
+    "need_title": "Horarios que necesitan a alguien",
+    "nobody": "nadie todavía",
+    "mostly_open": "casi libre",
+    "some_gaps": "algunos huecos",
+    "show_more": "Ver más",
+    "legend_none": "Nadie todavía",
+    "legend_some": "Algunos días cubiertos",
+    "legend_full": "Todos los días cubiertos",
+    "hour_label": "{hour}: {percent}% cubierto",
+    "time_label": "{time}: {percent}% cubierto",
+    "open_on": "{time}: todavía libre {open} de {total} días",
+    "all_covered": "{time}: ya hay alguien orando todos los días que quedan"
   },
   "between": {
     "ended": "{campaign} ha terminado.",
@@ -296,7 +312,8 @@
     "closed": "Las inscripciones no están abiertas en este momento.",
     "required_field": "Responde las preguntas obligatorias.",
     "id_token": "No pudimos confirmar tu inicio de sesión. Usa tu correo electrónico en su lugar.",
-    "rate": "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+    "rate": "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+    "time": "Elige una hora para orar."
   },
   "my": {
     "title": "Mi oración",

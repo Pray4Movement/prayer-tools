@@ -334,6 +334,7 @@ export interface PtCampaignTable {
   cadence: Cadence
   track_time: Generated<boolean>
   goal_target: number | null
+  slot_min: number | null
   timezone: string
   end_message: Json<TranslatableText | null> | null
   cta: JsonDefault<CampaignCta>

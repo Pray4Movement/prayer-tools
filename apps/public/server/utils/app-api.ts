@@ -5,7 +5,7 @@ import { sql } from 'kysely'
 import { withOrg, type Tx } from '@prayertools/shared/db/scope'
 import { hashToken, shortCode } from '@prayertools/shared/tokens'
 import { normalizeCampaign, type CampaignRow, type CommitmentRow, type SubscriptionRow } from '@prayertools/shared/subscriptions'
-import { campaignStatus, durationRule } from '@prayertools/shared/setup'
+import { campaignStatus, defaultDuration, durationOptions, durationRule, slotMinutes } from '@prayertools/shared/setup'
 import { toIsoDate } from '@prayertools/shared/dates'
 import { useDb } from './db'
 
@@ -100,7 +100,7 @@ export function commitmentJson(c: CommitmentRow) {
   }
 }
 
-export function campaignJson(c: CampaignRow, defaultDuration: number) {
+export function campaignJson(c: CampaignRow, siteDefaultDuration: number) {
   return {
     id: c.id,
     slug: c.slug,
@@ -115,6 +115,8 @@ export function campaignJson(c: CampaignRow, defaultDuration: number) {
     length_days: c.length_days,
     timezone: c.timezone,
     duration: durationRule(c.goal, c.track_time),
-    default_duration_min: defaultDuration
+    duration_options: durationOptions(c),
+    default_duration_min: defaultDuration(c, siteDefaultDuration),
+    slot_minutes: c.goal === 'coverage' ? slotMinutes(c) : null
   }
 }

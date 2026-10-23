@@ -3,7 +3,7 @@
 import { sql } from 'kysely'
 import type { Tx } from './db/scope'
 import type { Goal } from './db/schema'
-import { displayLength, type CampaignDates } from './setup'
+import { displayLength, slotMinutes, type CampaignDates } from './setup'
 import { todayIn } from './dates'
 import { buildGrid, coveragePercent } from './coverage'
 import type { CommitmentRule } from './schedule'
@@ -63,6 +63,7 @@ export interface CampaignForCount extends CampaignDates {
   id: string
   goal: Goal
   goal_target: number | null
+  slot_min?: number | null
 }
 
 // People signed up to a campaign. Web people count once their email is
@@ -132,7 +133,7 @@ export async function goalProgress(tx: Tx, c: CampaignForCount, defaultMinutes =
     return { goal: c.goal, people, value: Math.round(perDay), target, percent: Math.min(100, Math.round(perDay / target * 100)) }
   }
   if (c.start_date && c.end_date) {
-    const grid = buildGrid(c.start_date, c.end_date, c.timezone, rules, defaultMinutes)
+    const grid = buildGrid(c.start_date, c.end_date, c.timezone, rules, defaultMinutes, slotMinutes(c))
     const pct = coveragePercent(grid.slots)
     return { goal: c.goal, people, value: pct, target: 100, percent: Math.round(pct) }
   }

@@ -13,6 +13,8 @@ export const CADENCES: readonly Cadence[] = ['daily', 'weekly']
 export const FIXED_MAX_DAYS = 50
 export const DEFAULT_DURATION_MIN = 15
 export const DURATION_OPTIONS = [5, 10, 15, 20, 30, 45, 60, 90, 120]
+export const SLOT_OPTIONS = [5, 10, 15, 30, 60]
+export const DEFAULT_SLOT_MIN = 15
 
 export interface SetupAnswers {
   start_mode: StartMode
@@ -141,6 +143,8 @@ export function validateSetup(a: SetupAnswers): string[] {
     if (!isIsoDate(a.end_date)) errors.push('end_date')
     else if (a.start_date && a.end_date < a.start_date) errors.push('end_date')
   }
+  // Coverage is a grid over fixed dates; open-ended campaigns aim for prayer time.
+  if (a.goal === 'coverage' && (a.start_mode !== 'date' || a.end_mode !== 'date')) errors.push('goal')
   if (a.end_mode === 'days' && a.length_days !== null && !(Number.isInteger(a.length_days) && a.length_days >= 1 && a.length_days <= 3650)) {
     errors.push('length_days')
   }
@@ -195,6 +199,32 @@ export function campaignLength(c: CampaignDates): number | null {
 export function durationRule(goal: Goal, trackTime: boolean): 'required' | 'optional' | 'hidden' {
   if (goal === 'people') return trackTime ? 'optional' : 'hidden'
   return 'required'
+}
+
+export interface CampaignSlots {
+  goal: Goal
+  slot_min?: number | null
+}
+
+// Length of one 24/7 coverage slot in minutes.
+export function slotMinutes(c: CampaignSlots): number {
+  return c.slot_min ?? DEFAULT_SLOT_MIN
+}
+
+// Prayer lengths a commitment may choose: on 24/7 campaigns whole slots only,
+// so every commitment fills complete cells of the coverage grid.
+export function durationOptions(c: CampaignSlots): number[] {
+  if (c.goal !== 'coverage') return [...DURATION_OPTIONS]
+  const slot = slotMinutes(c)
+  return DURATION_OPTIONS.filter(d => d >= slot && d % slot === 0)
+}
+
+// The site's default prayer length; on 24/7 campaigns moved up to the nearest
+// whole number of slots.
+export function defaultDuration(c: CampaignSlots, siteDefault: number): number {
+  if (c.goal !== 'coverage') return siteDefault
+  const options = durationOptions(c)
+  return options.find(d => d >= siteDefault) ?? options[options.length - 1]!
 }
 
 // The site's current campaign: the active one, else the next upcoming one

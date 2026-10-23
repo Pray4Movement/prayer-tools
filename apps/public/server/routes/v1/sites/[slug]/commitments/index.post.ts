@@ -2,7 +2,7 @@
 // commitments never get `next_reminder_utc` (the app schedules locally).
 import { withOrg } from '@prayertools/shared/db/scope'
 import { insertCommitment, validateRuleForCampaign } from '@prayertools/shared/subscriptions'
-import { campaignStatus, pickCurrentCampaign } from '@prayertools/shared/setup'
+import { campaignStatus, defaultDuration, pickCurrentCampaign } from '@prayertools/shared/setup'
 import { isValidTimezone } from '@prayertools/shared/dates'
 import { siteSettings } from '@prayertools/shared/site'
 import { useDb } from '../../../../../utils/db'
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     const campaign = wanted ? campaigns.find(c => c.id === wanted || c.slug === wanted) : pickCurrentCampaign(campaigns)?.campaign
     if (!campaign || campaignStatus(campaign) === 'ended') throw createError({ statusCode: 409, statusMessage: 'Campaign is not open' })
     const settings = siteSettings((await tx.selectFrom('pt_site').select('settings').executeTakeFirstOrThrow()).settings)
-    if (rule.duration_min === null && campaign.goal !== 'people') rule.duration_min = settings.default_duration_min
+    if (rule.duration_min === null && campaign.goal !== 'people') rule.duration_min = defaultDuration(campaign, settings.default_duration_min)
     const errors = validateRuleForCampaign(rule, campaign)
     if (errors.length) throw createError({ statusCode: 400, statusMessage: 'commitment', data: { errors } })
     const sub = await ensureAppSubscription(tx, device.intercessorId, { timezone: rule.timezone ?? null, language: typeof body.language === 'string' ? body.language : null })

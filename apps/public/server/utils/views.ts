@@ -10,7 +10,6 @@ import { entryDate } from '@prayertools/shared/schedule'
 import { parseLink } from '@prayertools/shared/links'
 import { textIn } from '@prayertools/shared/translatable'
 import { videoEmbed } from '@prayertools/shared/video'
-import { DURATION_OPTIONS } from '@prayertools/shared/setup'
 import type { TranslatableText, CampaignCta, SignupFieldKind } from '@prayertools/shared/db/schema'
 import type { CampaignRow } from '@prayertools/shared/subscriptions'
 import { platformConfig } from '@prayertools/shared/config'
@@ -245,7 +244,6 @@ async function signupForm(tx: Parameters<typeof loadSiteData>[0], data: SiteData
       required: f.required,
       options: ((f.options ?? []) as { key: string, label: TranslatableText }[]).map(o => ({ key: o.key, label: textIn(o.label, lang, def) }))
     })),
-    durations: [...DURATION_OPTIONS],
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     appleServicesId: process.env.APPLE_SERVICES_ID || null,
     open: open && data.site.status !== 'archived'

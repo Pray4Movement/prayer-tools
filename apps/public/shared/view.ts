@@ -21,7 +21,10 @@ export interface CampaignView {
   timezone: string
   length: number | null
   durationRule: 'required' | 'optional' | 'hidden'
+  durations: number[]
   defaultDuration: number
+  // 24/7 coverage campaigns: minutes in one coverage slot.
+  slotMinutes: number | null
   todayEntry: number
 }
 
@@ -119,7 +122,6 @@ export interface SignupFieldView {
 export interface SignupFormView {
   consentOptions: ConsentOptionView[]
   fields: SignupFieldView[]
-  durations: number[]
   googleClientId: string | null
   appleServicesId: string | null
   open: boolean
@@ -168,7 +170,7 @@ export interface MySiteView {
   status: SubscriptionStatus
   siteUpdates: boolean
   customConsents: { key: string, label: string, granted: boolean }[]
-  current: { campaign: { id: string, name: string, state: CampaignState, goal: Goal, durationRule: 'required' | 'optional' | 'hidden', defaultDuration: number }, commitments: CommitmentView[] }[]
+  current: { campaign: { id: string, name: string, state: CampaignState, goal: Goal, durationRule: 'required' | 'optional' | 'hidden', durations: number[], defaultDuration: number }, commitments: CommitmentView[] }[]
   past: { id: string, name: string, prayers: number, minutes: number }[]
 }
 

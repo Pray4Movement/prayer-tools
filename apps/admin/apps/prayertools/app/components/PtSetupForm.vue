@@ -12,6 +12,7 @@ export interface SetupState {
   cadence: 'daily' | 'weekly'
   track_time: boolean
   goal_target: number | null
+  slot_min: number | null
 }
 
 const props = withDefaults(defineProps<{ templateKey?: string, lockTemplate?: boolean, withCadence?: boolean }>(), { templateKey: 'generic', lockTemplate: true, withCadence: true })
@@ -34,11 +35,27 @@ const endItems = computed(() => state.value.start_mode === 'join'
       { value: 'date', label: PT_LABELS.endMode.date, description: 'The campaign ends for everyone on the same day.' },
       { value: 'none', label: PT_LABELS.endMode.none, description: 'An ongoing campaign with no end date.' }
     ])
+// 24/7 coverage is a grid over the campaign's dates, so it needs both.
+const datedCampaign = computed(() => state.value.start_mode === 'date' && state.value.end_mode === 'date')
 const goalItems = computed(() => (meta.value?.setup.goals ?? ['people', 'prayer_time', 'coverage']).map(g => ({
   value: g,
   label: g === 'people' ? `${PT_LABELS.goal[g]} (recommended)` : PT_LABELS.goal[g],
-  description: PT_LABELS.goalDescription[g]
+  description: g === 'coverage' && !datedCampaign.value ? 'Needs a start date and an end date.' : PT_LABELS.goalDescription[g],
+  disabled: g === 'coverage' && !datedCampaign.value
 })))
+const defaultSlot = computed(() => meta.value?.setup.defaultSlot ?? 15)
+const slotItems = computed(() => (meta.value?.setup.slotOptions ?? [5, 10, 15, 30, 60]).map(m => ({
+  value: m,
+  label: m === defaultSlot.value ? `${m} minutes (default)` : `${m} minutes`
+})))
+const slot = computed({
+  get: () => state.value.slot_min ?? defaultSlot.value,
+  set: (v: number) => { state.value.slot_min = v === defaultSlot.value ? null : v }
+})
+
+watch(datedCampaign, (dated) => {
+  if (!dated && state.value.goal === 'coverage') state.value.goal = 'prayer_time'
+})
 
 watch(() => state.value.start_mode, (m) => {
   if (m === 'join' && state.value.end_mode === 'date') state.value.end_mode = 'days'
@@ -141,6 +158,17 @@ const lengthLabel = computed(() => {
         <USwitch
           v-model="state.track_time"
           :disabled="!open('track_time')"
+        />
+      </UFormField>
+      <UFormField
+        v-if="state.goal === 'coverage'"
+        label="Length of one prayer slot"
+        help="People sign up for whole slots, and the calendar shows how many people pray in each one."
+      >
+        <USelect
+          v-model="slot"
+          :items="slotItems"
+          class="w-48"
         />
       </UFormField>
       <UFormField
