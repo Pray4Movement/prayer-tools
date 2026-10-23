@@ -382,7 +382,7 @@ async function translateWhy() {
             <template v-if="s.key === 'top'">
               <div class="space-y-3">
                 <p class="text-sm text-(--ui-text-muted)">
-                  The top image and colors are set under
+                  The hero image and colors are set under
                   <ULink
                     :to="`/@${site.org.slug}/site/settings?tab=look`"
                     class="text-(--ui-primary)"

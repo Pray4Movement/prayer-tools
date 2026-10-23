@@ -19,8 +19,13 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
 
 <template>
   <div>
-    <section class="brand-bg" aria-labelledby="top-title" data-pt-section="top">
-      <div class="max-w-5xl mx-auto px-4 py-10 sm:py-16 grid gap-8 md:grid-cols-2 md:items-center">
+    <section class="brand-bg relative overflow-hidden" aria-labelledby="top-title" data-pt-section="top">
+      <template v-if="site.image">
+        <img :src="site.image.url" :alt="site.image.alt" class="absolute inset-0 size-full object-cover" :style="imageStyle" fetchpriority="high">
+        <!-- Tints the image with the brand color so text keeps its contrast. -->
+        <div class="absolute inset-0 bg-(--brand) opacity-80" aria-hidden="true" />
+      </template>
+      <div class="relative max-w-3xl mx-auto px-4 py-16 sm:py-28 text-center">
         <div class="space-y-5">
           <p v-if="campaign" class="text-sm uppercase tracking-wide opacity-90">{{ campaign.name }}</p>
           <h1 id="top-title" class="text-3xl sm:text-5xl font-bold leading-tight">{{ site.name }}</h1>
@@ -28,16 +33,13 @@ const imageStyle = computed(() => site.value.image ? { objectPosition: `${site.v
           <p v-if="campaign?.state === 'upcoming' && campaign.startDate" class="font-medium">{{ t('landing.starts_on', { date: date(campaign.startDate) }) }}</p>
           <GoalProgress v-if="page.progress" :progress="page.progress" on-brand />
           <p v-if="page.prayingNow > 0" class="text-sm">{{ t('pray.praying_now', { n: num(page.prayingNow) }, page.prayingNow) }}</p>
-          <div class="flex flex-wrap gap-3">
+          <div class="flex flex-wrap justify-center gap-3">
             <UButton to="#signup" size="xl" color="neutral" variant="solid" class="bg-white text-stone-900 hover:bg-stone-100" :label="st('landing.signup.title')" />
             <UButton v-if="page.today" :to="link('pray')" size="xl" variant="outline" class="text-(--brand-text) ring-(--brand-text)/60 hover:bg-white/10" :label="t('landing.pray_today')" />
           </div>
         </div>
-        <figure v-if="site.image" class="m-0">
-          <img :src="site.image.url" :alt="site.image.alt" class="w-full h-64 sm:h-80 object-cover rounded-xl shadow-lg" :style="imageStyle" fetchpriority="high">
-          <figcaption v-if="site.image.credit" class="mt-1 text-xs opacity-80">{{ site.image.credit }}</figcaption>
-        </figure>
       </div>
+      <p v-if="site.image?.credit" class="absolute bottom-1 end-3 text-xs opacity-80">{{ site.image.credit }}</p>
     </section>
 
     <div class="max-w-3xl mx-auto px-4 py-10 space-y-14">

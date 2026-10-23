@@ -4,6 +4,7 @@
 // Only values that differ from the code defaults are stored.
 import type { TranslatableText } from '@prayertools/shared/db/schema'
 import { DEFAULT_BRAND_COLOR } from '@prayertools/shared/colors'
+import { heroImage } from '@prayertools/shared/hero-images'
 import type { SitePlaceWording } from '@prayertools/shared/place'
 import type { PtLocation } from '../../../components/PtLocationSearch.vue'
 
@@ -122,7 +123,7 @@ const brandColor = computed({
 })
 const IMAGE_SLOTS = [
   { slot: 'logo', key: 'logo_url', label: 'Logo', help: 'Shown at the top of your site and emails. Without one, the site name is shown.' },
-  { slot: 'image', key: 'image_url', label: 'Top image', help: 'The large image at the top of your landing page.' }
+  { slot: 'image', key: 'image_url', label: 'Hero image', help: 'Shown behind the top of your landing page, tinted with your color.' }
 ] as const
 function comparable(o: Record<string, unknown> | null | undefined) {
   return JSON.stringify(Object.keys(o ?? {}).sort().filter(k => o![k] !== undefined && o![k] !== null && o![k] !== '').map(k => [k, o![k]]))
@@ -495,7 +496,7 @@ watch(tab, (t) => {
             class="space-y-5 border-t border-default pt-5"
           >
             <UFormField
-              label="Focal point of the top image"
+              label="Focal point of the hero image"
               description="Keeps the important part visible when phones crop the image."
             >
               <div class="grid grid-cols-2 gap-4 max-w-md">
@@ -515,19 +516,21 @@ watch(tab, (t) => {
                 />
               </div>
             </UFormField>
-            <PtTranslatableInput
-              v-model="branding.image_alt"
-              :languages="site.site.languages"
-              :default-language="site.site.default_language"
-              label="Image description (alt text)"
-              required
-            />
-            <UFormField label="Image credit (shown under the image)">
-              <UInput
-                v-model="branding.image_credit"
-                class="w-full"
+            <template v-if="!heroImage(branding.image_url)">
+              <PtTranslatableInput
+                v-model="branding.image_alt"
+                :languages="site.site.languages"
+                :default-language="site.site.default_language"
+                label="Image description (alt text)"
+                required
               />
-            </UFormField>
+              <UFormField label="Image credit (shown under the image)">
+                <UInput
+                  v-model="branding.image_credit"
+                  class="w-full"
+                />
+              </UFormField>
+            </template>
           </div>
           <p class="text-xs text-muted">
             The image for link previews is on the
@@ -891,7 +894,12 @@ watch(tab, (t) => {
     <PtImagePicker
       :open="!!imagePicker"
       :language="site.site.default_language"
+      :hero-for="imagePicker === 'image' ? site.site.template_key : undefined"
       @update:open="(v) => { if (!v) imagePicker = null }"
+      @hero="(url) => {
+        Object.assign(branding, { image_url: url, image_alt: undefined, image_credit: undefined, focal_x: undefined, focal_y: undefined })
+        imagePicker = null
+      }"
       @select="(a) => {
         branding[`${imagePicker}_url`] = a.url
         if (imagePicker === 'image') { branding.image_alt = a.asset.alt ?? undefined; branding.image_credit = a.credit ?? undefined; branding.focal_x = a.asset.focal_x; branding.focal_y = a.asset.focal_y }

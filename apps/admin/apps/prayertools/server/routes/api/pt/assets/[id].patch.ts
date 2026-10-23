@@ -1,4 +1,4 @@
-// Edits an image's alt text, credit and focal point (so the top image crops
+// Edits an image's alt text, credit and focal point (so the hero image crops
 // well on phones).
 import { withUserContext } from '#core/server/utils/personal-apps'
 import { PT_LIBRARY_APP } from '@prayertools/shared/site'

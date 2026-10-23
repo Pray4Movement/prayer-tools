@@ -1,6 +1,9 @@
 <script setup lang="ts">
 // Picks an image from the champion's personal library, or uploads one.
 // Uploads always go to the personal library so they can be reused on any site.
+// With `heroFor`, it also offers the built-in hero images, the template's first.
+import { HERO_IMAGES, heroImagesFor, type HeroImage } from '@prayertools/shared/hero-images'
+
 interface Asset {
   id: string
   url: string
@@ -12,8 +15,15 @@ interface Asset {
 }
 
 const open = defineModel<boolean>('open', { default: false })
-const emit = defineEmits<{ select: [{ url: string, alt: string, credit: string | null, asset: Asset }] }>()
-const props = withDefaults(defineProps<{ language?: string }>(), { language: 'en' })
+const emit = defineEmits<{ select: [{ url: string, alt: string, credit: string | null, asset: Asset }], hero: [url: string] }>()
+const props = withDefaults(defineProps<{ language?: string, heroFor?: string | null }>(), { language: 'en', heroFor: undefined })
+
+const heroSuggested = computed(() => props.heroFor === undefined ? [] : heroImagesFor(props.heroFor))
+const heroMore = computed(() => props.heroFor === undefined ? [] : HERO_IMAGES.filter(i => !heroSuggested.value.includes(i)))
+const heroGroups = computed(() => [
+  { label: `Suggested for ${PT_LABELS.template[props.heroFor ?? ''] ?? 'this template'}`, images: heroSuggested.value },
+  { label: heroSuggested.value.length ? 'More images' : 'Image library', images: heroMore.value }
+].filter(g => g.images.length) as { label: string, images: HeroImage[] }[])
 
 const { data, refresh, status } = useFetch<{ assets: Asset[] }>('/api/pt/assets', { immediate: false, key: 'pt-assets' })
 watch(open, (o) => { if (o) refresh() })
@@ -58,7 +68,7 @@ function choose(a: Asset) {
   <UModal
     v-model:open="open"
     title="Images"
-    description="Your image library. Images you upload can be reused on any of your sites."
+    :description="heroFor === undefined ? 'Your image library. Images you upload can be reused on any of your sites.' : 'A photo of your own of the place or people you pray for works best. Images you upload can be reused on any of your sites.'"
     :ui="{ content: 'max-w-3xl' }"
   >
     <template #body>
@@ -130,6 +140,32 @@ function choose(a: Asset) {
               loading="lazy"
             >
           </button>
+        </div>
+        <div
+          v-for="g in heroGroups"
+          :key="g.label"
+          class="space-y-2"
+        >
+          <h3 class="text-sm font-semibold">
+            {{ g.label }}
+          </h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <button
+              v-for="h in g.images"
+              :key="h.url"
+              type="button"
+              class="aspect-video overflow-hidden rounded-md border border-(--ui-border) focus-visible:ring-2 focus-visible:ring-(--ui-primary)"
+              :aria-label="`Use ${h.alt.en}`"
+              @click="emit('hero', h.url)"
+            >
+              <img
+                :src="h.url"
+                :alt="h.alt.en"
+                class="size-full object-cover"
+                loading="lazy"
+              >
+            </button>
+          </div>
         </div>
       </div>
     </template>

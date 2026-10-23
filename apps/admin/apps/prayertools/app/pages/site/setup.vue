@@ -5,6 +5,7 @@
 // site, so setup can be resumed.
 import { suggestedStartDate } from '@prayertools/shared/setup'
 import { addDays, todayIn } from '@prayertools/shared/dates'
+import { heroImage } from '@prayertools/shared/hero-images'
 import type { SitePlaceWording } from '@prayertools/shared/place'
 import type { SetupState } from '../../components/PtSetupForm.vue'
 import type { PtChecklist } from '../../components/PtLaunchChecklist.vue'
@@ -229,7 +230,7 @@ async function saveLook(): Promise<boolean> {
     await $fetch('/api/pt/site', {
       method: 'PATCH',
       body: {
-        branding: { ...(site.value?.site.branding ?? {}), color: color.value, image_url: image.value?.url, image_alt: image.value ? { source: lang, values: { [lang]: image.value.alt } } : undefined, image_credit: image.value?.credit ?? undefined, logo_url: logo.value?.url, logo_asset_id: logo.value?.assetId ?? undefined }
+        branding: { ...(site.value?.site.branding ?? {}), color: color.value, image_url: image.value?.url, image_alt: image.value && !heroImage(image.value.url) ? { source: lang, values: { [lang]: image.value.alt } } : undefined, image_credit: image.value?.credit ?? undefined, logo_url: logo.value?.url, logo_asset_id: logo.value?.assetId ?? undefined }
       }
     })
     await refreshSite()
@@ -594,8 +595,8 @@ async function publish() {
           />
           <div class="grid sm:grid-cols-2 gap-6 py-6 first:pt-0 last:pb-0">
             <UFormField
-              label="Top image"
-              description="A wide photo shown at the top of your page."
+              label="Hero image"
+              description="A wide photo shown behind the top of your page, tinted with your color."
               :ui="{ label: 'text-base font-semibold' }"
             >
               <div class="space-y-2">
@@ -726,6 +727,8 @@ async function publish() {
     <PtImagePicker
       v-model:open="pickerOpen"
       :language="site?.site.default_language"
+      :hero-for="pickerFor === 'image' ? templateKey : undefined"
+      @hero="(url) => { image = { url, alt: '', credit: null }; pickerOpen = false }"
       @select="(a) => { if (pickerFor === 'logo') logo = { url: a.url, assetId: a.asset.id }; else image = { url: a.url, alt: a.alt, credit: a.credit }; pickerOpen = false }"
     />
   </div>

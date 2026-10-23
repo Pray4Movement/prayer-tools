@@ -84,7 +84,7 @@ export async function ptLaunchChecklist(tx: Transaction<Database>): Promise<PtCh
     },
     {
       key: 'image',
-      label: 'Top image chosen',
+      label: 'Hero image chosen',
       done: !!branding.image_url,
       required: false,
       to: '/site/settings'

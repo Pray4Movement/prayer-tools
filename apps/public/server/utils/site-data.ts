@@ -9,6 +9,7 @@ import { normalizeCampaign, type CampaignRow } from '@prayertools/shared/subscri
 import { siteSettings, type SiteSettings } from '@prayertools/shared/site'
 import { getLanguage, languageDir, UI_LANGUAGES } from '@prayertools/shared/languages'
 import { textIn } from '@prayertools/shared/translatable'
+import { heroAlt, heroImage } from '@prayertools/shared/hero-images'
 import { brandColor } from '@prayertools/shared/colors'
 import { goOrigin, platformConfig, platformOrigin } from '@prayertools/shared/config'
 import { EDITABLE_SITE_STRINGS } from '@prayertools/shared/site-strings'
@@ -92,6 +93,14 @@ export function feedbackConfig(): SiteView['feedback'] {
   return { scriptUrl: `${apiBase}/js/feedback-web-component.iife.js`, projectId: f.projectId, apiBase }
 }
 
+// Library hero images take their alt text from code unless the site wrote its own.
+function heroView(branding: SiteBranding, lang: string, def: string): SiteView['image'] {
+  if (!branding.image_url) return null
+  const known = heroImage(branding.image_url)
+  const alt = textIn(branding.image_alt, lang, def) || (known ? heroAlt(known, lang) : '')
+  return { url: branding.image_url, alt, credit: branding.image_credit ?? null, fx: branding.focal_x ?? 0.5, fy: branding.focal_y ?? 0.5 }
+}
+
 export async function buildSiteView(tx: Tx, ctx: SiteContext, data: SiteData, lang: string, campaign: CampaignRow | null, path: string): Promise<SiteView> {
   const { site } = data
   const def = site.default_language
@@ -100,6 +109,7 @@ export async function buildSiteView(tx: Tx, ctx: SiteContext, data: SiteData, la
   const bc = brandColor(branding.color)
   const cv = campaign ? campaignView(data, campaign) : null
   const cfg = platformConfig()
+  const image = heroView(branding, lang, def)
   return {
     orgId: ctx.orgId,
     slug: ctx.slug,
@@ -113,10 +123,8 @@ export async function buildSiteView(tx: Tx, ctx: SiteContext, data: SiteData, la
     languages: site.languages.map(code => ({ code, native: getLanguage(code)?.native ?? code })),
     brand: { color: bc.color, text: bc.textColor },
     logoUrl: branding.logo_url ?? null,
-    image: branding.image_url
-      ? { url: branding.image_url, alt: textIn(branding.image_alt, lang, def), credit: branding.image_credit ?? null, fx: branding.focal_x ?? 0.5, fy: branding.focal_y ?? 0.5 }
-      : null,
-    shareImageUrl: branding.share_image_url ?? branding.image_url ?? null,
+    image,
+    shareImageUrl: branding.share_image_url ?? image?.url ?? null,
     description: textIn(site.description as TranslatableText | null, lang, def),
     status: site.status,
     preview: ctx.preview,
