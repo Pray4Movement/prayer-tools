@@ -8,11 +8,13 @@ import { recordActivity, setSubscriptionStatus, verifySubscription } from '@pray
 import { primaryEmailOf } from '@prayertools/shared/crm'
 import { recordEvent } from '@prayertools/shared/stats'
 import { sitePath } from '@prayertools/shared/paths'
+import { campaignStatus } from '@prayertools/shared/setup'
 import type { CheckinResponse } from '@prayertools/shared/db/schema'
 import { useDb } from './db'
 import type { SiteContext } from './site-context'
 import { setManageCookie, setPreviewCookie } from './cookies'
 import { forwardInBackground } from './analytics'
+import { loadSiteData } from './site-data'
 
 // Renders another page path in place of the requested one.
 export function rewriteView(event: H3Event, path: string, status = 200): void {
@@ -35,12 +37,16 @@ export async function verifyLink(event: H3Event, ctx: SiteContext, token: string
     if (!before) return null
     const sub = await verifySubscription(tx, token)
     if (!sub) return null
-    const site = await tx.selectFrom('pt_site').select('default_language').executeTakeFirstOrThrow()
+    const data = await loadSiteData(tx)
     const latest = await tx.selectFrom('pt_commitment').select('campaign_id').where('subscription_id', '=', sub.id).orderBy('created_at', 'desc').executeTakeFirst()
     const email = sub.contact_id ? await primaryEmailOf(tx, sub.contact_id) : null
     const firstTime = !before.verified_at
     if (firstTime) await recordEvent(tx, { campaignId: latest?.campaign_id ?? null, type: 'campaign_signup_verified', meta: { subscription_id: sub.id } })
-    return { sub, defaultLanguage: site.default_language, campaignId: latest?.campaign_id ?? null, email: email?.email ?? null, firstTime }
+    const campaign = data.campaigns.find(c => c.id === latest?.campaign_id)
+    const upcoming = campaign && campaignStatus(campaign) === 'upcoming'
+      ? { slug: data.current?.campaign.id === campaign.id ? null : campaign.slug }
+      : null
+    return { sub, defaultLanguage: data.site.default_language, campaignId: latest?.campaign_id ?? null, email: email?.email ?? null, firstTime, upcoming }
   })
   if (!result) return
   const { sub } = result
@@ -54,7 +60,10 @@ export async function verifyLink(event: H3Event, ctx: SiteContext, token: string
       metadata: { subscription_id: sub.id }
     })
   }
-  const path = sitePath({ lang: sub.language, defaultLang: result.defaultLanguage, page: 'pray' })
+  // A campaign that has not started yet has nothing to pray, so its subscribers land on its signup page.
+  const path = result.upcoming
+    ? sitePath({ lang: sub.language, defaultLang: result.defaultLanguage, campaignSlug: result.upcoming.slug, page: 'signup' })
+    : sitePath({ lang: sub.language, defaultLang: result.defaultLanguage, page: 'pray' })
   return sendRedirect(event, `${path}?confirmed=1`, 302)
 }
 

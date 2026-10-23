@@ -4,6 +4,7 @@ import type { SlotCounts } from '@prayertools/shared/coverage'
 import { browserTimezone, newCommitment, timezones, type CommitmentInput } from '~/utils/commitment'
 
 const props = defineProps<{ form: SignupFormView }>()
+const emit = defineEmits<{ joined: [verify: boolean] }>()
 const { site, link, st } = useSite()
 const { t } = useI18n()
 const route = useRoute()
@@ -113,7 +114,9 @@ async function submit() {
     })
     if (res.referral_code) rememberReferral(site.value.orgId, res.referral_code)
     signupEmail.value = state.idToken?.email ?? state.email
-    await navigateTo(`${link('pray', [], { lang: state.language })}?joined=1${res.verify ? '&verify=1' : ''}`)
+    // Before a campaign starts there is nothing to pray yet, so the signup page stays.
+    if (campaign.value.state === 'upcoming') emit('joined', res.verify)
+    else await navigateTo(`${link('pray', [], { lang: state.language })}?joined=1${res.verify ? '&verify=1' : ''}`)
   } catch (err) {
     const msg = (err as { data?: { statusMessage?: string } }).data?.statusMessage ?? 'generic'
     error.value = t(`errors.${msg}`) === `errors.${msg}` ? t('errors.generic') : t(`errors.${msg}`)

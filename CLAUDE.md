@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 prayer.tools v3 ("with orgs"): every prayer site is a Nuxtinator org. Bun monorepo, Nuxt 4 + Nuxt UI 4, Postgres via Kysely. `plans/` is the spec (start at `plans/README.md`); `README.md` lists where the build differs from the plans or stops short. `docs/dev-context.md` holds the full RLS rules and local environment notes.
 
+This project is a re-implementation of https://github.com/DiscipleTools/disciple-tools-prayer-campaigns that was built on Disciple.Tools. 
+
 ## Commands
 
 ```bash
