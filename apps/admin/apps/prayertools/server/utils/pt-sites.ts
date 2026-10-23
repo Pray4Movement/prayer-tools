@@ -11,6 +11,7 @@ import { makeText } from '@prayertools/shared/translatable'
 import { forwardEvent } from '@prayertools/shared/statinator'
 import { getTemplate } from '@prayertools/shared/setup'
 import { enableSiteApps } from '@prayertools/shared/site'
+import { randomBrandColor } from '@prayertools/shared/colors'
 
 export const PT_STAFF_SLUG = 'staff'
 
@@ -91,6 +92,7 @@ export async function ptCreateSite(userId: string, input: CreateSiteInput): Prom
         default_language: input.default_language ?? languages[0]!,
         timezone: input.timezone ?? 'UTC',
         template_key: template.key,
+        branding: jsonb({ color: randomBrandColor() }),
         landing: jsonb(template.hiddenSections.length ? { hidden: template.hiddenSections } : {}),
         onboarding: jsonb({ step: 'about' })
       } as never).execute()
